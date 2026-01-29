@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/comment_count.dart';
+import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
@@ -131,7 +132,7 @@ class _DiscussionCardState extends State<DiscussionCard>
                                 const SizedBox(height: 4),
                                 Obx(
                                   () => Text(
-                                    widget.discussion.author.name(),
+                                    widget.discussion.author.name,
                                     style: const TextStyle(
                                       color: Color(0xff626262),
                                       fontWeight: FontWeight.bold,

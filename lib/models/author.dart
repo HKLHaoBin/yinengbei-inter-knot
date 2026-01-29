@@ -2,9 +2,10 @@ class AuthorModel {
   String login;
   String avatar;
   late String name;
-  int level;
+  int level; // Mocked or removed
 
-  late final url = 'https://github.com/$login';
+  // Adjusted for custom backend
+  String get url => ''; // No external profile URL yet
 
   AuthorModel({
     required this.login,
@@ -15,10 +16,10 @@ class AuthorModel {
 
   factory AuthorModel.fromJson(Map<String, dynamic> json) {
     return AuthorModel(
-      login: json['login'] as String,
-      avatar: json['avatarUrl'] as String,
-      level: (json['repositories'] as Map<String, int>?)?['totalCount'] ?? 0,
-      name: json['name'] as String?,
+      login: json['username'] as String,
+      avatar: json['avatarUrl'] as String? ?? '',
+      level: 0, // No repositories count in backend
+      name: json['username'] as String?,
     );
   }
 

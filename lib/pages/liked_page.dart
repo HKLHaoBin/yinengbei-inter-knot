@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/discussions_grid.dart';
 
+import 'package:inter_knot/controllers/data.dart';
+
 class LikedPage extends StatefulWidget {
   const LikedPage({super.key});
 

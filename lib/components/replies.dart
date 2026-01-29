@@ -5,6 +5,7 @@ import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/my_chip.dart';
 import 'package:inter_knot/models/comment.dart';
 import 'package:inter_knot/models/discussion.dart';
+import 'package:inter_knot/constants/globals.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class Replies extends StatelessWidget {
@@ -39,7 +40,7 @@ class Replies extends StatelessWidget {
                     onTap: () => launchUrlString(reply.url),
                     child: Obx(
                       () => Text(
-                        reply.author.name(),
+                        reply.author.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),

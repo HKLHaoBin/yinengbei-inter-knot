@@ -12,6 +12,9 @@ import 'package:inter_knot/components/report_discussion_comment.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
+import 'package:inter_knot/helpers/copy_text.dart';
+import 'package:inter_knot/helpers/logger.dart';
+import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -148,7 +151,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                   children: [
                                     Obx(
                                       () => Text(
-                                        widget.discussion.author.name(),
+                                        widget.discussion.author.name,
                                         style: const TextStyle(
                                           fontSize: 16,
                                           color: Color(0xff808080),

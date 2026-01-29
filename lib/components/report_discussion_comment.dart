@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:get/get.dart';
+import 'package:inter_knot/controllers/data.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class ReportDiscussionComment extends StatelessWidget {

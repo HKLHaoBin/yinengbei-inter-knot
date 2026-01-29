@@ -9,7 +9,6 @@ import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/l10n.dart';
 import 'package:inter_knot/pages/home_page.dart';
 import 'package:inter_knot/pages/search_page.dart';
-import 'package:inter_knot/pages/toolkit_page.dart';
 
 Future<void> main() async {
   await GetStorage.init();
@@ -21,7 +20,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Get.put(LoginApi());
+    Get.put(AuthApi());
     Get.put(Api());
     Get.put(Controller());
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
@@ -70,7 +69,6 @@ class MyHomePage extends GetView<Controller> {
               controller: controller.pageController,
               children: const [
                 SearchPage(),
-                ToolkitPage(),
                 HomePage(),
               ],
             ),

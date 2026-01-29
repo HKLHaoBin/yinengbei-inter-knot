@@ -1,17 +1,9 @@
-import 'dart:async';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart';
-import 'package:inter_knot/components/feedback_btn.dart';
+import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/box.dart';
-import 'package:inter_knot/helpers/copy_text.dart';
 import 'package:inter_knot/helpers/logger.dart';
-import 'package:inter_knot/helpers/num2dur.dart';
-import 'package:inter_knot/helpers/throttle.dart';
-import 'package:inter_knot/models/device_login.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -21,235 +13,151 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final loginApi = Get.find<LoginApi>();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final usernameController = TextEditingController();
 
-  DeviceLoginModel? deviceLogin;
-  Object? error;
-  int count = 0;
-
-  Future<void> poll() async {
-    if (deviceLogin == null) return;
-    try {
-      final r = await loginApi.getAccessToken(deviceLogin!);
-      switch (r.status) {
-        case DeviceLoginStatus.expiredToken:
-        case DeviceLoginStatus.accessDenied:
-          return refresh();
-        case DeviceLoginStatus.finished:
-          await box.write('access_token', r.accessToken);
-          await box.write('refresh_token', r.refreshToken);
-          Get.back();
-        case DeviceLoginStatus.authorizationPending:
-      }
-    } catch (e) {
-      showDialog(
-        context: Get.context!,
-        builder: (context) {
-          return AlertDialog(
-            title: Text('Error: Failed to get access token'.tr),
-            content: Text(e.toString()),
-            actions: [
-              FeedbackBtn('Error: Failed to get access token\n\n$e'),
-              TextButton(
-                onPressed: () => Get.back(),
-                child: Text('OK'.tr),
-              ),
-            ],
-          );
-        },
-      );
-    }
-  }
-
-  late final refresh = throttle(() async {
-    setState(() {
-      error = null;
-      deviceLogin = null;
-    });
-    try {
-      final data = await loginApi.getDeviceLogin();
-      if (mounted) {
-        Timer.run(() async {
-          final inner = count;
-          while (true) {
-            if (inner != count) return;
-            try {
-              await poll();
-              await Future.delayed(5.s);
-            } catch (e, s) {
-              logger.e('Poll failed', error: e, stackTrace: s);
-            }
-          }
-        });
-        setState(() {
-          error = null;
-          deviceLogin = data;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          error = e;
-          deviceLogin = null;
-        });
-      }
-    }
-  });
-
-  @override
-  void initState() {
-    super.initState();
-    refresh();
-  }
+  bool isRegister = false;
+  bool isLoading = false;
+  String? error;
 
   @override
   void dispose() {
-    count++;
+    emailController.dispose();
+    passwordController.dispose();
+    usernameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() {
+      isLoading = true;
+      error = null;
+    });
+
+    try {
+      final email = emailController.text.trim();
+      final password = passwordController.text.trim();
+      final username = usernameController.text.trim();
+
+      if (email.isEmpty || password.isEmpty) {
+        throw Exception('请填写邮箱和密码');
+      }
+      if (isRegister && username.isEmpty) {
+        throw Exception('请填写用户名');
+      }
+
+      final res = isRegister
+          ? await BaseConnect.authApi.register(username, email, password)
+          : await BaseConnect.authApi.login(email, password);
+
+      await box.write('access_token', res.token);
+      
+      // Update Controller state
+      final c = Get.find<Controller>();
+      c.user(res.user);
+      c.isLogin(true);
+      
+      Get.back();
+    } catch (e) {
+      logger.e('Login failed', error: e);
+      setState(() {
+        error = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Login'.tr)),
-      body: Builder(
-        builder: (context) {
-          if (deviceLogin != null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'User Code'.tr,
-                          style: const TextStyle(fontSize: 20),
-                        ),
-                        SelectableText(
-                          deviceLogin!.userCode,
-                          style: const TextStyle(fontSize: 24),
-                        ),
-                        const SizedBox(height: 8),
-                        Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(text: 'Open'.tr),
-                              const TextSpan(text: ' '),
-                              TextSpan(
-                                text: deviceLogin!.verificationUri,
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () => launchUrlString(
-                                        deviceLogin!.verificationUri,
-                                      ),
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  decoration: TextDecoration.underline,
-                                  decorationColor:
-                                      Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' . Then enter the 「user code」'.tr,
-                              ),
-                            ],
-                          ),
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 8),
-                        StreamBuilder(
-                          stream: deviceLogin!.getExpiresIn(),
-                          builder: (context, snapshot) {
-                            final v = snapshot.data;
-                            if (v == null) return const SizedBox.shrink();
-                            if (v == 0) {
-                              return Text('User code has expired'.tr);
-                            }
-                            return Text(
-                              '@s seconds left'.trParams({'s': v.toString()}),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: () {
-                            final url = deviceLogin!.verificationUri;
-                            Future.delayed(3.s)
-                                .then((_) => launchUrlString(url));
-                            copyText(
-                              deviceLogin!.userCode,
-                              title: 'User code has been copied'.tr,
-                              msg:
-                                  'Jump to the authorization page after 3 seconds'
-                                      .tr,
-                            );
-                          },
-                          child: Text('Copy and open'.tr),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
-          if (error != null) {
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Center(
+      appBar: AppBar(title: Text(isRegister ? '注册'.tr : '登录'.tr)),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SelectableText(error.toString()),
-                    if (kIsWeb) ...[
-                      const SizedBox(height: 16),
-                      Text('You May Need to Allow CORS Extensions'.tr),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          FilledButton(
-                            onPressed: () => launchUrlString(
-                              'https://microsoftedge.microsoft.com/addons/detail/allow-cors-accesscontro/bhjepjpgngghppolkjdhckmnfphffdag',
-                            ),
-                            child: Text('Edge Extension'.tr),
-                          ),
-                          FilledButton(
-                            onPressed: () => launchUrlString(
-                              'https://chromewebstore.google.com/detail/allow-cors-access-control/lhobafahddgcelffkeicbaginigeejlf',
-                            ),
-                            child: Text('Chrome Extension'.tr),
-                          ),
-                          FilledButton(
-                            onPressed: () => launchUrlString(
-                              'https://addons.mozilla.org/en-US/firefox/addon/access-control-allow-origin/',
-                            ),
-                            child: Text('Firefox Extension'.tr),
-                          ),
-                          FilledButton(
-                            onPressed: () => launchUrlString(
-                              'https://www.crxsoso.com/webstore/detail/lhobafahddgcelffkeicbaginigeejlf',
-                            ),
-                            child: Text('Crx Soso'.tr),
-                          ),
-                        ],
+                    if (error != null) ...[
+                      Text(
+                        error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
+                      const SizedBox(height: 16),
                     ],
+                    if (isRegister) ...[
+                      TextField(
+                        controller: usernameController,
+                        decoration: InputDecoration(
+                          labelText: '用户名'.tr,
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.person),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    TextField(
+                      controller: emailController,
+                      decoration: InputDecoration(
+                        labelText: '邮箱'.tr,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.email),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: passwordController,
+                      decoration: InputDecoration(
+                        labelText: '密码'.tr,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock),
+                      ),
+                      obscureText: true,
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: FilledButton(
+                        onPressed: isLoading ? null : _submit,
+                        child: isLoading
+                            ? const CircularProgressIndicator()
+                            : Text(isRegister ? '注册'.tr : 'Login'.tr),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          isRegister = !isRegister;
+                          error = null;
+                        });
+                      },
+                      child: Text(
+                        isRegister
+                            ? '登录'.tr
+                            : '注册账号'.tr,
+                      ),
+                    ),
                   ],
                 ),
               ),
-            );
-          }
-          return const Center(child: CircularProgressIndicator());
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: refresh,
-        tooltip: 'Refresh'.tr,
-        child: const Icon(Icons.refresh),
+            ),
+          ),
+        ),
       ),
     );
   }

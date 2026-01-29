@@ -17,6 +17,10 @@ class DiscussionModel {
   AuthorModel author;
   List<PaginationModel<CommentModel>> comments;
   String get bodyText => rawBodyText.replaceAll(RegExp(r'\s+'), ' ').trim();
+  String get url => ''; // Placeholder
+  // Placeholder methods for compatibility
+  bool hasNextPage() => false; 
+  Future<void> fetchComments() async {}
 
   DiscussionModel({
     required this.title,
@@ -34,25 +38,28 @@ class DiscussionModel {
 
   factory DiscussionModel.fromJson(Map<String, dynamic> json) {
     final (:cover, :html) = parseHtml(json['bodyHTML'] as String);
+    final commentsJson = json['comments'] as Map<String, dynamic>?;
+
     return DiscussionModel(
       title: json['title'] as String,
       bodyHTML: html,
       cover: cover,
       rawBodyText: json['bodyText'] as String,
-      number: json['number'] as int,
-      id: json['id'] as String,
+      number: json['number'] as int? ?? json['id'] as int,
+      id: json['id'].toString(),
       createdAt: DateTime.parse(json['createdAt'] as String),
-      commentsCount: (json['comments'] as Map<String, int>)['totalCount']!,
+      commentsCount: json['commentsCount'] as int? ?? 0,
       lastEditedAt:
-          (json['lastEditedAt'] as String?).use((v) => DateTime.parse(v)),
+          (json['updatedAt'] as String?).use((v) => DateTime.parse(v)),
       author: AuthorModel.fromJson(json['author'] as Map<String, dynamic>),
-      comments: [
-        PaginationModel.fromJson(
-          // ignore: avoid_dynamic_calls
-          json['comments'] as Map<String, dynamic>,
-          CommentModel.fromJson,
-        ),
-      ],
+      comments: commentsJson != null
+          ? [
+              PaginationModel.fromJson(
+                commentsJson,
+                CommentModel.fromJson,
+              ),
+            ]
+          : [],
     );
   }
 

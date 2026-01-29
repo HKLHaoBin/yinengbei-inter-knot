@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/my_tab.dart';
+import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
+import 'package:inter_knot/constants/globals.dart';
 
 class MyAppBar extends StatelessWidget {
   const MyAppBar({super.key});
@@ -43,7 +45,7 @@ class MyAppBar extends StatelessWidget {
                       children: [
                         Obx(() {
                           return Text(
-                            c.user()?.name() ?? 'Not logged in'.tr,
+                            c.user()?.name ?? 'Not logged in'.tr,
                             style: const TextStyle(
                               fontSize: 18,
                               height: 1,
@@ -97,7 +99,7 @@ class MyAppBar extends StatelessWidget {
                       children: [
                         Obx(
                           () => Text(
-                            c.user()?.level().toString() ?? '0',
+                            c.user()?.level.toString() ?? '0',
                             style: const TextStyle(
                               fontSize: 24,
                               height: 1,
@@ -149,12 +151,8 @@ class MyAppBar extends StatelessWidget {
                       );
                     }),
                     MyTab(
-                      text: 'Toolkit'.tr,
-                      onTap: () => c.animateToPage(1),
-                    ),
-                    MyTab(
                       text: 'Home'.tr,
-                      onTap: () => c.animateToPage(2),
+                      onTap: () => c.animateToPage(1),
                     ),
                   ],
                 ),

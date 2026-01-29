@@ -30,11 +30,10 @@ class CommentModel {
       bodyHTML: html,
       createdAt: DateTime.parse(json['createdAt'] as String),
       lastEditedAt:
-          (json['lastEditedAt'] as String?).use((v) => DateTime.parse(v)),
-      replies: (json['replies'] as List<Map<String, dynamic>>)
-          .map((e) => CommentModel.fromJson(e)),
-      id: json['id'] as String,
-      url: json['url'] as String,
+          (json['updatedAt'] as String?).use((v) => DateTime.parse(v)),
+      replies: [], // Replies not supported in backend yet
+      id: json['id'].toString(),
+      url: '', // URL not supported yet
     );
   }
 

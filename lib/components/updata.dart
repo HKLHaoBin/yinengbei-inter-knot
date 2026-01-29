@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:get/get.dart';
+import 'package:inter_knot/controllers/data.dart';
+import 'package:inter_knot/helpers/copy_text.dart';
+import 'package:inter_knot/models/release.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class Updata extends StatefulWidget {
@@ -17,7 +20,7 @@ class Updata extends StatefulWidget {
   final String curFullVer;
   final String descriptionHTML;
   final bool mustUpdate;
-  final Release release;
+  final ReleaseModel release;
 
   @override
   State<Updata> createState() => _UpdataState();

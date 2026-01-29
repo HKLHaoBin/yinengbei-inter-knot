@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:inter_knot/api_user/api_user.dart' as api_user;
+import 'package:inter_knot/api/api.dart';
+import 'package:inter_knot/controllers/data.dart';
+import 'package:inter_knot/constants/globals.dart';
+import 'package:inter_knot/helpers/copy_text.dart';
 import 'package:inter_knot/pages/history_page.dart';
 import 'package:inter_knot/pages/liked_page.dart';
+import 'package:inter_knot/pages/login_page.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -49,71 +53,29 @@ class HomePage extends StatelessWidget {
                   subtitle: Text(fullVer),
                 );
               }
-              if (snapshot.hasError) {
-                return ListTile(
-                  title: Text('Current version'.tr),
-                  subtitle: SelectableText(snapshot.error.toString()),
-                );
-              }
-              return ListTile(
-                onTap: () {},
-                title: Text('Current version'.tr),
-                subtitle: const LinearProgressIndicator(),
-              );
-            },
-          ),
-          FutureBuilder(
-            future: c.isLogin()
-                ? api_user.getNewVersion()
-                : api_root.getNewVersion(),
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                final fullVer = 'v${snapshot.data!.version}';
-                return ListTile(
-                  onTap: () => launchUrlString(releasesLink),
-                  title: Text('Latest version'.tr),
-                  subtitle: Text(fullVer),
-                );
-              }
-              if (snapshot.hasError) {
-                return ListTile(
-                  title: Text('Latest version'.tr),
-                  onTap: () => launchUrlString(releasesLink),
-                  subtitle: Text(snapshot.error.toString()),
-                );
-              }
-              return ListTile(
-                onTap: () => launchUrlString(releasesLink),
-                title: Text('Latest version'.tr),
-                subtitle: const LinearProgressIndicator(),
-              );
+              return const SizedBox.shrink();
             },
           ),
           Obx(() {
-            return RadioListTile(
-              value: true,
-              groupValue: c.isLogin(),
-              title: Text('User Api'.tr),
-              onChanged: c.isLogin.call,
-            );
+            if (c.isLogin()) {
+              return ListTile(
+                onTap: () async {
+                  await c.pref.remove('access_token');
+                  c.isLogin(false);
+                  Get.rawSnackbar(message: 'Logout successfully'.tr);
+                },
+                title: Text('Logout'.tr),
+                leading: const Icon(Icons.logout),
+              );
+            } else {
+              return ListTile(
+                onTap: () => Get.to(() => const LoginPage()),
+                title: Text('Login'.tr),
+                leading: const Icon(Icons.login),
+              );
+            }
           }),
-          Obx(() {
-            return RadioListTile(
-              value: false,
-              groupValue: c.isLogin(),
-              title: Text('Common Api'.tr),
-              onChanged: c.isLogin.call,
-            );
-          }),
-          ListTile(
-            onTap: () async {
-              await c.pref.remove('root_token');
-              await c.pref.remove('access_token');
-              await c.pref.remove('refresh_token');
-              Get.rawSnackbar(message: 'Login out successfully'.tr);
-            },
-            title: Text('Login out'.tr),
-          ),
+          // Documentation and Links
           ListTile(
             leading: Icon(MdiIcons.github),
             title: const Text('Github'),
@@ -121,22 +83,10 @@ class HomePage extends StatelessWidget {
             subtitle: const Text(githubLink),
           ),
           ListTile(
-            leading: const Icon(Icons.discord),
-            title: const Text('Discord'),
-            onTap: () => launchUrlString(discordLink),
-            subtitle: const Text(discordLink),
-          ),
-          ListTile(
             leading: const Icon(Icons.book),
             title: Text('Documentation'.tr),
             onTap: () => launchUrlString(docLink),
             subtitle: const Text(docLink),
-          ),
-          ListTile(
-            leading: const Icon(Icons.search),
-            title: Text('Advanced Search Tips'.tr),
-            onTap: () => launchUrlString(advancedSearchTipsLink),
-            subtitle: const Text(advancedSearchTipsLink),
           ),
         ],
       ),

@@ -11,6 +11,9 @@ class HDataModel {
   int number;
   DateTime updatedAt;
   bool isPinned;
+  bool get isPin => isPinned;
+  // TODO: Implement URL
+  String get url => '';
 
   HDataModel({
     required this.number,
@@ -18,12 +21,12 @@ class HDataModel {
     required this.isPinned,
   }) : updatedAt = updatedAt ?? _zeroDate;
 
-  Future<DiscussionModel?> getDiscussion() =>
+  Future<DiscussionModel?> get discussion =>
       discussionsCache[number] ??= api.getDiscussion(number);
 
   factory HDataModel.fromJson(Map<String, dynamic> json) {
     return HDataModel(
-      number: json['number'] as int,
+      number: json['number'] as int? ?? json['id'] as int,
       updatedAt: (json['updatedAt'] as String?).use((v) => DateTime.parse(v)),
       isPinned: false,
     );
@@ -31,9 +34,18 @@ class HDataModel {
 
   factory HDataModel.fromPinnedJson(Map<String, dynamic> json) {
     return HDataModel(
-      number: json['number'] as int,
+      number: json['number'] as int? ?? json['id'] as int,
       updatedAt: (json['updatedAt'] as String?).use((v) => DateTime.parse(v)),
       isPinned: true,
+    );
+  }
+
+  factory HDataModel.fromStr(String str) {
+    final s = str.split(',');
+    return HDataModel(
+      number: int.parse(s[0]),
+      updatedAt: DateTime.parse(s[1]),
+      isPinned: false,
     );
   }
 
