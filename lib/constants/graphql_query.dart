@@ -107,7 +107,6 @@ String register(String username, String email, String password) =>
 const String createArticleMutation = r'''
   mutation CreateArticle($data: ArticleInput!, $status: PublicationStatus) {
     createArticle(data: $data, status: $status) {
-      id
       documentId
     }
   }
