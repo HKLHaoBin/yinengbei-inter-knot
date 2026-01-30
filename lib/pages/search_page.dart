@@ -7,7 +7,6 @@ import 'package:inter_knot/helpers/throttle.dart';
 import 'package:inter_knot/pages/create_discussion_page.dart';
 import 'package:inter_knot/pages/login_page.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});

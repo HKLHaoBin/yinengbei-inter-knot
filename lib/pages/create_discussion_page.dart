@@ -20,15 +20,6 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   final c = Get.find<Controller>();
   late final api = Get.find<Api>();
 
-  String _slugify(String input) {
-    final slug = input
-        .trim()
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-        .replaceAll(RegExp(r'^-+|-+$'), '');
-    return slug.isEmpty ? DateTime.now().millisecondsSinceEpoch.toString() : slug;
-  }
-
   Future<void> _submit() async {
     final title = titleController.text.trim();
     final body = bodyController.text;
@@ -130,7 +121,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
             TextField(
               controller: coverController,
               decoration: const InputDecoration(
-                labelText: '封面图片 ID (可选)',
+                labelText: '封面图片 URL (可选)',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -154,4 +145,3 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     );
   }
 }
-
