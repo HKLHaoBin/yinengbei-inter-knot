@@ -68,12 +68,16 @@ class Comment extends StatelessWidget {
                   children: [
                     Text(
                       'Published on: '.tr +
-                          comment.createdAt.toLocal().toString(),
+                          comment.createdAt.toLocal().toString().split('.').first,
                     ),
                     if (comment.lastEditedAt != null)
                       Text(
                         'Last edited on: '.tr +
-                            comment.lastEditedAt!.toLocal().toString(),
+                            comment.lastEditedAt!
+                                .toLocal()
+                                .toString()
+                                .split('.')
+                                .first,
                       ),
                     const SizedBox(height: 8),
                     SelectionArea(

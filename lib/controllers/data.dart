@@ -42,7 +42,7 @@ class Controller extends GetxController {
   final isLogin = false.obs;
   final user = Rx<AuthorModel?>(null); // Author -> AuthorModel
 
-  final report = <int, Set<ReportCommentModel>>{}.obs;
+  final report = <String, Set<ReportCommentModel>>{}.obs;
 
   final bookmarks = <HDataModel>{}.obs;
   final history = <HDataModel>{}.obs;
@@ -51,10 +51,10 @@ class Controller extends GetxController {
   final api = Get.find<Api>();
 
   bool canVisit(DiscussionModel discussion, bool isPin) =>
-      report[discussion.number] == null ||
+      report[discussion.id] == null ||
       [owner, ...collaborators].contains(discussion.author.login) ||
       isPin ||
-      report[discussion.number]!.length < 6;
+      report[discussion.id]!.length < 6;
 
   final curPage = 0.obs;
 
@@ -150,11 +150,14 @@ class Controller extends GetxController {
   final searchController = SearchController();
 
   late final refreshSearchData = throttle(() async {
+    logger.i('Refreshing search data...');
     searchHasNextPage.value = true;
     searchEndCur = null;
     searchCache.clear();
+    HDataModel.discussionsCache.clear(); // 清空详情缓存
     searchResult.clear();
     await searchData();
+    logger.i('Refreshed. Result count: ${searchResult.length}');
   });
 
   final searchCache = <String?>{};

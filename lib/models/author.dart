@@ -13,10 +13,23 @@ class AuthorModel {
   }) : name = name ?? login;
 
   factory AuthorModel.fromJson(Map<String, dynamic> json) {
+    // Strapi Media 字段可能包含 data 层，也可能通过 flatten plugin 只有 attributes
+    // 假设结构是 avatar: { url: "..." }
+    final avatarData = json['avatar'];
+    String? avatarUrl;
+    if (avatarData is Map) {
+      avatarUrl = avatarData['url'] as String?;
+    }
+    
+    // 补全完整 URL
+    if (avatarUrl != null && !avatarUrl.startsWith('http')) {
+      avatarUrl = 'https://ik.tiwat.cn$avatarUrl';
+    }
+
     return AuthorModel(
-      login: json['username'] as String,
-      avatar: json['avatarUrl'] as String? ?? '',
-      name: json['username'] as String?,
+      login: json['name'] as String? ?? json['username'] as String,
+      avatar: avatarUrl ?? 'https://ik.tiwat.cn/uploads/default_avatar.png',
+      name: json['name'] as String? ?? json['username'] as String?,
     );
   }
 

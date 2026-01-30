@@ -3,14 +3,15 @@ import 'package:inter_knot/helpers/use.dart';
 import 'package:inter_knot/models/author.dart';
 import 'package:inter_knot/models/comment.dart';
 import 'package:inter_knot/models/pagination.dart';
+import 'package:markdown/markdown.dart' as md;
 
 class DiscussionModel {
   String title;
   String bodyHTML;
   String rawBodyText;
   String? cover;
-  int number;
   String id;
+  // int number; // Removed, merged into id
   DateTime createdAt;
   DateTime? lastEditedAt;
   int commentsCount;
@@ -27,7 +28,7 @@ class DiscussionModel {
     required this.bodyHTML,
     required this.rawBodyText,
     required this.cover,
-    required this.number,
+    // required this.number, // Removed
     required this.id,
     required this.createdAt,
     required this.commentsCount,
@@ -37,16 +38,52 @@ class DiscussionModel {
   });
 
   factory DiscussionModel.fromJson(Map<String, dynamic> json) {
-    final (:cover, :html) = parseHtml(json['bodyHTML'] as String);
+    // 优先使用 description
+    String rawBody = json['description'] as String? ?? '';
+    
+    // 如果有 blocks (Dynamic Zone)，尝试提取其中的文本
+    // 这里需要根据具体的 Component 名称来解析
+    if (json['blocks'] != null) {
+       final blocks = json['blocks'] as List;
+       for (final block in blocks) {
+          final type = block['__typename'] as String?;
+          // ComponentSharedRichText -> body
+          if (type == 'ComponentSharedRichText' && block['body'] != null) {
+             rawBody += '\n\n' + (block['body'] as String);
+          }
+          // ComponentSharedQuote -> body
+          else if (type == 'ComponentSharedQuote' && block['body'] != null) {
+             rawBody += '\n\n> ' + (block['body'] as String);
+          }
+       }
+    }
+
+    // Convert Markdown to HTML
+    final htmlBody = md.markdownToHtml(
+      rawBody,
+      extensionSet: md.ExtensionSet.gitHubWeb,
+    );
+
+    final (:cover, :html) = parseHtml(htmlBody);
+    
+    // 处理封面图: 优先取 json['cover']，如果没有则尝试从 parseHtml 获取
+    String? coverUrl;
+    if (json['cover'] != null && json['cover']['url'] != null) {
+        coverUrl = json['cover']['url'] as String;
+        if (!coverUrl.startsWith('http')) {
+            coverUrl = 'https://ik.tiwat.cn$coverUrl';
+        }
+    }
+    
     final commentsJson = json['comments'] as Map<String, dynamic>?;
 
     return DiscussionModel(
       title: json['title'] as String,
       bodyHTML: html,
-      cover: cover,
-      rawBodyText: json['bodyText'] as String,
-      number: json['number'] as int? ?? json['id'] as int,
-      id: json['id'].toString(),
+      cover: coverUrl ?? cover, // 优先使用 Strapi 字段，其次是内容里的图
+      rawBodyText: rawBody,
+      // number: ... Removed
+      id: json['documentId'] as String? ?? json['id']?.toString() ?? '', // 优先 documentId
       createdAt: DateTime.parse(json['createdAt'] as String),
       commentsCount: json['commentsCount'] as int? ?? 0,
       lastEditedAt:
@@ -65,8 +102,8 @@ class DiscussionModel {
 
   @override
   bool operator ==(Object other) =>
-      other is DiscussionModel && other.number == number;
+      other is DiscussionModel && other.id == id;
 
   @override
-  int get hashCode => number;
+  int get hashCode => id.hashCode;
 }
