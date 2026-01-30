@@ -34,10 +34,10 @@ class _DiscussionCardState extends State<DiscussionCard>
     return Obx(() {
       return Badge(
         isLabelVisible: !c.history
-                .map((e) => e.number)
-                .contains(widget.discussion.number) ||
+                .map((e) => e.id)
+                .contains(widget.discussion.id) ||
             c.history
-                    .firstWhere((e) => e.number == widget.discussion.number)
+                    .firstWhere((e) => e.id == widget.discussion.id)
                     .updatedAt !=
                 widget.hData.updatedAt,
         child: Card(
@@ -62,7 +62,7 @@ class _DiscussionCardState extends State<DiscussionCard>
                         Text(
                           'This discussion was reported by @count people'
                               .trParams({
-                            'count': c.report[widget.discussion.number]!.length
+                            'count': c.report[widget.discussion.id]!.length
                                 .toString(),
                           }),
                         ),

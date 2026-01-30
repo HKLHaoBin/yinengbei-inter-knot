@@ -1,10 +1,63 @@
 import 'package:inter_knot/helpers/query_encode.dart';
 
-String getDiscussion(int number) =>
-    '{ getDiscussion(number: $number) { author { avatarUrl username } createdAt updatedAt bodyHTML id bodyText title commentsCount } }';
+String getDiscussion(String id) => '''
+  query {
+    article(documentId: "$id") {
+      title
+      description
+      cover {
+        url
+      }
+      blocks {
+        __typename
+        ... on ComponentSharedRichText {
+          body
+        }
+        ... on ComponentSharedQuote {
+          title
+          body
+        }
+        ... on ComponentSharedMedia {
+          file {
+            url
+          }
+        }
+      }
+      createdAt
+      updatedAt
+      author {
+        name
+        avatar {
+          url
+        }
+      }
+    }
+  }
+''';
 
-String search(String query, String? endCur, [int length = 20]) =>
-    '{ search(query: "${queryEncode(query)}", first: $length, after: ${endCur == null ? null : '"$endCur"'}) { pageInfo { endCursor hasNextPage } nodes { number updatedAt } } }';
+String search(String query, String? endCur, [int length = 20]) => '''
+  query {
+    articles(
+      pagination: { limit: $length, start: ${endCur == null || endCur.isEmpty ? 0 : endCur} }
+      sort: "updatedAt:desc"
+      filters: { title: { contains: "${queryEncode(query)}" } }
+    ) {
+      documentId
+      title
+      description
+      cover {
+        url
+      }
+      updatedAt
+      author {
+        name
+        avatar {
+          url
+        }
+      }
+    }
+  }
+''';
 
 String getUserInfo(String username) =>
     '{ user(username: "$username") { username avatarUrl createdAt } }'; // Simplified
@@ -18,20 +71,38 @@ String getPinnedDiscussions(String? endCur) =>
 // Releases not implemented
 String getNewVersion() => '';
 
-String getComments(int number, String? endCur) =>
-    '{ getDiscussion(number: $number) { comments(first: 20, after: ${endCur == null ? null : '"$endCur"'}) { pageInfo { endCursor hasNextPage } nodes { author { avatarUrl username } id bodyHTML createdAt updatedAt } } } }';
+String getComments(String id, String? endCur) => '''
+  query {
+    comments(
+      filters: { article: { documentId: { eq: "$id" } } }
+      pagination: { limit: 20, start: ${endCur == null || endCur.isEmpty ? 0 : endCur} }
+      sort: "createdAt:asc"
+    ) {
+      documentId
+      content
+      createdAt
+      updatedAt
+      author {
+        name
+        avatar {
+          url
+        }
+      }
+    }
+  }
+''';
 
 String deleteDiscussion(String id) =>
     'mutation { deleteDiscussion(id: "$id") { id } }'; // Not implemented in backend yet
 
-String addDiscussionComment(int discussionId, String body) =>
-    'mutation { addComment(discussionId: $discussionId, bodyHTML: "${queryEncode(body)}") { id } }';
+String addDiscussionComment(String discussionId, String body) =>
+    'mutation { createComment(data: { article: "$discussionId", content: "${queryEncode(body)}" }) { documentId } }';
 
 String login(String email, String password) =>
-    'mutation { login(email: "$email", password: "$password") { token user { username avatarUrl } } }';
+    'mutation { login(input: { identifier: "$email", password: "$password" }) { jwt user { username email id } } }';
 
 String register(String username, String email, String password) =>
-    'mutation { register(username: "$username", email: "$email", password: "$password") { token user { username avatarUrl } } }';
+    'mutation { register(input: { username: "$username", email: "$email", password: "$password" }) { jwt user { username email id } } }';
 
 const String createDiscussionMutation = r'''
   mutation CreateDiscussion($title: String!, $bodyHTML: String!, $bodyText: String!, $cover: String) {

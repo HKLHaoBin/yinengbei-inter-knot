@@ -304,12 +304,17 @@ class RightBox extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Published on: '.tr + discussion.createdAt.toLocal().toString(),
+                'Published on: '.tr +
+                    discussion.createdAt.toLocal().toString().split('.').first,
               ),
               if (discussion.lastEditedAt != null)
                 Text(
                   'Last edited on: '.tr +
-                      discussion.lastEditedAt!.toLocal().toString(),
+                      discussion.lastEditedAt!
+                          .toLocal()
+                          .toString()
+                          .split('.')
+                          .first,
                 ),
               const SizedBox(height: 16),
               SelectionArea(
@@ -369,7 +374,7 @@ class RightBox extends StatelessWidget {
                           ),
                         );
                         copyText(
-                          '违规讨论：#${discussion.number}\n举报原因：',
+                          '违规讨论：#${discussion.id}\n举报原因：',
                           title: 'Report template copied'.tr,
                           msg: 'Jump to the report page after 3 seconds'.tr,
                         );
@@ -382,8 +387,8 @@ class RightBox extends StatelessWidget {
               const SizedBox(width: 8),
               Obx(() {
                 final isLiked = c.bookmarks
-                    .map((e) => e.number)
-                    .contains(discussion.number);
+                    .map((e) => e.id)
+                    .contains(discussion.id);
                 return Tooltip(
                   message: isLiked ? 'Dislike'.tr : 'Like'.tr,
                   child: Container(
@@ -398,7 +403,7 @@ class RightBox extends StatelessWidget {
                       onTap: () {
                         if (isLiked) {
                           c.bookmarks.removeWhere(
-                            (e) => e.number == discussion.number,
+                            (e) => e.id == discussion.id,
                           );
                         } else {
                           c.bookmarks({hData, ...c.bookmarks});
@@ -415,7 +420,7 @@ class RightBox extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Divider(),
-          if (discussion.number == reportDiscussionNumber)
+          if (discussion.id == reportDiscussionNumber)
             const ReportDiscussionComment()
           else
             Comment(discussion: discussion),

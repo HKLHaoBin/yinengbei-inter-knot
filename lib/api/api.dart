@@ -16,22 +16,30 @@ import 'package:inter_knot/pages/login_page.dart';
 class AuthApi extends GetConnect {
   @override
   void onInit() {
-    httpClient.baseUrl = 'http://localhost:4000/graphql';
+    httpClient.baseUrl = 'https://ik.tiwat.cn';
+    httpClient.timeout = const Duration(seconds: 15);
   }
 
   Future<({String token, AuthorModel user})> login(
       String email, String password) async {
     final res = await post(
-      '',
+      '/graphql',
       {'query': graphql_query.login(email, password)},
     );
-    if (res.hasError) throw Exception(res.statusText);
     
-    final data = res.body['data']['login'];
-    if (data == null) throw Exception('Login failed');
+    if (res.hasError) {
+      print('Login Error: ${res.statusCode} - ${res.bodyString}');
+      throw Exception(res.statusText);
+    }
+    
+    final data = res.body['data']?['login'];
+    if (data == null) {
+      print('Login Data Null: ${res.body}');
+      throw Exception('Login failed: ${res.body['errors']?[0]['message'] ?? "Unknown error"}');
+    }
 
     return (
-      token: data['token'] as String,
+      token: data['jwt'] as String,
       user: AuthorModel.fromJson(data['user'] as Map<String, dynamic>)
     );
   }
@@ -39,16 +47,23 @@ class AuthApi extends GetConnect {
   Future<({String token, AuthorModel user})> register(
       String username, String email, String password) async {
     final res = await post(
-      '',
+      '/graphql',
       {'query': graphql_query.register(username, email, password)},
     );
-    if (res.hasError) throw Exception(res.statusText);
 
-    final data = res.body['data']['register'];
-    if (data == null) throw Exception('Registration failed');
+    if (res.hasError) {
+       print('Register Error: ${res.statusCode} - ${res.bodyString}');
+       throw Exception(res.statusText);
+    }
+
+    final data = res.body['data']?['register'];
+    if (data == null) {
+      print('Register Data Null: ${res.body}');
+      throw Exception('Registration failed: ${res.body['errors']?[0]['message'] ?? "Unknown error"}');
+    }
 
     return (
-      token: data['token'] as String,
+      token: data['jwt'] as String,
       user: AuthorModel.fromJson(data['user'] as Map<String, dynamic>)
     );
   }
@@ -59,7 +74,7 @@ class BaseConnect extends GetConnect {
 
   @override
   void onInit() {
-    httpClient.baseUrl = 'http://localhost:4000';
+    httpClient.baseUrl = 'https://ik.tiwat.cn';
     httpClient.addRequestModifier<dynamic>((request) async {
       var token = box.read<String>('access_token') ?? '';
       if (token.isNotEmpty) {
@@ -82,25 +97,42 @@ class BaseConnect extends GetConnect {
 }
 
 class Api extends BaseConnect {
-  Future<DiscussionModel> getDiscussion(int number) async {
-    final res = await graphql(graphql_query.getDiscussion(number));
+  Future<DiscussionModel> getDiscussion(String id) async {
+    // 目前 query 里的 getDiscussion 接受 String
+    final res = await graphql(graphql_query.getDiscussion(id)); 
+    
+    if (res.hasError) {
+      print('GetDiscussion Error: ${res.bodyString}');
+      throw Exception(res.statusText);
+    }
+
+    final data = res.body?['data'];
+    if (data == null || data['article'] == null) {
+      print('GetDiscussion Data Null for ID: $id. Body: ${res.body}');
+      throw Exception('Discussion not found');
+    }
+
     return DiscussionModel.fromJson(
-      res.body!['data']['getDiscussion'] as Map<String, dynamic>,
+      data['article'] as Map<String, dynamic>,
     );
   }
 
   Future<PaginationModel<HDataModel>> search(
       String query, String endCur) async {
     final res = await graphql(graphql_query.search(query, endCur));
-    return PaginationModel.fromJson(
-      res.body!['data']['search'] as Map<String, dynamic>,
-      HDataModel.fromJson,
+    final List<dynamic> nodes = res.body!['data']['articles'] ?? [];
+    
+    // 手动构造分页模型
+    return PaginationModel(
+       nodes: nodes.map((e) => HDataModel.fromJson(e)).toList(),
+       endCursor: (int.parse(endCur.isEmpty ? "0" : endCur) + 20).toString(), 
+       hasNextPage: nodes.length >= 20
     );
   }
 
   Future<PaginationModel<CommentModel>> getComments(
-      int number, String endCur) async {
-    final res = await graphql(graphql_query.getComments(number, endCur));
+      String id, String endCur) async {
+    final res = await graphql(graphql_query.getComments(id, endCur));
     return PaginationModel.fromJson(
       res.body!['data']['getDiscussion']['comments']
           as Map<String, dynamic>,
@@ -109,7 +141,7 @@ class Api extends BaseConnect {
   }
 
   Future<Response<Map<String, dynamic>>> addDiscussionComment(
-    int discussionId,
+    String discussionId,
     String body,
   ) =>
       graphql(graphql_query.addDiscussionComment(discussionId, body));
@@ -161,7 +193,7 @@ class Api extends BaseConnect {
     return null;
   }
 
-  Future<Report> getAllReports(int number) async {
+  Future<Report> getAllReports(String id) async {
     // Mocked empty report list as backend doesn't support it yet
     return {};
   }
