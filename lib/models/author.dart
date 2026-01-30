@@ -2,6 +2,7 @@ class AuthorModel {
   String login;
   String avatar;
   late String name;
+  String? email;
 
   // Adjusted for custom backend
   String get url => ''; // No external profile URL yet
@@ -10,6 +11,7 @@ class AuthorModel {
     required this.login,
     required this.avatar,
     required String? name,
+    this.email,
   }) : name = name ?? login;
 
   factory AuthorModel.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,7 @@ class AuthorModel {
       login: json['name'] as String? ?? json['username'] as String,
       avatar: avatarUrl ?? 'https://ik.tiwat.cn/uploads/default_avatar.png',
       name: json['name'] as String? ?? json['username'] as String?,
+      email: json['email'] as String?,
     );
   }
 

@@ -111,3 +111,26 @@ const String createArticleMutation = r'''
     }
   }
 ''';
+
+String getAuthorByName(String name) => '''
+  query {
+    authors(filters: { name: { eq: "${queryEncode(name)}" } }) {
+      documentId
+      name
+      email
+      avatar {
+        url
+      }
+    }
+  }
+''';
+
+const String createAuthorMutation = r'''
+  mutation CreateAuthor($data: AuthorInput!) {
+    createAuthor(data: $data) {
+      documentId
+      name
+      email
+    }
+  }
+''';

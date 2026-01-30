@@ -49,12 +49,22 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
     try {
       final slug = _slugify(title);
+      String? authorId;
+      final user = c.user.value;
+      final authorName = user?.name ?? user?.login;
+      if (authorName != null && authorName.trim().isNotEmpty) {
+        authorId = await api.ensureAuthorId(
+          name: authorName.trim(),
+          email: user?.email,
+        );
+      }
 
       final res = await api.createArticle(
         title: title,
         description: body,
         slug: slug,
         coverId: cover.isEmpty ? null : cover,
+        authorId: authorId,
       );
 
       if (res.hasError) {

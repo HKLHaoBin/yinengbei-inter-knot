@@ -158,6 +158,7 @@ class Api extends BaseConnect {
     required String description,
     required String slug,
     String? coverId,
+    String? authorId,
     String status = 'PUBLISHED',
   }) =>
       graphql(
@@ -169,9 +170,59 @@ class Api extends BaseConnect {
             'description': description,
             'slug': slug,
             if (coverId != null && coverId.isNotEmpty) 'cover': coverId,
+            if (authorId != null && authorId.isNotEmpty) 'author': authorId,
           },
         },
       );
+
+  Future<String?> findAuthorIdByName(String name) async {
+    final res = await graphql(graphql_query.getAuthorByName(name));
+    if (res.hasError) {
+      print('FindAuthor Error: ${res.bodyString}');
+      return null;
+    }
+    final list = res.body?['data']?['authors'];
+    if (list is List && list.isNotEmpty) {
+      final first = list.first;
+      if (first is Map) {
+        return first['documentId'] as String? ?? first['id']?.toString();
+      }
+    }
+    return null;
+  }
+
+  Future<String?> createAuthor({
+    required String name,
+    String? email,
+  }) async {
+    final res = await graphql(
+      graphql_query.createAuthorMutation,
+      variables: {
+        'data': {
+          'name': name,
+          if (email != null && email.isNotEmpty) 'email': email,
+        },
+      },
+    );
+    if (res.hasError) {
+      print('CreateAuthor Error: ${res.bodyString}');
+      return null;
+    }
+    final data = res.body?['data']?['createAuthor'];
+    if (data is Map) {
+      return data['documentId'] as String? ?? data['id']?.toString();
+    }
+    return null;
+  }
+
+  Future<String?> ensureAuthorId({
+    required String name,
+    String? email,
+  }) async {
+    final existingId = await findAuthorIdByName(name);
+    if (existingId != null && existingId.isNotEmpty) return existingId;
+    return createAuthor(name: name, email: email);
+  }
 
   Future<Response<Map<String, dynamic>>> deleteDiscussion(String id) =>
       graphql(graphql_query.deleteDiscussion(id));

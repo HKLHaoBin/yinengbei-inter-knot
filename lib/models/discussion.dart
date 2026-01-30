@@ -85,6 +85,7 @@ class DiscussionModel {
             login: 'unknown',
             avatar: 'https://ik.tiwat.cn/uploads/default_avatar.png',
             name: 'Unknown',
+            email: null,
           );
 
     return DiscussionModel(
