@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:get/get.dart';
 import 'package:inter_knot/constants/graphql_query.dart' as graphql_query;
@@ -18,6 +17,7 @@ class AuthApi extends GetConnect {
   void onInit() {
     httpClient.baseUrl = 'https://ik.tiwat.cn';
     httpClient.timeout = const Duration(seconds: 15);
+    httpClient.defaultContentType = 'application/json; charset=utf-8';
   }
 
   Future<({String token, AuthorModel user})> login(
@@ -25,6 +25,7 @@ class AuthApi extends GetConnect {
     final res = await post(
       '/graphql',
       {'query': graphql_query.login(email, password)},
+      contentType: 'application/json',
     );
     
     if (res.hasError) {
@@ -49,6 +50,7 @@ class AuthApi extends GetConnect {
     final res = await post(
       '/graphql',
       {'query': graphql_query.register(username, email, password)},
+      contentType: 'application/json',
     );
 
     if (res.hasError) {
@@ -75,6 +77,7 @@ class BaseConnect extends GetConnect {
   @override
   void onInit() {
     httpClient.baseUrl = 'https://ik.tiwat.cn';
+    httpClient.defaultContentType = 'application/json; charset=utf-8';
     httpClient.addRequestModifier<dynamic>((request) async {
       var token = box.read<String>('access_token') ?? '';
       if (token.isNotEmpty) {
@@ -93,7 +96,11 @@ class BaseConnect extends GetConnect {
 
   Future<Response<Map<String, dynamic>>> graphql(String query,
           {Map<String, dynamic>? variables}) =>
-      post('/graphql', jsonEncode({'query': query, 'variables': variables}));
+      post(
+        '/graphql',
+        {'query': query, 'variables': variables},
+        contentType: 'application/json',
+      );
 }
 
 class Api extends BaseConnect {
