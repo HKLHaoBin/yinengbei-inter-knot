@@ -132,4 +132,3 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     );
   }
 }
-

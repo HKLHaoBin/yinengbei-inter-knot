@@ -120,11 +120,11 @@ class Api extends BaseConnect {
   Future<PaginationModel<HDataModel>> search(
       String query, String endCur) async {
     final res = await graphql(graphql_query.search(query, endCur));
-    final List<dynamic> nodes = res.body!['data']['articles'] ?? [];
+    final List<dynamic> nodes = res.body!['data']['articles'] as List? ?? [];
     
     // 手动构造分页模型
     return PaginationModel(
-       nodes: nodes.map((e) => HDataModel.fromJson(e)).toList(),
+       nodes: nodes.map((e) => HDataModel.fromJson(e as Map<String, dynamic>)).toList(),
        endCursor: (int.parse(endCur.isEmpty ? "0" : endCur) + 20).toString(), 
        hasNextPage: nodes.length >= 20
     );

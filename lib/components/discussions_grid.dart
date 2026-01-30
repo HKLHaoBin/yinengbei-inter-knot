@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/discussion_card.dart';
+import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/pages/discussion_page.dart';
-import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:waterfall_flow/waterfall_flow.dart';
 
