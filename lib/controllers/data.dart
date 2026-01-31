@@ -75,15 +75,14 @@ class Controller extends GetxController {
     
     // Always check for user info if token exists
     if (getToken().isNotEmpty) {
+       isLogin(true);
        try {
-         final u = await api.getSelfUserInfo(''); 
+         final u = await api.getSelfUserInfo('');
          user(u);
          await ensureAuthorForUser(u);
-         isLogin(true);
        } catch (e) {
-         // Token might be invalid
+         // Keep login state; token will be cleared on 401 by BaseConnect
          logger.e('Failed to get user info', error: e);
-         isLogin(false);
        }
     }
 
