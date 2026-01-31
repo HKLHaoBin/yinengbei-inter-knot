@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart'; // Import Api
-import 'package:inter_knot/components/feedback_btn.dart';
-import 'package:inter_knot/components/updata.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/helpers/box.dart';
 import 'package:inter_knot/helpers/logger.dart';
@@ -19,7 +17,6 @@ import 'package:pub_semver/pub_semver.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Standard shared_preferences or specific wrapper?
 // The file used SharedPreferencesWithCache which is new in flutter/packages?
 // I'll stick to what was there or what works.
-import 'package:url_launcher/url_launcher_string.dart';
 
 // Assuming Controller is registered
 final c = Get.find<Controller>();
@@ -41,6 +38,7 @@ class Controller extends GetxController {
 
   final isLogin = false.obs;
   final user = Rx<AuthorModel?>(null); // Author -> AuthorModel
+  final authorId = RxnString();
 
   final report = <String, Set<ReportCommentModel>>{}.obs;
 
@@ -80,6 +78,7 @@ class Controller extends GetxController {
        try {
          final u = await api.getSelfUserInfo(''); 
          user(u);
+         await ensureAuthorForUser(u);
          isLogin(true);
        } catch (e) {
          // Token might be invalid
@@ -95,12 +94,14 @@ class Controller extends GetxController {
               try {
                 final u = await api.getSelfUserInfo('');
                 user(u);
+                await ensureAuthorForUser(u);
               } catch(e) {
                 logger.e('Failed to fetch user after login', error: e);
               }
           }
        } else {
          user.value = null;
+         authorId.value = null;
          box.remove('access_token');
        }
     });
@@ -118,9 +119,9 @@ class Controller extends GetxController {
       time: 500.ms,
     );
     searchData();
-    bookmarks.addAll(pref.getStringList('bookmarks')?.map((e) => HDataModel.fromJson(jsonDecode(e))).cast<HDataModel>() ?? []);
+    bookmarks.addAll(pref.getStringList('bookmarks')?.map((e) => HDataModel.fromJson(jsonDecode(e) as Map<String, dynamic>)).cast<HDataModel>() ?? []);
     
-    history.addAll(pref.getStringList('history')?.map((e) => HDataModel.fromJson(jsonDecode(e))).cast<HDataModel>() ?? []);
+    history.addAll(pref.getStringList('history')?.map((e) => HDataModel.fromJson(jsonDecode(e) as Map<String, dynamic>)).cast<HDataModel>() ?? []);
     
     // Reports and Version
     // api.getAllReports...
@@ -170,6 +171,20 @@ class Controller extends GetxController {
     searchEndCur = pagination.endCursor;
     searchHasNextPage.value = pagination.hasNextPage;
     searchResult.addAll(pagination.nodes);
+  }
+
+  Future<String?> ensureAuthorForUser(AuthorModel? u) async {
+    if (u == null) return null;
+    final name = (u.name.isNotEmpty ? u.name : u.login).trim();
+    if (name.isEmpty) return null;
+    final id = await api.ensureAuthorId(
+      name: name,
+      userId: u.userId,
+    );
+    if (id != null && id.isNotEmpty) {
+      authorId.value = id;
+    }
+    return id;
   }
 }
 
