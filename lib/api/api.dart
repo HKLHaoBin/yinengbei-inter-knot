@@ -270,7 +270,13 @@ class Api extends BaseConnect {
     required String userId,
     required String articleId,
   }) async {
-    final res = await graphql(graphql_query.createFavorite(userId, articleId));
+    final res = await graphql(
+      graphql_query.createFavoriteMutation,
+      variables: {
+        'user': _coerceId(userId),
+        'article': articleId,
+      },
+    );
     if (res.hasError) {
       print('CreateFavorite Error: ${res.bodyString}');
       return null;

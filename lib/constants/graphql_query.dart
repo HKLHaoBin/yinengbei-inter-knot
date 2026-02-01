@@ -143,8 +143,13 @@ String getFavoriteId(String username, String articleId) => '''
   }
 ''';
 
-String createFavorite(String userId, String articleId) =>
-    'mutation { createFavorite(data: { user: "$userId", article: "$articleId" }) { documentId } }';
+const String createFavoriteMutation = r'''
+  mutation CreateFavorite($user: ID!, $article: ID!) {
+    createFavorite(data: { user: $user, article: $article }) {
+      documentId
+    }
+  }
+''';
 
 String deleteFavorite(String favoriteId) =>
     'mutation { deleteFavorite(documentId: "$favoriteId") { documentId } }';
