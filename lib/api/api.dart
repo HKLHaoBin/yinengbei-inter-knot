@@ -231,8 +231,7 @@ class Api extends BaseConnect {
     final favoriteIds = <String, String>{};
     for (final entry in list) {
       if (entry is! Map) continue;
-      final favoriteId = entry['documentId']?.toString() ??
-          entry['id']?.toString();
+      final favoriteId = entry['documentId']?.toString();
       final article = entry['article'];
       if (article is Map<String, dynamic>) {
         final hData = HDataModel.fromJson(article);
@@ -261,7 +260,7 @@ class Api extends BaseConnect {
     if (list is List && list.isNotEmpty) {
       final first = list.first;
       if (first is Map) {
-        return first['documentId']?.toString() ?? first['id']?.toString();
+        return first['documentId']?.toString();
       }
     }
     return null;
@@ -278,7 +277,7 @@ class Api extends BaseConnect {
     }
     final data = res.body?['data']?['createFavorite'];
     if (data is Map) {
-      return data['documentId']?.toString() ?? data['id']?.toString();
+      return data['documentId']?.toString();
     }
     return null;
   }

@@ -177,6 +177,8 @@ class Controller extends GetxController {
       if (ok) {
         favoriteIds.remove(articleId);
         bookmarks.removeWhere((e) => e.id == articleId);
+      } else {
+        Get.rawSnackbar(message: '取消收藏失败'.tr);
       }
     } else {
       final newId = await api.createFavorite(
@@ -186,6 +188,8 @@ class Controller extends GetxController {
       if (newId != null && newId.isNotEmpty) {
         favoriteIds[articleId] = newId;
         bookmarks({hData, ...bookmarks});
+      } else {
+        Get.rawSnackbar(message: '收藏失败'.tr);
       }
     }
   }
