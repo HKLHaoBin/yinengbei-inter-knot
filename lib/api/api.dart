@@ -217,7 +217,7 @@ class Api extends BaseConnect {
 
   Future<({List<HDataModel> items, Map<String, String> favoriteIds})>
       getFavorites(String username, String endCur) async {
-    final res = await graphql(graphql_query.getFavorites(username, endCur));
+    final res = await graphql(graphql_query.getFavorites(endCur));
     if (res.hasError) {
       print('GetFavorites Error: ${res.bodyString}');
       return (items: <HDataModel>[], favoriteIds: <String, String>{});
@@ -233,6 +233,10 @@ class Api extends BaseConnect {
       if (entry is! Map) continue;
       final favoriteId = entry['documentId']?.toString();
       final article = entry['article'];
+      final user = entry['user'];
+      if (user is Map && user['username'] != username) {
+        continue;
+      }
       if (article is Map<String, dynamic>) {
         final hData = HDataModel.fromJson(article);
         if (hData.id.isNotEmpty) {
@@ -250,8 +254,7 @@ class Api extends BaseConnect {
     required String username,
     required String articleId,
   }) async {
-    final res =
-        await graphql(graphql_query.getFavoriteId(username, articleId));
+    final res = await graphql(graphql_query.getFavoriteId(articleId));
     if (res.hasError) {
       print('GetFavoriteId Error: ${res.bodyString}');
       return null;
@@ -260,6 +263,10 @@ class Api extends BaseConnect {
     if (list is List && list.isNotEmpty) {
       final first = list.first;
       if (first is Map) {
+        final user = first['user'];
+        if (user is Map && user['username'] != username) {
+          return null;
+        }
         return first['documentId']?.toString();
       }
     }
