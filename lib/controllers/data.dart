@@ -43,6 +43,7 @@ class Controller extends GetxController {
   final report = <String, Set<ReportCommentModel>>{}.obs;
 
   final bookmarks = <HDataModel>{}.obs;
+  final favoriteIds = <String, String>{}.obs;
   final history = <HDataModel>{}.obs;
 
   // Api instance
@@ -80,6 +81,7 @@ class Controller extends GetxController {
          final u = await api.getSelfUserInfo('');
          user(u);
          await ensureAuthorForUser(u);
+         await refreshFavorites();
        } catch (e) {
          // Keep login state; token will be cleared on 401 by BaseConnect
          logger.e('Failed to get user info', error: e);
@@ -94,14 +96,19 @@ class Controller extends GetxController {
                 final u = await api.getSelfUserInfo('');
                 user(u);
                 await ensureAuthorForUser(u);
+                await refreshFavorites();
               } catch(e) {
                 logger.e('Failed to fetch user after login', error: e);
               }
+          } else {
+            await refreshFavorites();
           }
        } else {
          user.value = null;
          authorId.value = null;
          box.remove('access_token');
+         bookmarks.clear();
+         favoriteIds.clear();
        }
     });
 
@@ -118,13 +125,68 @@ class Controller extends GetxController {
       time: 500.ms,
     );
     searchData();
-    bookmarks.addAll(pref.getStringList('bookmarks')?.map((e) => HDataModel.fromJson(jsonDecode(e) as Map<String, dynamic>)).cast<HDataModel>() ?? []);
-    
     history.addAll(pref.getStringList('history')?.map((e) => HDataModel.fromJson(jsonDecode(e) as Map<String, dynamic>)).cast<HDataModel>() ?? []);
     
     // Reports and Version
     // api.getAllReports...
     // api.getNewVersion...
+  }
+
+  Future<void> refreshFavorites() async {
+    final userId = user.value?.userId;
+    if (isLogin.isFalse || userId == null || userId.isEmpty) {
+      bookmarks.clear();
+      favoriteIds.clear();
+      return;
+    }
+
+    final result = await api.getFavorites(userId, '');
+    bookmarks(result.items.toSet());
+    favoriteIds.assignAll(result.favoriteIds);
+  }
+
+  Future<void> toggleFavorite(HDataModel hData) async {
+    if (isLogin.isFalse) {
+      Get.rawSnackbar(message: '请先登录'.tr);
+      return;
+    }
+    final userId = user.value?.userId;
+    if (userId == null || userId.isEmpty) {
+      Get.rawSnackbar(message: '用户信息获取失败'.tr);
+      return;
+    }
+
+    final articleId = hData.id;
+    if (articleId.isEmpty) return;
+
+    var favoriteId = favoriteIds[articleId];
+    if (favoriteId == null) {
+      favoriteId = await api.getFavoriteId(
+        userId: userId,
+        articleId: articleId,
+      );
+      if (favoriteId != null && favoriteId.isNotEmpty) {
+        favoriteIds[articleId] = favoriteId;
+        bookmarks({hData, ...bookmarks});
+      }
+    }
+
+    if (favoriteId != null && favoriteId.isNotEmpty) {
+      final ok = await api.deleteFavorite(favoriteId);
+      if (ok) {
+        favoriteIds.remove(articleId);
+        bookmarks.removeWhere((e) => e.id == articleId);
+      }
+    } else {
+      final newId = await api.createFavorite(
+        userId: userId,
+        articleId: articleId,
+      );
+      if (newId != null && newId.isNotEmpty) {
+        favoriteIds[articleId] = newId;
+        bookmarks({hData, ...bookmarks});
+      }
+    }
   }
 
   FutureOr<void> getVersionHandle(ReleaseModel? release) async {

@@ -400,15 +400,7 @@ class RightBox extends StatelessWidget {
                           Border.all(color: const Color(0xff2D2D2D), width: 4),
                     ),
                     child: ClickRegion(
-                      onTap: () {
-                        if (isLiked) {
-                          c.bookmarks.removeWhere(
-                            (e) => e.id == discussion.id,
-                          );
-                        } else {
-                          c.bookmarks({hData, ...c.bookmarks});
-                        }
-                      },
+                      onTap: () async => c.toggleFavorite(hData),
                       child: Icon(
                         isLiked ? Icons.favorite : Icons.favorite_outline,
                       ),

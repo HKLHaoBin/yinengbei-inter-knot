@@ -173,6 +173,82 @@ class Api extends BaseConnect {
   ) =>
       graphql(graphql_query.addDiscussionComment(discussionId, body));
 
+  Future<({List<HDataModel> items, Map<String, String> favoriteIds})>
+      getFavorites(String userId, String endCur) async {
+    final res = await graphql(graphql_query.getFavorites(userId, endCur));
+    if (res.hasError) {
+      print('GetFavorites Error: ${res.bodyString}');
+      return (items: [], favoriteIds: {});
+    }
+    final list = res.body?['data']?['favorites'];
+    if (list is! List) {
+      return (items: [], favoriteIds: {});
+    }
+
+    final items = <HDataModel>[];
+    final favoriteIds = <String, String>{};
+    for (final entry in list) {
+      if (entry is! Map) continue;
+      final favoriteId = entry['documentId']?.toString() ??
+          entry['id']?.toString();
+      final article = entry['article'];
+      if (article is Map<String, dynamic>) {
+        final hData = HDataModel.fromJson(article);
+        if (hData.id.isNotEmpty) {
+          items.add(hData);
+          if (favoriteId != null && favoriteId.isNotEmpty) {
+            favoriteIds[hData.id] = favoriteId;
+          }
+        }
+      }
+    }
+    return (items: items, favoriteIds: favoriteIds);
+  }
+
+  Future<String?> getFavoriteId({
+    required String userId,
+    required String articleId,
+  }) async {
+    final res = await graphql(graphql_query.getFavoriteId(userId, articleId));
+    if (res.hasError) {
+      print('GetFavoriteId Error: ${res.bodyString}');
+      return null;
+    }
+    final list = res.body?['data']?['favorites'];
+    if (list is List && list.isNotEmpty) {
+      final first = list.first;
+      if (first is Map) {
+        return first['documentId']?.toString() ?? first['id']?.toString();
+      }
+    }
+    return null;
+  }
+
+  Future<String?> createFavorite({
+    required String userId,
+    required String articleId,
+  }) async {
+    final res = await graphql(graphql_query.createFavorite(userId, articleId));
+    if (res.hasError) {
+      print('CreateFavorite Error: ${res.bodyString}');
+      return null;
+    }
+    final data = res.body?['data']?['createFavorite'];
+    if (data is Map) {
+      return data['documentId']?.toString() ?? data['id']?.toString();
+    }
+    return null;
+  }
+
+  Future<bool> deleteFavorite(String favoriteId) async {
+    final res = await graphql(graphql_query.deleteFavorite(favoriteId));
+    if (res.hasError) {
+      print('DeleteFavorite Error: ${res.bodyString}');
+      return false;
+    }
+    return true;
+  }
+
   Future<Response<Map<String, dynamic>>> createArticle({
     required String title,
     required String description,

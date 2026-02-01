@@ -98,6 +98,43 @@ String deleteDiscussion(String id) =>
 String addDiscussionComment(String discussionId, String body) =>
     'mutation { createComment(data: { article: "$discussionId", content: "${queryEncode(body)}" }) { documentId } }';
 
+String getFavorites(String userId, String? endCur, [int length = 50]) => '''
+  query {
+    favorites(
+      filters: { user: { id: { eq: "$userId" } } }
+      sort: "createdAt:desc"
+      pagination: { limit: $length, start: ${endCur == null || endCur.isEmpty ? 0 : endCur} }
+    ) {
+      documentId
+      createdAt
+      article {
+        documentId
+        updatedAt
+      }
+    }
+  }
+''';
+
+String getFavoriteId(String userId, String articleId) => '''
+  query {
+    favorites(
+      filters: {
+        user: { id: { eq: "$userId" } }
+        article: { documentId: { eq: "$articleId" } }
+      }
+      pagination: { limit: 1 }
+    ) {
+      documentId
+    }
+  }
+''';
+
+String createFavorite(String userId, String articleId) =>
+    'mutation { createFavorite(data: { user: "$userId", article: "$articleId" }) { documentId } }';
+
+String deleteFavorite(String favoriteId) =>
+    'mutation { deleteFavorite(documentId: "$favoriteId") { documentId } }';
+
 String login(String email, String password) =>
     'mutation { login(input: { identifier: "$email", password: "$password" }) { jwt user { username email id } } }';
 
