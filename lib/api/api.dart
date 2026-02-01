@@ -220,11 +220,11 @@ class Api extends BaseConnect {
     final res = await graphql(graphql_query.getFavorites(userId, endCur));
     if (res.hasError) {
       print('GetFavorites Error: ${res.bodyString}');
-      return (items: [], favoriteIds: {});
+      return (items: <HDataModel>[], favoriteIds: <String, String>{});
     }
     final list = res.body?['data']?['favorites'];
     if (list is! List) {
-      return (items: [], favoriteIds: {});
+      return (items: <HDataModel>[], favoriteIds: <String, String>{});
     }
 
     final items = <HDataModel>[];
