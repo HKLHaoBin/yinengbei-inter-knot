@@ -112,10 +112,11 @@ const String addDiscussionCommentMutation = r'''
   }
 ''';
 
-String getFavorites(String? endCur, [int length = 200]) => '''
+String getFavorites(String username, String? endCur, [int length = 200]) => '''
   query {
     favorites(
       sort: "createdAt:desc"
+      filters: { user: { username: { eq: "$username" } } }
       pagination: { limit: $length, start: ${endCur == null || endCur.isEmpty ? 0 : endCur} }
     ) {
       documentId
@@ -131,11 +132,12 @@ String getFavorites(String? endCur, [int length = 200]) => '''
   }
 ''';
 
-String getFavoriteId(String articleId) => '''
+String getFavoriteId(String username, String articleId) => '''
   query {
     favorites(
       filters: {
         article: { documentId: { eq: "$articleId" } }
+        user: { username: { eq: "$username" } }
       }
       pagination: { limit: 1 }
     ) {
