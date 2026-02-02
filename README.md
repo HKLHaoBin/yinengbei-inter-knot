@@ -9,7 +9,7 @@
 | 创建讨论   | all | 待后续完善  | 希望能像GitHub那样，上传图片， <br> 除非指定图片，否则正文中的第一个图片就是封面 |
 | 评论讨论   | yiyi | 已实现     | 后续可添加图片上传以及markdown支持 <br> [没有同步评论数量](https://github.com/yinengbei/inter-knot/issues/11)  |
 | 回复评论   | 负责人 | 进度     | |
-| 收藏讨论   | 浩彬   | [PR等待验收](https://github.com/yinengbei/inter-knot/pull/12) | 在 Strapi 中的 Users-permissions 插件权限中的 user <br> 开放了 find 权限解决。 |
+| 收藏讨论   | 浩彬   | 已完成合并 | 在 Strapi 中的 Users-permissions 插件权限中的 user <br> 开放了 find 权限解决。 |
 | 举报讨论   | 负责人 | 进度     | |
 | 举报讨论   | 负责人 | 进度     | |
 | 举报讨论   | 负责人 | 进度     | |
