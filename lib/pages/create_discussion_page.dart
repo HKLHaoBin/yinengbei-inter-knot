@@ -1,11 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/click_region.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
+import 'package:markdown_quill/markdown_quill.dart';
 
 class CreateDiscussionPage extends StatefulWidget {
   const CreateDiscussionPage({super.key});
@@ -16,7 +18,7 @@ class CreateDiscussionPage extends StatefulWidget {
 
 class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   final titleController = TextEditingController();
-  final bodyController = TextEditingController();
+  final _quillController = quill.QuillController.basic();
   final coverController = TextEditingController();
 
   bool isLoading = false;
@@ -69,14 +71,15 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   Future<void> _submit() async {
     final title = titleController.text.trim();
-    final body = bodyController.text;
+    final delta = _quillController.document.toDelta();
+    final body = DeltaToMarkdown().convert(delta);
     final cover = coverController.text.trim();
 
     if (title.isEmpty) {
       Get.rawSnackbar(message: '标题不能为空');
       return;
     }
-    if (body.isEmpty) {
+    if (_quillController.document.isEmpty()) {
       Get.rawSnackbar(message: '内容不能为空');
       return;
     }
@@ -95,7 +98,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
       var res = await api.createArticle(
         title: title,
-        description: body,
+        text: body,
         slug: slug,
         coverId: cover.isEmpty ? null : cover,
         authorId: authorId,
@@ -105,7 +108,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         slug = _slugifyUnique(title);
         res = await api.createArticle(
           title: title,
-          description: body,
+          text: body,
           slug: slug,
           coverId: cover.isEmpty ? null : cover,
           authorId: authorId,
@@ -138,7 +141,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   @override
   void dispose() {
     titleController.dispose();
-    bodyController.dispose();
+    _quillController.dispose();
     coverController.dispose();
     super.dispose();
   }
@@ -161,17 +164,32 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
               ),
             ),
             const SizedBox(height: 16),
+            quill.QuillSimpleToolbar(
+              controller: _quillController,
+              config: const quill.QuillSimpleToolbarConfig(
+                showFontFamily: false,
+                showFontSize: false,
+                showSearchButton: false,
+                showSubscript: false,
+                showSuperscript: false,
+                toolbarIconAlignment: WrapAlignment.start,
+                multiRowsDisplay: false,
+              ),
+            ),
+            const SizedBox(height: 8),
             Expanded(
-              child: TextField(
-                controller: bodyController,
-                decoration: const InputDecoration(
-                  labelText: '内容 (支持 Markdown)',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.withOpacity(0.5)),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-                maxLines: null,
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
+                child: quill.QuillEditor.basic(
+                  controller: _quillController,
+                  config: const quill.QuillEditorConfig(
+                    placeholder: '请输入文本',
+                    padding: EdgeInsets.all(16),
+                  ),
+                ),
               ),
             ),
           ],

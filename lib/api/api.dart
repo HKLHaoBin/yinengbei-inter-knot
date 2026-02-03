@@ -301,7 +301,7 @@ class Api extends BaseConnect {
 
   Future<Response<Map<String, dynamic>>> createArticle({
     required String title,
-    required String description,
+    required String text,
     required String slug,
     String? coverId,
     String? authorId,
@@ -313,7 +313,7 @@ class Api extends BaseConnect {
           'status': status,
           'data': {
             'title': title,
-            'description': description,
+            'text': text,
             'slug': slug,
             if (coverId != null && coverId.isNotEmpty) 'cover': coverId,
             if (authorId != null && authorId.isNotEmpty) 'author': authorId,

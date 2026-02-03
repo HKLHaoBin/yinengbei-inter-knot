@@ -5,7 +5,7 @@ String getDiscussion(String id) => '''
     article(documentId: "$id") {
       documentId
       title
-      description
+      text
       cover {
         url
       }
@@ -46,7 +46,7 @@ String search(String query, String? endCur, [int length = 20]) => '''
     ) {
       documentId
       title
-      description
+      text
       cover {
         url
       }
