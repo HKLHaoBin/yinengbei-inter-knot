@@ -1,7 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart';
+import 'package:inter_knot/components/avatar.dart';
+import 'package:inter_knot/components/click_region.dart';
 import 'package:inter_knot/controllers/data.dart';
+import 'package:inter_knot/gen/assets.gen.dart';
 
 class CreateDiscussionPage extends StatefulWidget {
   const CreateDiscussionPage({super.key});
@@ -16,6 +20,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   final coverController = TextEditingController();
 
   bool isLoading = false;
+  int _selectedIndex = 0;
 
   final c = Get.find<Controller>();
   late final api = Get.find<Api>();
@@ -140,37 +145,18 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('发布新讨论'),
-        actions: [
-          IconButton(
-            onPressed: isLoading ? null : _submit,
-            icon: isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.send),
-          )
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+    final screenW = MediaQuery.of(context).size.width;
+    final isDesktop = screenW >= 600;
+
+    final content = IndexedStack(
+      index: _selectedIndex,
+      children: [
+        Column(
           children: [
             TextField(
               controller: titleController,
               decoration: const InputDecoration(
                 labelText: '标题',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: coverController,
-              decoration: const InputDecoration(
-                labelText: '封面图片 URL (可选)',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -187,6 +173,223 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                 expands: true,
                 textAlignVertical: TextAlignVertical.top,
               ),
+            ),
+          ],
+        ),
+        Column(
+          children: [
+            TextField(
+              controller: coverController,
+              decoration: const InputDecoration(
+                labelText: '封面图片 URL (可选)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    return Scaffold(
+      backgroundColor: const Color(0xff121212),
+      bottomNavigationBar: isDesktop
+          ? null
+          : BottomNavigationBar(
+              currentIndex: _selectedIndex,
+              onTap: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.article_outlined),
+                  label: '正文',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.image_outlined),
+                  label: '图片',
+                ),
+              ],
+            ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: Assets.images.discussionPageBgPoint.provider(),
+                  repeat: ImageRepeat.repeat,
+                ),
+                gradient: const LinearGradient(
+                  colors: [Color(0xff161616), Color(0xff080808)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomLeft,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Obx(() {
+                    final user = c.user.value;
+                    return Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: const Color(0xff2D2D2D),
+                          width: 3,
+                        ),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: Avatar(user?.avatar ?? ''),
+                    );
+                  }),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '发布委托',
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  ClickRegion(
+                    child: Assets.images.closeBtn.image(),
+                    onTap: () => Get.back(),
+                  ),
+                ],
+              ),
+            ),
+            // Body
+            Expanded(
+              child: isDesktop
+                  ? Row(
+                      children: [
+                                    Expanded(
+                                      flex: 1,
+                                      child: Container(
+                            margin: const EdgeInsets.only(
+                              top: 16,
+                              left: 16,
+                              right: 8,
+                              bottom: 16,
+                            ),
+                            height: double.infinity,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: const Color(0xff313132),
+                                width: 4,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: ListView(
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(Icons.article_outlined),
+                                    title: const Text('正文'),
+                                    selected: _selectedIndex == 0,
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedIndex = 0;
+                                      });
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.image_outlined),
+                                    title: const Text('图片'),
+                                    selected: _selectedIndex == 1,
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedIndex = 1;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                                    Expanded(
+                                      flex: 9,
+                                      child: Column(
+                                        children: [
+                                          Expanded(
+                                            child: Container(
+                                              margin: const EdgeInsets.only(
+                                                top: 16,
+                                                left: 8,
+                                                right: 16,
+                                                bottom: 8,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xff070707),
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(16.0),
+                                                child: content,
+                                              ),
+                                            ),
+                                          ),
+                                          Container(
+                                            margin: const EdgeInsets.only(
+                                              left: 8,
+                                              right: 16,
+                                              bottom: 16,
+                                            ),
+                                            padding: const EdgeInsets.all(16),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xff070707),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.end,
+                                              children: [
+                                                FilledButton.icon(
+                                                  onPressed:
+                                                      isLoading ? null : _submit,
+                                                  style: FilledButton.styleFrom(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                      horizontal: 24,
+                                                      vertical: 16,
+                                                    ),
+                                                  ),
+                                                  icon: isLoading
+                                                      ? const SizedBox(
+                                                          width: 20,
+                                                          height: 20,
+                                                          child:
+                                                              CircularProgressIndicator(
+                                                                  strokeWidth:
+                                                                      2,
+                                                                  color: Colors
+                                                                      .white))
+                                                      : const Icon(Icons.send),
+                                                  label: const Text('发布'),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                      ],
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: content,
+                    ),
             ),
           ],
         ),
