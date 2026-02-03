@@ -75,11 +75,10 @@ class DiscussionModel {
   });
 
   factory DiscussionModel.fromJson(Map<String, dynamic> json) {
-    // 优先使用 description
-    String rawBody = json['description'] as String? ?? '';
+ 
+    final textVal = json['text'];
+    String rawBody = textVal is String ? textVal : '';
     
-    // 如果有 blocks (Dynamic Zone)，尝试提取其中的文本
-    // 这里需要根据具体的 Component 名称来解析
     if (json['blocks'] != null) {
        final blocks = json['blocks'] as List;
        for (final block in blocks) {
@@ -126,13 +125,13 @@ class DiscussionModel {
           );
 
     return DiscussionModel(
-      title: json['title'] as String,
+      title: json['title'] is String ? json['title'] as String : (json['title']?.toString() ?? ''),
       bodyHTML: html,
       cover: coverUrl ?? cover, // 优先使用 Strapi 字段，其次是内容里的图
       rawBodyText: rawBody,
       // number: ... Removed
       id: json['documentId'] as String? ?? json['id']?.toString() ?? '', // 优先 documentId
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: json['createdAt'] is String ? DateTime.parse(json['createdAt'] as String) : DateTime.now(),
       commentsCount: (json['commentsCount'] ?? json['commentscount']) is int
           ? (json['commentsCount'] ?? json['commentscount']) as int
           : int.tryParse(
@@ -140,7 +139,7 @@ class DiscussionModel {
               ) ??
               0,
       lastEditedAt:
-          (json['updatedAt'] as String?).use((v) => DateTime.parse(v)),
+          (json['updatedAt'] is String ? json['updatedAt'] as String : null).use((v) => DateTime.parse(v)),
       author: author,
       comments: commentsJson != null
           ? [

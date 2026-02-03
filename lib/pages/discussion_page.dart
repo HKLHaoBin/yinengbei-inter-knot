@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/click_region.dart';
@@ -343,9 +343,19 @@ class _RightBoxState extends State<RightBox> {
                 ),
               const SizedBox(height: 16),
               SelectionArea(
-                child: HtmlWidget(
-                  discussion.bodyHTML,
-                  textStyle: const TextStyle(fontSize: 16),
+                child: MarkdownBody(
+                  data: discussion.rawBodyText,
+                  selectable: true,
+                  styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                      .copyWith(
+                    p: const TextStyle(fontSize: 16),
+                    blockSpacing: 16,
+                  ),
+                  onTapLink: (text, href, title) {
+                    if (href != null) {
+                      launchUrlString(href);
+                    }
+                  },
                 ),
               ),
             ],
