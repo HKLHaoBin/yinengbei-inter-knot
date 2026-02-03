@@ -172,6 +172,8 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                 showSearchButton: false,
                 showSubscript: false,
                 showSuperscript: false,
+                showColorButton: false,
+                showBackgroundColorButton: false,
                 toolbarIconAlignment: WrapAlignment.start,
                 multiRowsDisplay: false,
               ),
