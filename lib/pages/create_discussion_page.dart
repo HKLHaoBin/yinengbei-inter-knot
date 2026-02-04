@@ -44,13 +44,13 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   bool _isSlugUniqueError(Map<String, dynamic>? body) {
     if (body == null) return false;
-    
+
     // Check for Strapi v5 REST error format
     final error = body['error'];
     if (error is Map) {
       final message = error['message']?.toString().toLowerCase() ?? '';
       if (message.contains('unique') || message.contains('slug')) return true;
-      
+
       final details = error['details'];
       if (details is Map) {
         final errors = details['errors'];
@@ -59,7 +59,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
             if (item is Map) {
               final path = item['path'];
               final msg = item['message']?.toString().toLowerCase() ?? '';
-              if (msg.contains('unique') || 
+              if (msg.contains('unique') ||
                   (path is List && path.contains('slug'))) {
                 return true;
               }
@@ -80,8 +80,10 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     final ext = first['extensions'];
     if (ext is Map<String, dynamic>) {
       final error = ext['error'];
-      final details = error is Map ? (error as Map<String, dynamic>)['details'] : null;
-      final errList = details is Map ? (details as Map<String, dynamic>)['errors'] : null;
+      final details =
+          error is Map ? (error as Map<String, dynamic>)['details'] : null;
+      final errList =
+          details is Map ? (details as Map<String, dynamic>)['errors'] : null;
       if (errList is List) {
         for (final item in errList) {
           if (item is Map<String, dynamic>) {
@@ -101,7 +103,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   Future<void> _submit() async {
     final title = titleController.text.trim();
     final delta = _quillController.document.toDelta();
-    final body = DeltaToMarkdown().convert(delta);
+    final markdownText = DeltaToMarkdown().convert(delta);
     final cover = coverController.text.trim();
 
     if (title.isEmpty) {
@@ -127,49 +129,62 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
       var res = await api.createArticle(
         title: title,
-        text: body,
+        text: markdownText,
         slug: slug,
         coverId: cover.isEmpty ? null : cover,
         authorId: authorId,
       );
 
       // Check for error in REST format (error object) or GraphQL format (errors list)
-      if ((res.body?['error'] != null || res.body?['errors'] != null) && 
-          _isSlugUniqueError(res.body)) {
-        slug = _slugifyUnique(title);
-        res = await api.createArticle(
-          title: title,
-          text: body,
-          slug: slug,
-          coverId: cover.isEmpty ? null : cover,
-          authorId: authorId,
-        );
+      final resBody = res.body;
+      if (resBody != null) {
+        final error = resBody['error'];
+        final errors = resBody['errors'];
+        if ((error != null || errors != null) && _isSlugUniqueError(resBody)) {
+          slug = _slugifyUnique(title);
+          res = await api.createArticle(
+            title: title,
+            text: markdownText,
+            slug: slug,
+            coverId: cover.isEmpty ? null : cover,
+            authorId: authorId,
+          );
+        }
       }
 
       if (res.hasError) {
         // Try to extract Strapi error message
-        final body = res.body;
+        final errorBody = res.body;
         String? msg;
-        if (body != null && body is Map) {
-          final error = body['error'];
+        if (errorBody != null) {
+          final error = errorBody['error'];
+          final errors = errorBody['errors'];
           if (error is Map) {
             msg = error['message']?.toString();
+          } else if (errors is List && errors.isNotEmpty) {
+            final first = errors.first;
+            if (first is Map) {
+              msg = first['message']?.toString();
+            }
           }
         }
         throw Exception(msg ?? res.statusText ?? 'Unknown error');
       }
 
-      if (res.body != null) {
-        final body = res.body!;
-        if (body['errors'] != null) {
-          final errors = body['errors'] as List<dynamic>;
+      // Final check for business logic errors even if status is 200
+      final successBody = res.body;
+      if (successBody != null) {
+        final errors = successBody['errors'];
+        if (errors != null && errors is List) {
           final first = errors.isNotEmpty ? errors[0] : null;
           final msg = first is Map ? first['message']?.toString() : null;
           throw Exception(msg ?? 'Unknown error');
-        } else if (body['error'] != null) {
-          final error = body['error'] as Map;
-          final msg = error['message']?.toString();
-          throw Exception(msg ?? 'Unknown error');
+        } else {
+          final error = successBody['error'];
+          if (error != null && error is Map) {
+            final msg = error['message']?.toString();
+            throw Exception(msg ?? 'Unknown error');
+          }
         }
       }
 
@@ -342,8 +357,8 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
               child: isDesktop
                   ? Row(
                       children: [
-                                    Expanded(
-                                      child: Container(
+                        Expanded(
+                          child: Container(
                             margin: const EdgeInsets.only(
                               top: 16,
                               left: 16,
@@ -387,75 +402,66 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                             ),
                           ),
                         ),
-                                    Expanded(
-                                      flex: 9,
-                                      child: Column(
-                                        children: [
-                                          Expanded(
-                                            child: Container(
-                                              margin: const EdgeInsets.only(
-                                                top: 16,
-                                                left: 8,
-                                                right: 16,
-                                                bottom: 8,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xff070707),
-                                                borderRadius:
-                                                    BorderRadius.circular(16),
-                                              ),
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(16.0),
-                                                child: content,
-                                              ),
-                                            ),
-                                          ),
-                                          Container(
-                                            margin: const EdgeInsets.only(
-                                              left: 8,
-                                              right: 16,
-                                              bottom: 16,
-                                            ),
-                                            padding: const EdgeInsets.all(16),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xff070707),
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.end,
-                                              children: [
-                                                FilledButton.icon(
-                                                  onPressed:
-                                                      isLoading ? null : _submit,
-                                                  style: FilledButton.styleFrom(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 24,
-                                                      vertical: 16,
-                                                    ),
-                                                  ),
-                                                  icon: isLoading
-                                                      ? const SizedBox(
-                                                          width: 20,
-                                                          height: 20,
-                                                          child:
-                                                              CircularProgressIndicator(
-                                                                  strokeWidth:
-                                                                      2,
-                                                                  color: Colors
-                                                                      .white))
-                                                      : const Icon(Icons.send),
-                                                  label: const Text('发布'),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                        Expanded(
+                          flex: 9,
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  margin: const EdgeInsets.only(
+                                    top: 16,
+                                    left: 8,
+                                    right: 16,
+                                    bottom: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xff070707),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: content,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                margin: const EdgeInsets.only(
+                                  left: 8,
+                                  right: 16,
+                                  bottom: 16,
+                                ),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xff070707),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    FilledButton.icon(
+                                      onPressed: isLoading ? null : _submit,
+                                      style: FilledButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 24,
+                                          vertical: 16,
+                                        ),
                                       ),
+                                      icon: isLoading
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: Colors.white))
+                                          : const Icon(Icons.send),
+                                      label: const Text('发布'),
                                     ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     )
                   : Padding(

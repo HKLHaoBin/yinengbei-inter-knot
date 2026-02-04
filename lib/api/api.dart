@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:inter_knot/api/api_exception.dart';
+import 'package:inter_knot/constants/api_config.dart';
 import 'package:inter_knot/helpers/box.dart';
 import 'package:inter_knot/helpers/transform_reports.dart';
 import 'package:inter_knot/models/author.dart';
@@ -15,8 +18,8 @@ import 'package:inter_knot/pages/login_page.dart';
 class AuthApi extends GetConnect {
   @override
   void onInit() {
-    httpClient.baseUrl = 'https://ik.tiwat.cn';
-    httpClient.timeout = const Duration(seconds: 15);
+    httpClient.baseUrl = ApiConfig.baseUrl;
+    httpClient.timeout = ApiConfig.timeout;
     httpClient.defaultContentType = 'application/json';
   }
 
@@ -28,8 +31,9 @@ class AuthApi extends GetConnect {
     );
 
     if (res.hasError) {
-      print('Login Error: ${res.statusCode} - ${res.bodyString}');
-      throw Exception(res.statusText);
+      debugPrint('Login Error: ${res.statusCode} - ${res.bodyString}');
+      throw ApiException(res.statusText ?? 'Login failed',
+          statusCode: res.statusCode);
     }
 
     final body = res.body as Map<String, dynamic>;
@@ -47,8 +51,9 @@ class AuthApi extends GetConnect {
     );
 
     if (res.hasError) {
-      print('Register Error: ${res.statusCode} - ${res.bodyString}');
-      throw Exception(res.statusText);
+      debugPrint('Register Error: ${res.statusCode} - ${res.bodyString}');
+      throw ApiException(res.statusText ?? 'Registration failed',
+          statusCode: res.statusCode);
     }
 
     final body = res.body as Map<String, dynamic>;
@@ -64,14 +69,14 @@ class BaseConnect extends GetConnect {
 
   @override
   void onInit() {
-    httpClient.baseUrl = 'https://ik.tiwat.cn';
+    httpClient.baseUrl = ApiConfig.baseUrl;
     httpClient.defaultContentType = 'application/json';
-    httpClient.addRequestModifier<dynamic>((request) async {
-      var token = box.read<String>('access_token') ?? '';
+    httpClient.addRequestModifier<dynamic>((request) {
+      final token = box.read<String>('access_token') ?? '';
       if (token.isNotEmpty) {
         request.headers['Authorization'] = 'Bearer $token';
       }
-      return request;
+      return Future.value(request);
     });
     httpClient.addResponseModifier((req, rep) {
       if (rep.statusCode == HttpStatus.unauthorized) {
@@ -85,7 +90,7 @@ class BaseConnect extends GetConnect {
   /// Extracts 'data' from Strapi v5 response and handles errors
   T unwrapData<T>(Response response) {
     if (response.hasError) {
-      print('API Error: ${response.statusCode} - ${response.bodyString}');
+      debugPrint('API Error: ${response.statusCode} - ${response.bodyString}');
       final body = response.body;
       String? message;
       if (body is Map) {
@@ -94,7 +99,8 @@ class BaseConnect extends GetConnect {
           message = error['message']?.toString();
         }
       }
-      throw Exception(message ?? response.statusText ?? 'Unknown error');
+      throw ApiException(message ?? response.statusText ?? 'Unknown error',
+          statusCode: response.statusCode, details: response.bodyString);
     }
 
     final body = response.body;
@@ -122,8 +128,8 @@ class Api extends BaseConnect {
     final normalized = input
         .toLowerCase()
         .trim()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-        .replaceAll(RegExp(r'-{2,}'), '-')
+        .replaceAll(RegExp('[^a-z0-9]+'), '-')
+        .replaceAll(RegExp('-{2,}'), '-')
         .replaceAll(RegExp(r'^-+|-+$'), '');
     var slug = normalized.isEmpty ? 'author' : normalized;
 
@@ -138,6 +144,22 @@ class Api extends BaseConnect {
   Object _coerceId(String value) {
     final asInt = int.tryParse(value);
     return asInt ?? value;
+  }
+
+  Map<String, String> _buildPaginationQuery({
+    required int start,
+    int limit = ApiConfig.defaultPageSize,
+    Map<String, String>? filters,
+    Map<String, String>? populate,
+    String? sort,
+  }) {
+    return {
+      'pagination[start]': start.toString(),
+      'pagination[limit]': limit.toString(),
+      if (sort != null) 'sort': sort,
+      ...?filters,
+      ...?populate,
+    };
   }
 
   Future<DiscussionModel> getDiscussion(String id) async {
@@ -156,16 +178,19 @@ class Api extends BaseConnect {
 
   Future<PaginationModel<HDataModel>> search(
       String query, String endCur) async {
-    final Map<String, dynamic> queryParams = {
-      'pagination[start]': endCur.isEmpty ? '0' : endCur,
-      'pagination[limit]': '20',
-      'sort': 'createdAt:desc',
-    };
+    final start = int.tryParse(endCur.isEmpty ? '0' : endCur) ?? 0;
 
+    final filters = <String, String>{};
     if (query.isNotEmpty) {
-      queryParams['filters[\$or][0][title][\$contains]'] = query;
-      queryParams['filters[\$or][1][text][\$contains]'] = query;
+      filters['filters[\$or][0][title][\$contains]'] = query;
+      filters['filters[\$or][1][text][\$contains]'] = query;
     }
+
+    final queryParams = _buildPaginationQuery(
+      start: start,
+      sort: 'createdAt:desc',
+      filters: filters,
+    );
 
     final res = await get(
       '/api/articles',
@@ -173,14 +198,13 @@ class Api extends BaseConnect {
     );
 
     final data = unwrapData<List<dynamic>>(res);
-    final hasNext = data.length >= 20;
-    final start = int.tryParse(endCur.isEmpty ? '0' : endCur) ?? 0;
+    final hasNext = data.length >= ApiConfig.defaultPageSize;
 
     return PaginationModel(
       nodes: data
           .map((e) => HDataModel.fromJson(e as Map<String, dynamic>))
           .toList(),
-      endCursor: (start + 20).toString(),
+      endCursor: (start + ApiConfig.defaultPageSize).toString(),
       hasNextPage: hasNext,
     );
   }
@@ -188,25 +212,26 @@ class Api extends BaseConnect {
   Future<PaginationModel<CommentModel>> getComments(
       String id, String endCur) async {
     final start = int.tryParse(endCur.isEmpty ? '0' : endCur) ?? 0;
-    const limit = 20;
+
+    final queryParams = _buildPaginationQuery(
+      start: start,
+      sort: 'createdAt:asc',
+      filters: {'filters[article][documentId][\$eq]': id},
+      populate: {'populate[author][populate]': 'avatar'},
+    );
 
     final res = await get(
       '/api/comments',
-      query: {
-        'filters[article][documentId][\$eq]': id,
-        'populate[author][populate]': 'avatar',
-        'sort': 'createdAt:asc',
-        'pagination[start]': start.toString(),
-        'pagination[limit]': limit.toString(),
-      },
+      query: queryParams,
     );
 
     final data = unwrapData<List<dynamic>>(res);
     final comments =
         data.cast<Map<String, dynamic>>().map(CommentModel.fromJson).toList();
 
-    final hasNextPage = comments.length >= limit;
-    final nextEndCur = hasNextPage ? (start + limit).toString() : null;
+    final hasNextPage = comments.length >= ApiConfig.defaultPageSize;
+    final nextEndCur =
+        hasNextPage ? (start + ApiConfig.defaultPageSize).toString() : null;
 
     return PaginationModel(
       nodes: comments,
@@ -221,10 +246,11 @@ class Api extends BaseConnect {
     String? authorId,
   }) {
     if (discussionId.isEmpty) {
-      throw Exception('Discussion ID cannot be empty');
+      throw ApiException('Discussion ID cannot be empty');
     }
 
-    print('Adding comment to discussion: $discussionId, author: $authorId');
+    debugPrint(
+        'Adding comment to discussion: $discussionId, author: $authorId');
 
     return post(
       '/api/comments',
@@ -242,15 +268,18 @@ class Api extends BaseConnect {
       getFavorites(String username, String endCur) async {
     final start = int.tryParse(endCur.isEmpty ? '0' : endCur) ?? 0;
 
-    final res = await get(
-      '/api/favorites',
-      query: {
-        'filters[user][username][\$eq]': username,
+    final queryParams = _buildPaginationQuery(
+      start: start,
+      filters: {'filters[user][username][\$eq]': username},
+      populate: {
         'populate[article][fields][0]': 'documentId',
         'populate[article][fields][1]': 'updatedAt',
-        'pagination[start]': start.toString(),
-        'pagination[limit]': '20',
       },
+    );
+
+    final res = await get(
+      '/api/favorites',
+      query: queryParams,
     );
 
     List<dynamic> list;
@@ -303,7 +332,7 @@ class Api extends BaseConnect {
         }
       }
     } catch (e) {
-      print('GetFavoriteId Error: $e');
+      debugPrint('GetFavoriteId Error: $e');
     }
     return null;
   }
@@ -326,7 +355,7 @@ class Api extends BaseConnect {
       final data = unwrapData<Map<String, dynamic>>(res);
       return data['documentId']?.toString();
     } catch (e) {
-      print('CreateFavorite Error: $e');
+      debugPrint('CreateFavorite Error: $e');
       return null;
     }
   }
@@ -375,7 +404,7 @@ class Api extends BaseConnect {
         }
       }
     } catch (e) {
-      print('FindAuthor Error: $e');
+      debugPrint('FindAuthor Error: $e');
     }
     return null;
   }
@@ -400,7 +429,7 @@ class Api extends BaseConnect {
       // Simple retry logic for slug conflict if needed,
       // but strictly we should check the error message.
       if (res.bodyString?.contains('unique') == true) {
-        print('Slug conflict detected, retrying find by name');
+        debugPrint('Slug conflict detected, retrying find by name');
         await Future.delayed(const Duration(milliseconds: 300));
         return await findAuthorIdByName(name);
       }
@@ -410,7 +439,7 @@ class Api extends BaseConnect {
       final data = unwrapData<Map<String, dynamic>>(res);
       return data['documentId'] as String?;
     } catch (e) {
-      print('CreateAuthor Error: $e');
+      debugPrint('CreateAuthor Error: $e');
       return null;
     }
   }
@@ -428,7 +457,7 @@ class Api extends BaseConnect {
       },
     );
     if (res.hasError) {
-      print('UpdateAuthor Error: ${res.bodyString}');
+      debugPrint('UpdateAuthor Error: ${res.bodyString}');
     }
   }
 
@@ -439,23 +468,23 @@ class Api extends BaseConnect {
     var existingId = await findAuthorIdByName(name);
     if (existingId != null && existingId.isNotEmpty) return existingId;
 
-    await Future.delayed(const Duration(milliseconds: 500));
-    existingId = await findAuthorIdByName(name);
-    if (existingId != null && existingId.isNotEmpty) return existingId;
+    // Exponential backoff
+    int delay = 200;
+    for (int i = 0; i < 3; i++) {
+      await Future.delayed(Duration(milliseconds: delay));
+      existingId = await findAuthorIdByName(name);
+      if (existingId != null && existingId.isNotEmpty) return existingId;
+      delay *= 2; // 200, 400, 800
+    }
 
-    await Future.delayed(const Duration(milliseconds: 500));
-    existingId = await findAuthorIdByName(name);
-    if (existingId != null && existingId.isNotEmpty) return existingId;
-
-    print('Warning: Author not found after retries, creating as fallback');
-    return createAuthor(name: name, userId: null, ensureUniqueSlug: true);
+    debugPrint('Warning: Author not found after retries, creating as fallback');
+    return createAuthor(name: name, ensureUniqueSlug: true);
   }
 
   Future<Response<Map<String, dynamic>>> deleteDiscussion(String id) =>
       delete('/api/articles/$id');
 
-  Future<PaginationModel<HDataModel>> getPinnedDiscussions(
-      String? endCur) async {
+  Future<PaginationModel<HDataModel>> getPinnedDiscussions(String? endCur) {
     // Reusing search/list endpoint for now as placeholder
     return search('', endCur ?? '');
   }
@@ -485,7 +514,7 @@ class Api extends BaseConnect {
     );
 
     final list = unwrapData<List<dynamic>>(res);
-    if (list.isEmpty) throw Exception('User not found');
+    if (list.isEmpty) throw ApiException('User not found');
 
     return AuthorModel.fromJson(list.first as Map<String, dynamic>);
   }
@@ -521,13 +550,13 @@ class Api extends BaseConnect {
     // upload response in strapi is typically a list of files
     final uploadedList = unwrapData<List<dynamic>>(uploadRes);
     if (uploadedList.isEmpty) {
-      throw Exception('Upload failed');
+      throw ApiException('Upload failed');
     }
 
     final uploaded = uploadedList.first as Map;
     final rawAvatarId = uploaded['id'] ?? uploaded['documentId'];
     if (rawAvatarId == null) {
-      throw Exception('Upload response missing file id');
+      throw ApiException('Upload response missing file id');
     }
 
     // Update Author with new avatar
@@ -541,7 +570,7 @@ class Api extends BaseConnect {
     );
 
     if (updateRes.hasError) {
-      throw Exception(updateRes.bodyString ??
+      throw ApiException(updateRes.bodyString ??
           updateRes.statusText ??
           'Failed to bind avatar');
     }
