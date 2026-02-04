@@ -285,16 +285,15 @@ class Controller extends GetxController {
       }
 
       final bytes = await file.readAsBytes();
-      await api.uploadAvatar(
+      final avatarUrl = await api.uploadAvatar(
         authorId: targetAuthorId,
         bytes: bytes,
         filename: file.name,
       );
-
-      final refreshedUser = await api.getSelfUserInfo('');
-      user(refreshedUser);
-      if (refreshedUser.authorId != null && refreshedUser.authorId!.isNotEmpty) {
-        authorId.value = refreshedUser.authorId;
+      final current = user.value;
+      if (current != null && avatarUrl != null && avatarUrl.isNotEmpty) {
+        current.avatar = avatarUrl;
+        user.refresh();
       }
       Get.rawSnackbar(message: '头像已更新'.tr);
     } catch (e) {

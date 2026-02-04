@@ -65,21 +65,7 @@ String search(String query, String? endCur, [int length = 20]) => '''
 String getUserInfo(String username) =>
     '{ user(username: "$username") { username avatarUrl createdAt } }'; // Simplified
 
-String getSelfUserInfo() => '''
-  query {
-    me {
-      id
-      username
-      email
-      author {
-        documentId
-        avatar {
-          url
-        }
-      }
-    }
-  }
-''';
+String getSelfUserInfo() => '{ me { id username email } }';
 
 // Pinned discussions not implemented in backend, falling back to search or empty
 String getPinnedDiscussions(String? endCur) =>
