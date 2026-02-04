@@ -43,7 +43,35 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   }
 
   bool _isSlugUniqueError(Map<String, dynamic>? body) {
-    final errors = body?['errors'];
+    if (body == null) return false;
+    
+    // Check for Strapi v5 REST error format
+    final error = body['error'];
+    if (error is Map) {
+      final message = error['message']?.toString().toLowerCase() ?? '';
+      if (message.contains('unique') || message.contains('slug')) return true;
+      
+      final details = error['details'];
+      if (details is Map) {
+        final errors = details['errors'];
+        if (errors is List) {
+          for (final item in errors) {
+            if (item is Map) {
+              final path = item['path'];
+              final msg = item['message']?.toString().toLowerCase() ?? '';
+              if (msg.contains('unique') || 
+                  (path is List && path.contains('slug'))) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    // Fallback for GraphQL style (if any legacy code remains)
+    final errors = body['errors'];
     if (errors is! List || errors.isEmpty) return false;
     final first = errors.first;
     if (first is! Map) return false;
@@ -105,7 +133,9 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         authorId: authorId,
       );
 
-      if (res.body?['errors'] != null && _isSlugUniqueError(res.body)) {
+      // Check for error in REST format (error object) or GraphQL format (errors list)
+      if ((res.body?['error'] != null || res.body?['errors'] != null) && 
+          _isSlugUniqueError(res.body)) {
         slug = _slugifyUnique(title);
         res = await api.createArticle(
           title: title,
@@ -117,14 +147,30 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       }
 
       if (res.hasError) {
-        throw Exception(res.statusText ?? 'Unknown error');
+        // Try to extract Strapi error message
+        final body = res.body;
+        String? msg;
+        if (body != null && body is Map) {
+          final error = body['error'];
+          if (error is Map) {
+            msg = error['message']?.toString();
+          }
+        }
+        throw Exception(msg ?? res.statusText ?? 'Unknown error');
       }
 
-      if (res.body?['errors'] != null) {
-        final errors = res.body!['errors'] as List<dynamic>;
-        final first = errors.isNotEmpty ? errors[0] : null;
-        final msg = first is Map ? first['message']?.toString() : null;
-        throw Exception(msg ?? 'Unknown error');
+      if (res.body != null) {
+        final body = res.body!;
+        if (body['errors'] != null) {
+          final errors = body['errors'] as List<dynamic>;
+          final first = errors.isNotEmpty ? errors[0] : null;
+          final msg = first is Map ? first['message']?.toString() : null;
+          throw Exception(msg ?? 'Unknown error');
+        } else if (body['error'] != null) {
+          final error = body['error'] as Map;
+          final msg = error['message']?.toString();
+          throw Exception(msg ?? 'Unknown error');
+        }
       }
 
       Get.back();
