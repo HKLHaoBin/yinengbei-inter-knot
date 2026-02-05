@@ -56,6 +56,32 @@ class Controller extends GetxController {
     return url.contains('?') ? '$url&v=$ts' : '$url?v=$ts';
   }
 
+  String? _avatarCacheKeyForUser(AuthorModel? u) {
+    final id = u?.userId;
+    if (id != null && id.isNotEmpty) return 'avatar_url_$id';
+    final login = u?.login;
+    if (login != null && login.isNotEmpty) return 'avatar_url_$login';
+    return null;
+  }
+
+  void _cacheAvatarForUser(AuthorModel? u, String url) {
+    final key = _avatarCacheKeyForUser(u);
+    if (key == null) return;
+    box.write(key, url);
+  }
+
+  String? _getCachedAvatarForUser(AuthorModel? u) {
+    final key = _avatarCacheKeyForUser(u);
+    if (key == null) return null;
+    return box.read<String>(key);
+  }
+
+  void _clearCachedAvatarForUser(AuthorModel? u) {
+    final key = _avatarCacheKeyForUser(u);
+    if (key == null) return;
+    box.remove(key);
+  }
+
   Future<void> updateUserAvatarFromDiscussionsCache() async {
     final login = user.value?.login;
     if (login == null || login.isEmpty) return;
@@ -68,6 +94,7 @@ class Controller extends GetxController {
           final avatar = discussion.author.avatar;
           if (avatar.isNotEmpty) {
             user.value?.avatar = avatar;
+            _cacheAvatarForUser(user.value, avatar);
             user.refresh();
             return;
           }
@@ -108,11 +135,23 @@ class Controller extends GetxController {
       if (forceAvatarFetch) {
         final id = authorId.value ?? u.authorId;
         if (id != null && id.isNotEmpty) {
-          final url = await api.getAuthorAvatarUrl(id);
-          if (url != null && url.isNotEmpty) {
-            u.avatar = _withCacheBuster(url);
+          try {
+            final url = await api.getAuthorAvatarUrl(id);
+            if (url != null && url.isNotEmpty) {
+              u.avatar = _withCacheBuster(url);
+            }
+          } catch (_) {
+            // Ignore forbidden or missing permission.
           }
         }
+      }
+      if (u.avatar.isEmpty) {
+        final cached = _getCachedAvatarForUser(u);
+        if (cached != null && cached.isNotEmpty) {
+          u.avatar = cached;
+        }
+      } else {
+        _cacheAvatarForUser(u, u.avatar);
       }
       user.refresh();
       await updateUserAvatarFromDiscussionsCache();
@@ -172,8 +211,10 @@ class Controller extends GetxController {
             await refreshFavorites();
           }
        } else {
+         final u = user.value;
          user.value = null;
          authorId.value = null;
+         _clearCachedAvatarForUser(u);
          box.remove('access_token');
          bookmarks.clear();
          favoriteIds.clear();
@@ -368,6 +409,7 @@ class Controller extends GetxController {
       if (current != null && avatarUrl != null && avatarUrl.isNotEmpty) {
         final refreshed = _withCacheBuster(avatarUrl);
         current.avatar = refreshed;
+        _cacheAvatarForUser(current, refreshed);
         user.refresh();
         await _refreshAvatarCaches(refreshed);
       }
