@@ -60,11 +60,14 @@ class AuthorModel {
     final authorDataMap = authorMap?['data'];
     final authorDataMapTyped =
         authorDataMap is Map<String, dynamic> ? authorDataMap : null;
+    final authorDataAttributes = authorDataMapTyped?['attributes'];
+    final authorAttributes = authorMap?['attributes'];
+
     final avatarData = json['avatar'] ??
         authorMap?['avatar'] ??
         authorDataMapTyped?['avatar'] ??
-        authorDataMapTyped?['attributes']?['avatar'] ??
-        authorMap?['attributes']?['avatar'];
+        (authorDataAttributes is Map ? authorDataAttributes['avatar'] : null) ??
+        (authorAttributes is Map ? authorAttributes['avatar'] : null);
     String? avatarUrl = extractAvatarUrl(avatarData);
 
     if (avatarUrl != null && !avatarUrl.startsWith('http')) {
