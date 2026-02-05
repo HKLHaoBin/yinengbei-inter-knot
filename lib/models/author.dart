@@ -20,7 +20,7 @@ class AuthorModel {
     this.authorId,
   }) : name = name ?? login;
 
-  static String? _extractAvatarUrl(dynamic avatarData) {
+  static String? extractAvatarUrl(dynamic avatarData) {
     if (avatarData is! Map) return null;
 
     final directUrl = avatarData['url'] as String?;
@@ -57,8 +57,15 @@ class AuthorModel {
   factory AuthorModel.fromJson(Map<String, dynamic> json) {
     final authorData = json['author'];
     final authorMap = authorData is Map<String, dynamic> ? authorData : null;
-    final avatarData = json['avatar'] ?? authorMap?['avatar'];
-    String? avatarUrl = _extractAvatarUrl(avatarData);
+    final authorDataMap = authorMap?['data'];
+    final authorDataMapTyped =
+        authorDataMap is Map<String, dynamic> ? authorDataMap : null;
+    final avatarData = json['avatar'] ??
+        authorMap?['avatar'] ??
+        authorDataMapTyped?['avatar'] ??
+        authorDataMapTyped?['attributes']?['avatar'] ??
+        authorMap?['attributes']?['avatar'];
+    String? avatarUrl = extractAvatarUrl(avatarData);
 
     if (avatarUrl != null && !avatarUrl.startsWith('http')) {
       avatarUrl = '$_baseUrl$avatarUrl';
@@ -66,8 +73,13 @@ class AuthorModel {
 
     final username = json['username'] as String?;
     final userId = json['id']?.toString();
-    final authorId = authorMap?['documentId']?.toString() ??
+    final authorId = authorDataMapTyped?['documentId']?.toString() ??
+        authorDataMapTyped?['id']?.toString() ??
+        authorMap?['documentId']?.toString() ??
         authorMap?['id']?.toString() ??
+        (authorData is String || authorData is num
+            ? authorData.toString()
+            : null) ??
         json['authorId']?.toString();
     return AuthorModel(
       login: json['name'] as String? ?? username ?? 'unknown',

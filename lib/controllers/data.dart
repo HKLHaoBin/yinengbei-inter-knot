@@ -51,6 +51,115 @@ class Controller extends GetxController {
   // Api instance
   final api = Get.find<Api>();
 
+  String _withCacheBuster(String url) {
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    return url.contains('?') ? '$url&v=$ts' : '$url?v=$ts';
+  }
+
+  String? _avatarCacheKeyForUser(AuthorModel? u) {
+    final id = u?.userId;
+    if (id != null && id.isNotEmpty) return 'avatar_url_$id';
+    final login = u?.login;
+    if (login != null && login.isNotEmpty) return 'avatar_url_$login';
+    return null;
+  }
+
+  void _cacheAvatarForUser(AuthorModel? u, String url) {
+    final key = _avatarCacheKeyForUser(u);
+    if (key == null) return;
+    box.write(key, url);
+  }
+
+  String? _getCachedAvatarForUser(AuthorModel? u) {
+    final key = _avatarCacheKeyForUser(u);
+    if (key == null) return null;
+    return box.read<String>(key);
+  }
+
+  void _clearCachedAvatarForUser(AuthorModel? u) {
+    final key = _avatarCacheKeyForUser(u);
+    if (key == null) return;
+    box.remove(key);
+  }
+
+  Future<void> updateUserAvatarFromDiscussionsCache() async {
+    final login = user.value?.login;
+    if (login == null || login.isEmpty) return;
+    if (user.value?.avatar.isNotEmpty == true) return;
+
+    for (final future in HDataModel.discussionsCache.values) {
+      try {
+        final discussion = await future;
+        if (discussion != null && discussion.author.login == login) {
+          final avatar = discussion.author.avatar;
+          if (avatar.isNotEmpty) {
+            user.value?.avatar = avatar;
+            _cacheAvatarForUser(user.value, avatar);
+            user.refresh();
+            return;
+          }
+        }
+      } catch (_) {
+        // Ignore cache errors; continue scanning.
+      }
+    }
+  }
+
+  Future<void> _refreshAvatarCaches(String newUrl) async {
+    final login = user.value?.login;
+    if (login == null || login.isEmpty) return;
+
+    final futures = HDataModel.discussionsCache.values.toList();
+    for (final future in futures) {
+      try {
+        final discussion = await future;
+        if (discussion != null && discussion.author.login == login) {
+          discussion.author.avatar = newUrl;
+        }
+      } catch (_) {
+        // Ignore cache update errors.
+      }
+    }
+
+    searchResult.refresh();
+    bookmarks.refresh();
+    history.refresh();
+  }
+
+  Future<void> refreshSelfUserInfo({bool forceAvatarFetch = true}) async {
+    try {
+      final u = await api.getSelfUserInfo('');
+      user(u);
+      await ensureAuthorForUser(u);
+
+      if (forceAvatarFetch) {
+        final id = authorId.value ?? u.authorId;
+        if (id != null && id.isNotEmpty) {
+          try {
+            final url = await api.getAuthorAvatarUrl(id);
+            if (url != null && url.isNotEmpty) {
+              u.avatar = _withCacheBuster(url);
+            }
+          } catch (_) {
+            // Ignore forbidden or missing permission.
+          }
+        }
+      }
+      if (u.avatar.isEmpty) {
+        final cached = _getCachedAvatarForUser(u);
+        if (cached != null && cached.isNotEmpty) {
+          u.avatar = cached;
+        }
+      } else {
+        _cacheAvatarForUser(u, u.avatar);
+      }
+      user.refresh();
+      await updateUserAvatarFromDiscussionsCache();
+    } catch (e) {
+      logger.e('Failed to refresh self user info', error: e);
+    }
+  }
+
   bool canVisit(DiscussionModel discussion, bool isPin) =>
       report[discussion.id] == null ||
       [owner, ...collaborators].contains(discussion.author.login) ||
@@ -80,9 +189,7 @@ class Controller extends GetxController {
     if (getToken().isNotEmpty) {
        isLogin(true);
        try {
-         final u = await api.getSelfUserInfo('');
-         user(u);
-         await ensureAuthorForUser(u);
+         await refreshSelfUserInfo();
          await refreshFavorites();
        } catch (e) {
          // Keep login state; token will be cleared on 401 by BaseConnect
@@ -95,9 +202,7 @@ class Controller extends GetxController {
           // fetch user info if not present
           if (user.value == null) {
               try {
-                final u = await api.getSelfUserInfo('');
-                user(u);
-                await ensureAuthorForUser(u);
+                await refreshSelfUserInfo();
                 await refreshFavorites();
               } catch(e) {
                 logger.e('Failed to fetch user after login', error: e);
@@ -106,8 +211,10 @@ class Controller extends GetxController {
             await refreshFavorites();
           }
        } else {
+         final u = user.value;
          user.value = null;
          authorId.value = null;
+         _clearCachedAvatarForUser(u);
          box.remove('access_token');
          bookmarks.clear();
          favoriteIds.clear();
@@ -239,6 +346,7 @@ class Controller extends GetxController {
     searchEndCur = pagination.endCursor;
     searchHasNextPage.value = pagination.hasNextPage;
     searchResult.addAll(pagination.nodes);
+    await updateUserAvatarFromDiscussionsCache();
   }
 
   Future<String?> ensureAuthorForUser(AuthorModel? u) async {
@@ -255,6 +363,13 @@ class Controller extends GetxController {
     );
     if (id != null && id.isNotEmpty) {
       authorId.value = id;
+      if (u.userId != null && u.userId!.isNotEmpty) {
+        try {
+          await api.linkAuthorToUser(authorId: id, userId: u.userId!);
+        } catch (_) {
+          // Best-effort linking; avoid blocking login flow.
+        }
+      }
     }
     return id;
   }
@@ -292,9 +407,13 @@ class Controller extends GetxController {
       );
       final current = user.value;
       if (current != null && avatarUrl != null && avatarUrl.isNotEmpty) {
-        current.avatar = avatarUrl;
+        final refreshed = _withCacheBuster(avatarUrl);
+        current.avatar = refreshed;
+        _cacheAvatarForUser(current, refreshed);
         user.refresh();
+        await _refreshAvatarCaches(refreshed);
       }
+      await refreshSelfUserInfo();
       Get.rawSnackbar(message: '头像已更新'.tr);
     } catch (e) {
       Get.rawSnackbar(message: '头像上传失败: $e');
