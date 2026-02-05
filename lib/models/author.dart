@@ -57,12 +57,13 @@ class AuthorModel {
   factory AuthorModel.fromJson(Map<String, dynamic> json) {
     final authorData = json['author'];
     final authorMap = authorData is Map<String, dynamic> ? authorData : null;
-    final authorDataMap =
-        authorMap?['data'] is Map<String, dynamic> ? authorMap?['data'] : null;
+    final authorDataMap = authorMap?['data'];
+    final authorDataMapTyped =
+        authorDataMap is Map<String, dynamic> ? authorDataMap : null;
     final avatarData = json['avatar'] ??
         authorMap?['avatar'] ??
-        authorDataMap?['avatar'] ??
-        authorDataMap?['attributes']?['avatar'] ??
+        authorDataMapTyped?['avatar'] ??
+        authorDataMapTyped?['attributes']?['avatar'] ??
         authorMap?['attributes']?['avatar'];
     String? avatarUrl = extractAvatarUrl(avatarData);
 
@@ -72,8 +73,8 @@ class AuthorModel {
 
     final username = json['username'] as String?;
     final userId = json['id']?.toString();
-    final authorId = authorDataMap?['documentId']?.toString() ??
-        authorDataMap?['id']?.toString() ??
+    final authorId = authorDataMapTyped?['documentId']?.toString() ??
+        authorDataMapTyped?['id']?.toString() ??
         authorMap?['documentId']?.toString() ??
         authorMap?['id']?.toString() ??
         (authorData is String || authorData is num
