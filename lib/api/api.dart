@@ -115,6 +115,12 @@ class BaseConnect extends GetConnect {
 }
 
 class Api extends BaseConnect {
+  String? _normalizeFileUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('http')) return url;
+    return '${ApiConfig.baseUrl}$url';
+  }
+
   String _contentTypeFromFilename(String filename) {
     final ext = filename.toLowerCase();
     if (ext.endsWith('.png')) return 'image/png';
@@ -593,6 +599,7 @@ class Api extends BaseConnect {
     if (rawAvatarId == null) {
       throw ApiException('Upload response missing file id');
     }
+    final uploadedUrl = _normalizeFileUrl(uploaded['url'] as String?);
 
     // Update Author with new avatar
     final updateRes = await put(
@@ -610,11 +617,14 @@ class Api extends BaseConnect {
           'Failed to bind avatar');
     }
 
-    final authorData = unwrapData<Map<String, dynamic>>(updateRes);
-    final avatarMap = authorData['avatar'] as Map<String, dynamic>?;
-    final url = avatarMap?['url'] as String?;
+    if (uploadedUrl != null && uploadedUrl.isNotEmpty) {
+      return uploadedUrl;
+    }
 
-    if (url == null || url.isEmpty) return null;
-    return url.startsWith('http') ? url : 'https://ik.tiwat.cn$url';
+    try {
+      return await getAuthorAvatarUrl(authorId);
+    } catch (_) {
+      return null;
+    }
   }
 }

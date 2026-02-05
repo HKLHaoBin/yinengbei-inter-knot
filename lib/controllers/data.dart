@@ -56,6 +56,27 @@ class Controller extends GetxController {
     return url.contains('?') ? '$url&v=$ts' : '$url?v=$ts';
   }
 
+  Future<void> _refreshAvatarCaches(String newUrl) async {
+    final login = user.value?.login;
+    if (login == null || login.isEmpty) return;
+
+    final futures = HDataModel.discussionsCache.values.toList();
+    for (final future in futures) {
+      try {
+        final discussion = await future;
+        if (discussion != null && discussion.author.login == login) {
+          discussion.author.avatar = newUrl;
+        }
+      } catch (_) {
+        // Ignore cache update errors.
+      }
+    }
+
+    searchResult.refresh();
+    bookmarks.refresh();
+    history.refresh();
+  }
+
   bool canVisit(DiscussionModel discussion, bool isPin) =>
       report[discussion.id] == null ||
       [owner, ...collaborators].contains(discussion.author.login) ||
@@ -297,8 +318,10 @@ class Controller extends GetxController {
       );
       final current = user.value;
       if (current != null && avatarUrl != null && avatarUrl.isNotEmpty) {
-        current.avatar = _withCacheBuster(avatarUrl);
+        final refreshed = _withCacheBuster(avatarUrl);
+        current.avatar = refreshed;
         user.refresh();
+        await _refreshAvatarCaches(refreshed);
       }
       Get.rawSnackbar(message: '头像已更新'.tr);
     } catch (e) {
