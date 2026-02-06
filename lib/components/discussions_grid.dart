@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:inter_knot/components/discussion_card.dart';
 import 'package:inter_knot/helpers/num2dur.dart';
+import 'package:inter_knot/helpers/smooth_scroll.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/pages/discussion_page.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:waterfall_flow/waterfall_flow.dart';
 
-class DiscussionGrid extends StatelessWidget {
+class DiscussionGrid extends StatefulWidget {
   const DiscussionGrid({
     super.key,
     required this.list,
@@ -19,13 +20,33 @@ class DiscussionGrid extends StatelessWidget {
   final void Function()? fetchData;
 
   @override
+  State<DiscussionGrid> createState() => _DiscussionGridState();
+}
+
+class _DiscussionGridState extends State<DiscussionGrid> {
+  final scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final list = widget.list;
+    final fetchData = widget.fetchData;
+    final hasNextPage = widget.hasNextPage;
     if (list.isEmpty) return const Center(child: Text('空'));
     return LayoutBuilder(
       builder: (context, con) {
-        return WaterfallFlow.builder(
-          padding: const EdgeInsets.all(8),
-          gridDelegate: SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
+        return SmoothScroll(
+          controller: scrollController,
+          child: WaterfallFlow.builder(
+            controller: scrollController,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(8),
+            gridDelegate: SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
             maxCrossAxisExtent: 275,
             mainAxisSpacing: 16,
             crossAxisSpacing: 16,
@@ -143,6 +164,7 @@ class DiscussionGrid extends StatelessWidget {
               },
             );
           },
+        ),
         );
       },
     );

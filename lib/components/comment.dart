@@ -93,7 +93,10 @@ class Comment extends StatelessWidget {
                 SelectionArea(
                   child: HtmlWidget(
                     comment.bodyHTML,
-                    textStyle: const TextStyle(fontSize: 16),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xff808080),
+                    ),
                   ),
                 ),
                 const Divider(),
