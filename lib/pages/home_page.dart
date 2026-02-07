@@ -68,7 +68,11 @@ class _HomePageState extends State<HomePage> {
       ],
     );
 
-    if (GetPlatform.isDesktop) {
+    // Desktop/expanded layout uses SmoothScroll with NeverScrollableScrollPhysics
+    // Compact layout uses standard scrolling
+    final isCompact = MediaQuery.of(context).size.width < 640;
+    
+    if (!isCompact) {
       return SmoothScroll(
         controller: scrollController,
         child: SingleChildScrollView(

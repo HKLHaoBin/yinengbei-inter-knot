@@ -1,7 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:get/get.dart';
 
 class AdaptiveSmoothScroll extends StatelessWidget {
   final ScrollController controller;
@@ -17,7 +16,8 @@ class AdaptiveSmoothScroll extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (GetPlatform.isDesktop) {
+    final isCompact = MediaQuery.of(context).size.width < 640;
+    if (!isCompact) {
       return SmoothScroll(
         controller: controller,
         scrollSpeed: scrollSpeed,

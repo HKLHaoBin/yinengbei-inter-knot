@@ -35,6 +35,9 @@ class _SearchPageState extends State<SearchPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final width = MediaQuery.of(context).size.width;
+    final isCompact = width < 640;
+
     return Stack(
       children: [
         Column(
@@ -55,10 +58,10 @@ class _SearchPageState extends State<SearchPage>
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: GetPlatform.isMobile
+              child: isCompact
                   ? RefreshIndicator(
                       onRefresh: () async {
-                        c.refreshSearchData();
+                        await c.refreshSearchData();
                       },
                       child: Obx(() {
                         return DiscussionGrid(
@@ -78,7 +81,7 @@ class _SearchPageState extends State<SearchPage>
             ),
           ],
         ),
-        if (!GetPlatform.isMobile)
+        if (!isCompact)
           Positioned(
             bottom: 24,
             right: 24,

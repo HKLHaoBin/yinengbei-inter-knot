@@ -62,7 +62,11 @@ class MyHomePage extends GetView<Controller> {
 
   @override
   Widget build(BuildContext context) {
-    if (GetPlatform.isMobile) {
+    // Determine layout based on screen width
+    // Use 640 logical pixels as the breakpoint for mobile layout
+    final isCompact = MediaQuery.of(context).size.width < 640;
+
+    if (isCompact) {
       return Scaffold(
         backgroundColor: const Color(0xff121212),
         body: Column(

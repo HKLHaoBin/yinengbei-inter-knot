@@ -13,12 +13,13 @@ class MyAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isCompact = width < 640;
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: SizedBox(
-        width: GetPlatform.isMobile
-            ? MediaQuery.of(context).size.width
-            : max(MediaQuery.of(context).size.width, 640),
+        width: isCompact ? width : max(width, 640),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           color: Colors.black,
@@ -84,7 +85,7 @@ class MyAppBar extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               const Spacer(),
-              if (!GetPlatform.isMobile)
+              if (!isCompact)
                 Container(
                   decoration: BoxDecoration(
                     border: Border.all(

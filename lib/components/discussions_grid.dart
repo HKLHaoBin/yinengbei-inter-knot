@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:inter_knot/components/discussion_card.dart';
 import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/smooth_scroll.dart';
@@ -41,9 +40,10 @@ class _DiscussionGridState extends State<DiscussionGrid> {
     if (list.isEmpty) return const Center(child: Text('空'));
     return LayoutBuilder(
       builder: (context, con) {
+        final isCompact = MediaQuery.of(context).size.width < 640;
         final child = WaterfallFlow.builder(
           controller: scrollController,
-          physics: GetPlatform.isDesktop
+          physics: !isCompact
               ? const NeverScrollableScrollPhysics()
               : const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(8),
@@ -166,7 +166,7 @@ class _DiscussionGridState extends State<DiscussionGrid> {
             );
           },
         );
-        if (GetPlatform.isDesktop) {
+        if (!isCompact) {
           return SmoothScroll(
             controller: scrollController,
             child: child,
