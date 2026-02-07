@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:inter_knot/components/discussion_card.dart';
 import 'package:inter_knot/helpers/num2dur.dart';
+import 'package:inter_knot/helpers/smooth_scroll.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/pages/discussion_page.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:waterfall_flow/waterfall_flow.dart';
 
-class DiscussionGrid extends StatelessWidget {
+class DiscussionGrid extends StatefulWidget {
   const DiscussionGrid({
     super.key,
     required this.list,
@@ -19,14 +20,37 @@ class DiscussionGrid extends StatelessWidget {
   final void Function()? fetchData;
 
   @override
+  State<DiscussionGrid> createState() => _DiscussionGridState();
+}
+
+class _DiscussionGridState extends State<DiscussionGrid> {
+  final scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final list = widget.list;
+    final fetchData = widget.fetchData;
+    final hasNextPage = widget.hasNextPage;
     if (list.isEmpty) return const Center(child: Text('空'));
     return LayoutBuilder(
       builder: (context, con) {
-        return WaterfallFlow.builder(
+        final isCompact = MediaQuery.of(context).size.width < 640;
+        final child = WaterfallFlow.builder(
+          controller: scrollController,
+          physics: !isCompact
+              ? const NeverScrollableScrollPhysics()
+              : const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(8),
           gridDelegate: SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 250,
+            maxCrossAxisExtent: 275,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
             lastChildLayoutTypeBuilder: (index) => index == list.length
                 ? LastChildLayoutType.foot
                 : LastChildLayoutType.none,
@@ -113,15 +137,15 @@ class DiscussionGrid extends StatelessWidget {
                     clipBehavior: Clip.antiAlias,
                     color: const Color(0xff222222),
                     child: InkWell(
-                    onTap: () => launchUrlString(item.url),
-                    child: const AspectRatio(
-                      aspectRatio: 5 / 6,
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(child: Text('讨论已删除')),
+                      onTap: () => launchUrlString(item.url),
+                      child: const AspectRatio(
+                        aspectRatio: 5 / 6,
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: Text('讨论已删除')),
+                        ),
                       ),
                     ),
-                  ),
                   );
                 }
                 return Card(
@@ -142,6 +166,13 @@ class DiscussionGrid extends StatelessWidget {
             );
           },
         );
+        if (!isCompact) {
+          return SmoothScroll(
+            controller: scrollController,
+            child: child,
+          );
+        }
+        return child;
       },
     );
   }

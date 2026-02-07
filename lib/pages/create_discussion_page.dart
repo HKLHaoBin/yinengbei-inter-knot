@@ -279,23 +279,90 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       backgroundColor: const Color(0xff121212),
       bottomNavigationBar: isDesktop
           ? null
-          : BottomNavigationBar(
-              currentIndex: _selectedIndex,
-              onTap: (index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.article_outlined),
-                  label: '正文',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.image_outlined),
-                  label: '图片',
-                ),
-              ],
+          : Container(
+              color: const Color(0xff1A1A1A),
+              height: 80,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _selectedIndex = 0;
+                        });
+                      },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _selectedIndex == 0
+                                ? Icons.article
+                                : Icons.article_outlined,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            '正文',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Material(
+                      color: const Color(0xffFBC02D),
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: isLoading ? null : _submit,
+                        child: SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: isLoading
+                              ? const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.black,
+                                )
+                              : const Icon(Icons.send, color: Colors.black),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _selectedIndex = 1;
+                        });
+                      },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _selectedIndex == 1
+                                ? Icons.image
+                                : Icons.image_outlined,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            '图片',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
       body: SafeArea(
         child: Column(
@@ -438,23 +505,55 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
-                                    FilledButton.icon(
-                                      onPressed: isLoading ? null : _submit,
-                                      style: FilledButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 24,
-                                          vertical: 16,
+                                    Material(
+                                      color: const Color(0xff1A1A1A),
+                                      borderRadius: BorderRadius.circular(28),
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(28),
+                                        onTap: isLoading ? null : _submit,
+                                        child: Container(
+                                          height: 56,
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 24),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(4),
+                                                decoration: const BoxDecoration(
+                                                  color: Color(0xffFBC02D),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: isLoading
+                                                    ? const SizedBox(
+                                                        width: 16,
+                                                        height: 16,
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          color: Colors.black,
+                                                        ),
+                                                      )
+                                                    : const Icon(
+                                                        Icons.send,
+                                                        color: Colors.black,
+                                                        size: 16,
+                                                      ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              const Text(
+                                                '发布',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 1,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                      icon: isLoading
-                                          ? const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color: Colors.white))
-                                          : const Icon(Icons.send),
-                                      label: const Text('发布'),
                                     ),
                                   ],
                                 ),

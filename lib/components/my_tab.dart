@@ -36,7 +36,6 @@ class MyTab extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    fontStyle: FontStyle.italic,
                   ),
                 ),
                 AnimatedContainer(
