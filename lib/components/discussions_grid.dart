@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:inter_knot/components/discussion_card.dart';
 import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/smooth_scroll.dart';
@@ -40,13 +41,13 @@ class _DiscussionGridState extends State<DiscussionGrid> {
     if (list.isEmpty) return const Center(child: Text('空'));
     return LayoutBuilder(
       builder: (context, con) {
-        return SmoothScroll(
+        final child = WaterfallFlow.builder(
           controller: scrollController,
-          child: WaterfallFlow.builder(
-            controller: scrollController,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(8),
-            gridDelegate: SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
+          physics: GetPlatform.isDesktop
+              ? const NeverScrollableScrollPhysics()
+              : const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(8),
+          gridDelegate: SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
             maxCrossAxisExtent: 275,
             mainAxisSpacing: 16,
             crossAxisSpacing: 16,
@@ -164,8 +165,14 @@ class _DiscussionGridState extends State<DiscussionGrid> {
               },
             );
           },
-        ),
         );
+        if (GetPlatform.isDesktop) {
+          return SmoothScroll(
+            controller: scrollController,
+            child: child,
+          );
+        }
+        return child;
       },
     );
   }

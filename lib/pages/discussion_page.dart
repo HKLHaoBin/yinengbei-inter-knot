@@ -325,16 +325,16 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                               child: LayoutBuilder(
                                                 builder:
                                                     (context, constraints) {
-                                                  return SmoothScroll(
+                                                  return AdaptiveSmoothScroll(
                                                     controller:
                                                         leftScrollController,
                                                     scrollSpeed: 0.5,
-                                                    child:
+                                                    builder: (context,
+                                                            physics) =>
                                                         SingleChildScrollView(
                                                       controller:
                                                           leftScrollController,
-                                                      physics:
-                                                          const NeverScrollableScrollPhysics(),
+                                                      physics: physics,
                                                       child: Column(
                                                         children: [
                                                           SizedBox(
@@ -416,16 +416,16 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                             child: Column(
                                               children: [
                                                 Expanded(
-                                                  child: SmoothScroll(
+                                                  child: AdaptiveSmoothScroll(
                                                     controller:
                                                         scrollController,
                                                     scrollSpeed: 0.5,
-                                                    child:
+                                                    builder: (context,
+                                                            physics) =>
                                                         SingleChildScrollView(
                                                       controller:
                                                           scrollController,
-                                                      physics:
-                                                          const NeverScrollableScrollPhysics(),
+                                                      physics: physics,
                                                       child: Padding(
                                                         padding:
                                                             const EdgeInsets

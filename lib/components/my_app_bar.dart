@@ -16,7 +16,9 @@ class MyAppBar extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: SizedBox(
-        width: max(MediaQuery.of(context).size.width, 640),
+        width: GetPlatform.isMobile
+            ? MediaQuery.of(context).size.width
+            : max(MediaQuery.of(context).size.width, 640),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           color: Colors.black,
@@ -56,7 +58,8 @@ class MyAppBar extends StatelessWidget {
                                   child: SizedBox(
                                     height: 16,
                                     width: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
                                   ),
                                 ),
                               ),
@@ -81,39 +84,36 @@ class MyAppBar extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               const Spacer(),
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: const Color(0xff313131),
-                    width: 3,
+              if (!GetPlatform.isMobile)
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: const Color(0xff313131),
+                      width: 3,
+                    ),
+                    borderRadius: BorderRadius.circular(maxRadius),
+                    image: DecorationImage(
+                      image: Assets.images.tabBgPoint.provider(),
+                      repeat: ImageRepeat.repeat,
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(maxRadius),
-                  image: DecorationImage(
-                    image: Assets.images.tabBgPoint.provider(),
-                    repeat: ImageRepeat.repeat,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Obx(() {
-                      return MyTab(
+                  child: Row(
+                    children: [
+                      MyTab(
                         first: true,
                         text: '推送',
-                        trailing:
-                            c.curPage() == 0 ? const Icon(Icons.refresh) : null,
                         onTap: () {
                           if (c.curPage() == 0) c.refreshSearchData();
                           c.animateToPage(0);
                         },
-                      );
-                    }),
-                    MyTab(
-                      text: '我的',
-                      onTap: () => c.animateToPage(1),
-                    ),
-                  ],
+                      ),
+                      MyTab(
+                        text: '我的',
+                        onTap: () => c.animateToPage(1),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),

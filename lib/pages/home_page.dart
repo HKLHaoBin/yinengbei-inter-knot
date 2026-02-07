@@ -24,54 +24,63 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return SmoothScroll(
+    final child = Column(
+      children: [
+        Obx(
+          () => ListTile(
+            leading: const Icon(Icons.favorite),
+            title: const Text('喜欢'),
+            onTap: () => Get.to(() => const LikedPage()),
+            subtitle: Text(
+              '共 ${c.bookmarks.length} 项',
+            ),
+          ),
+        ),
+        Obx(
+          () => ListTile(
+            leading: const Icon(Icons.history),
+            title: const Text('历史记录'),
+            onTap: () => Get.to(() => const HistoryPage()),
+            subtitle: Text(
+              '共 ${c.history.length} 项',
+            ),
+          ),
+        ),
+        Obx(() {
+          if (c.isLogin()) {
+            return ListTile(
+              onTap: () async {
+                await c.setToken('');
+                c.isLogin(false);
+                Get.rawSnackbar(message: '已退出登录');
+              },
+              title: const Text('退出登录'),
+              leading: const Icon(Icons.logout),
+            );
+          } else {
+            return ListTile(
+              onTap: () => Get.to(() => const LoginPage()),
+              title: const Text('登录'),
+              leading: const Icon(Icons.login),
+            );
+          }
+        }),
+      ],
+    );
+
+    if (GetPlatform.isDesktop) {
+      return SmoothScroll(
         controller: scrollController,
         child: SingleChildScrollView(
           controller: scrollController,
           physics: const NeverScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              Obx(
-                () => ListTile(
-                  leading: const Icon(Icons.favorite),
-                  title: const Text('喜欢'),
-                  onTap: () => Get.to(() => const LikedPage()),
-                  subtitle: Text(
-                    '共 ${c.bookmarks.length} 项',
-                  ),
-                ),
-              ),
-              Obx(
-                () => ListTile(
-                  leading: const Icon(Icons.history),
-                  title: const Text('历史记录'),
-                  onTap: () => Get.to(() => const HistoryPage()),
-                  subtitle: Text(
-                    '共 ${c.history.length} 项',
-                  ),
-                ),
-              ),
-              Obx(() {
-                if (c.isLogin()) {
-                  return ListTile(
-                    onTap: () async {
-                      await c.setToken('');
-                      c.isLogin(false);
-                      Get.rawSnackbar(message: '已退出登录');
-                    },
-                    title: const Text('退出登录'),
-                    leading: const Icon(Icons.logout),
-                  );
-                } else {
-                  return ListTile(
-                    onTap: () => Get.to(() => const LoginPage()),
-                    title: const Text('登录'),
-                    leading: const Icon(Icons.login),
-                  );
-                }
-              }),
-            ],
-          ),
-        ));
+          child: child,
+        ),
+      );
+    }
+    return SingleChildScrollView(
+      controller: scrollController,
+      child: child,
+    );
   }
 }

@@ -1,6 +1,32 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:get/get.dart';
+
+class AdaptiveSmoothScroll extends StatelessWidget {
+  final ScrollController controller;
+  final Widget Function(BuildContext context, ScrollPhysics physics) builder;
+  final double scrollSpeed;
+
+  const AdaptiveSmoothScroll({
+    super.key,
+    required this.controller,
+    required this.builder,
+    this.scrollSpeed = 1.0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (GetPlatform.isDesktop) {
+      return SmoothScroll(
+        controller: controller,
+        scrollSpeed: scrollSpeed,
+        child: builder(context, const NeverScrollableScrollPhysics()),
+      );
+    }
+    return builder(context, const AlwaysScrollableScrollPhysics());
+  }
+}
 
 class SmoothScroll extends StatefulWidget {
   final Widget child;
