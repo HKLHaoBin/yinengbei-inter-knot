@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:get/get.dart';
@@ -13,6 +13,7 @@ import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/helpers/web_hooks.dart';
 import 'package:markdown_quill/markdown_quill.dart';
+import 'package:inter_knot/helpers/normalize_markdown.dart';
 
 class CreateDiscussionPage extends StatefulWidget {
   const CreateDiscussionPage({super.key});
@@ -24,7 +25,6 @@ class CreateDiscussionPage extends StatefulWidget {
 class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   final titleController = TextEditingController();
   final _quillController = quill.QuillController.basic();
-  final coverController = TextEditingController();
 
   // Images State
   final RxList<({String id, String url})> _uploadedImages =
@@ -265,7 +265,6 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   void dispose() {
     titleController.dispose();
     _quillController.dispose();
-    coverController.dispose();
     if (kIsWeb) {
       removePasteListener();
     }
@@ -358,12 +357,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   Future<void> _submit() async {
     final title = titleController.text.trim();
     final delta = _quillController.document.toDelta();
-    final markdownText = DeltaToMarkdown().convert(delta);
+    final markdownText = normalizeMarkdown(DeltaToMarkdown().convert(delta));
 
     // Pass all uploaded images as cover
     // If backend supports multiple, we send list.
     // If backend only supports single, we send first one.
-    // Based on user request "uploaded in picture page is placed in cover", we try sending all.
     dynamic finalCoverId;
     if (_uploadedImages.isNotEmpty) {
       if (_uploadedImages.length == 1) {
@@ -372,8 +370,6 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         finalCoverId = _uploadedImages.map((e) => e.id).toList();
       }
     }
-
-    // Note: The text input is removed from UI, but we keep logic for compatibility/safety
 
     if (title.isEmpty) {
       Get.rawSnackbar(message: '标题不能为空');
@@ -473,7 +469,6 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     }
   }
 
-  @override
   Widget build(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
     final isDesktop = screenW >= 600;
@@ -802,7 +797,8 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
               child: isDesktop
                   ? Row(
                       children: [
-                        Expanded(
+                        SizedBox(
+                          width: 180,
                           child: Container(
                             margin: const EdgeInsets.only(
                               top: 16,
@@ -825,6 +821,12 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                   ListTile(
                                     leading: const Icon(Icons.article_outlined),
                                     title: const Text('正文'),
+                                    dense: true,
+                                    visualDensity: VisualDensity.compact,
+                                    minLeadingWidth: 0,
+                                    horizontalTitleGap: 8,
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(horizontal: 8),
                                     selected: _selectedIndex == 0,
                                     onTap: () {
                                       setState(() {
@@ -834,7 +836,13 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                   ),
                                   ListTile(
                                     leading: const Icon(Icons.image_outlined),
-                                    title: const Text('封面'),
+                                    title: const Text('图片'),
+                                    dense: true,
+                                    visualDensity: VisualDensity.compact,
+                                    minLeadingWidth: 0,
+                                    horizontalTitleGap: 8,
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(horizontal: 8),
                                     selected: _selectedIndex == 1,
                                     onTap: () {
                                       setState(() {

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api_exception.dart';
@@ -89,7 +89,7 @@ class BaseConnect extends GetConnect {
       return Future.value(request);
     });
     httpClient.addResponseModifier((req, rep) {
-      if (rep.statusCode == HttpStatus.unauthorized) {
+      if (rep.statusCode == 401) {
         box.remove('access_token');
         Get.offAll(() => const LoginPage());
       }
@@ -397,14 +397,16 @@ class Api extends BaseConnect {
 
     if (coverId != null) {
       if (coverId is String && coverId.isNotEmpty) {
-        data['cover'] = coverId;
+        data['cover'] = _coerceId(coverId);
       } else if (coverId is List && coverId.isNotEmpty) {
-        data['cover'] = coverId;
+        data['cover'] = coverId
+            .map((e) => e is String ? _coerceId(e) : e)
+            .toList();
       }
     }
 
     if (authorId != null && authorId.isNotEmpty) {
-      data['author'] = authorId;
+      data['author'] = _coerceId(authorId);
     }
 
     return post(

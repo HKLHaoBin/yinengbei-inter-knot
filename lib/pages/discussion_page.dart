@@ -1,7 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/avatar.dart';
@@ -546,6 +548,14 @@ class _DiscussionDetailBoxState extends State<DiscussionDetailBox> {
   @override
   Widget build(BuildContext context) {
     final discussion = widget.discussion;
+    assert(() {
+      debugPrint(
+        'DiscussionPage uses bodyHTML for render. rawBodyText='
+        '${discussion.rawBodyText.length} chars, bodyHTML='
+        '${discussion.bodyHTML.length} chars',
+      );
+      return true;
+    }());
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: 16,
@@ -563,23 +573,16 @@ class _DiscussionDetailBoxState extends State<DiscussionDetailBox> {
               ),
               const SizedBox(height: 16),
               SelectionArea(
-                child: MarkdownBody(
-                  data: discussion.rawBodyText,
-                  selectable: true,
-                  fitContent: false,
-                  styleSheet:
-                      MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                    p: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 16,
-                      fontFamily: 'ZhCn',
-                      fontFamilyFallback: const ['ZhCn'],
-                    ),
-                    blockSpacing: 16,
-                  ),
-                  onTapLink: (text, href, title) {
-                    if (href != null) {
-                      launchUrlString(href);
-                    }
+                child: HtmlWidget(
+                  discussion.bodyHTML,
+                  textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 16,
+                        fontFamily: 'ZhCn',
+                        fontFamilyFallback: const ['ZhCn'],
+                      ),
+                  onTapUrl: (url) {
+                    launchUrlString(url);
+                    return true;
                   },
                 ),
               ),
@@ -933,14 +936,28 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
   }
 }
 
-class Cover extends StatelessWidget {
+class Cover extends StatefulWidget {
   const Cover({super.key, required this.discussion});
 
   final DiscussionModel discussion;
 
   @override
+  State<Cover> createState() => _CoverState();
+}
+
+class _CoverState extends State<Cover> {
+  final _controller = PageController();
+  int _currentIndex = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final covers = discussion.covers;
+    final covers = widget.discussion.covers;
 
     if (covers.isEmpty) {
       return Assets.images.defaultCover.image(fit: BoxFit.contain);
@@ -965,48 +982,167 @@ class Cover extends StatelessWidget {
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: covers.map((url) {
-              // Calculate width for grid-like appearance
-              // e.g. 3 columns
-              final width = (constraints.maxWidth - 16) / 3;
-              return SizedBox(
-                width: width,
-                height: width,
-                child: ClickRegion(
-                  onTap: () => launchUrlString(url),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: CachedNetworkImage(
-                      imageUrl: url,
-                      fit: BoxFit.cover,
-                      progressIndicatorBuilder: (context, url, p) {
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: p.totalSize == null
-                                ? null
-                                : p.downloaded / p.totalSize!,
-                          ),
-                        );
-                      },
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.grey[800],
-                        child:
-                            const Icon(Icons.broken_image, color: Colors.white),
+    return SizedBox(
+      height: 220,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          Listener(
+            onPointerSignal: (event) {
+              if (event is PointerScrollEvent) {
+                final shiftPressed =
+                    HardwareKeyboard.instance.logicalKeysPressed
+                            .contains(LogicalKeyboardKey.shiftLeft) ||
+                        HardwareKeyboard.instance.logicalKeysPressed
+                            .contains(LogicalKeyboardKey.shiftRight);
+                if (!shiftPressed) return;
+                if (event.scrollDelta.dy == 0) return;
+                if (event.scrollDelta.dy > 0) {
+                  _goToPage(_currentIndex + 1, covers.length);
+                } else {
+                  _goToPage(_currentIndex - 1, covers.length);
+                }
+              }
+            },
+            child: ScrollConfiguration(
+              behavior: const _CoverScrollBehavior(),
+              child: PageView.builder(
+                controller: _controller,
+                itemCount: covers.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  final url = covers[index];
+                  return ClickRegion(
+                    onTap: () => launchUrlString(url),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: CachedNetworkImage(
+                        imageUrl: url,
+                        fit: BoxFit.cover,
+                        progressIndicatorBuilder: (context, url, p) {
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: p.totalSize == null
+                                  ? null
+                                  : p.downloaded / p.totalSize!,
+                            ),
+                          );
+                        },
+                        errorWidget: (context, url, error) => Container(
+                          color: Colors.grey[800],
+                          child: const Icon(Icons.broken_image,
+                              color: Colors.white),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
+                  );
+                },
+              ),
+            ),
           ),
-        );
-      },
+          if (covers.length > 1)
+            Positioned.fill(
+              left: 8,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _NavButton(
+                  icon: Icons.chevron_left,
+                  onTap: () => _goToPage(_currentIndex - 1, covers.length),
+                ),
+              ),
+            ),
+          if (covers.length > 1)
+            Positioned.fill(
+              right: 8,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _NavButton(
+                  icon: Icons.chevron_right,
+                  onTap: () => _goToPage(_currentIndex + 1, covers.length),
+                ),
+              ),
+            ),
+          Positioned(
+            bottom: 8,
+            child: IgnorePointer(
+              child: SizedBox(
+                height: 8,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(covers.length, (i) {
+                    final isActive = i == _currentIndex;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: isActive ? 16 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? const Color(0xffFBC02D)
+                            : const Color(0xff2E2E2E),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+
+  void _goToPage(int index, int total) {
+    if (total <= 1) return;
+    final target = index.clamp(0, total - 1);
+    if (target == _currentIndex) return;
+    _controller.animateToPage(
+      target,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+    );
+  }
+}
+
+class _NavButton extends StatelessWidget {
+  const _NavButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xB3000000),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: Icon(icon, color: Colors.white, size: 22),
+        ),
+      ),
+    );
+  }
+}
+
+class _CoverScrollBehavior extends MaterialScrollBehavior {
+  const _CoverScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => const {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.invertedStylus,
+        PointerDeviceKind.unknown,
+      };
 }
