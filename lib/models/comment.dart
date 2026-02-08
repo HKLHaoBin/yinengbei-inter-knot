@@ -1,3 +1,4 @@
+import 'package:inter_knot/helpers/normalize_markdown.dart';
 import 'package:inter_knot/helpers/parse_html.dart';
 import 'package:inter_knot/helpers/use.dart';
 import 'package:inter_knot/models/author.dart';
@@ -25,9 +26,11 @@ class CommentModel {
 
   factory CommentModel.fromJson(Map<String, dynamic> json) {
     // 处理 content 字段（可能是 Markdown 或 HTML）
-    final content = json['content'] as String? ?? json['bodyHTML'] as String? ?? '';
-    final (:cover, :html) = parseHtml(content, true);
-    
+    final content =
+        json['content'] as String? ?? json['bodyHTML'] as String? ?? '';
+    final normalized = normalizeMarkdown(content);
+    final (:cover, :html) = parseHtml(normalized, true);
+
     return CommentModel(
       author: AuthorModel.fromJson(json['author'] as Map<String, dynamic>),
       bodyHTML: html,

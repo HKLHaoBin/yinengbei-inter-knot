@@ -1,7 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/avatar.dart';
@@ -563,23 +564,16 @@ class _DiscussionDetailBoxState extends State<DiscussionDetailBox> {
               ),
               const SizedBox(height: 16),
               SelectionArea(
-                child: MarkdownBody(
-                  data: discussion.rawBodyText,
-                  selectable: true,
-                  fitContent: false,
-                  styleSheet:
-                      MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                    p: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 16,
-                      fontFamily: 'ZhCn',
-                      fontFamilyFallback: const ['ZhCn'],
-                    ),
-                    blockSpacing: 16,
+                child: HtmlWidget(
+                  discussion.bodyHTML,
+                  textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: 16,
+                    fontFamily: 'ZhCn',
+                    fontFamilyFallback: const ['ZhCn'],
                   ),
-                  onTapLink: (text, href, title) {
-                    if (href != null) {
-                      launchUrlString(href);
-                    }
+                  onTapUrl: (url) {
+                    launchUrlString(url);
+                    return true;
                   },
                 ),
               ),
@@ -933,14 +927,28 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
   }
 }
 
-class Cover extends StatelessWidget {
+class Cover extends StatefulWidget {
   const Cover({super.key, required this.discussion});
 
   final DiscussionModel discussion;
 
   @override
+  State<Cover> createState() => _CoverState();
+}
+
+class _CoverState extends State<Cover> {
+  final _controller = PageController();
+  int _currentIndex = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final covers = discussion.covers;
+    final covers = widget.discussion.covers;
 
     if (covers.isEmpty) {
       return Assets.images.defaultCover.image(fit: BoxFit.contain);
@@ -965,20 +973,24 @@ class Cover extends StatelessWidget {
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: covers.map((url) {
-              // Calculate width for grid-like appearance
-              // e.g. 3 columns
-              final width = (constraints.maxWidth - 16) / 3;
-              return SizedBox(
-                width: width,
-                height: width,
-                child: ClickRegion(
+    return SizedBox(
+      height: 220,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          ScrollConfiguration(
+            behavior: const _CoverScrollBehavior(),
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: covers.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                final url = covers[index];
+                return ClickRegion(
                   onTap: () => launchUrlString(url),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
@@ -1001,12 +1013,109 @@ class Cover extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
-              );
-            }).toList(),
+                );
+              },
+            ),
           ),
-        );
-      },
+          if (covers.length > 1)
+            Positioned.fill(
+              left: 8,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _NavButton(
+                  icon: Icons.chevron_left,
+                  onTap: () => _goToPage(_currentIndex - 1, covers.length),
+                ),
+              ),
+            ),
+          if (covers.length > 1)
+            Positioned.fill(
+              right: 8,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _NavButton(
+                  icon: Icons.chevron_right,
+                  onTap: () => _goToPage(_currentIndex + 1, covers.length),
+                ),
+              ),
+            ),
+          Positioned(
+            bottom: 8,
+            child: IgnorePointer(
+              child: SizedBox(
+                height: 8,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(covers.length, (i) {
+                    final isActive = i == _currentIndex;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: isActive ? 16 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? const Color(0xffFBC02D)
+                            : const Color(0xff2E2E2E),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+
+  void _goToPage(int index, int total) {
+    if (total <= 1) return;
+    final target = index.clamp(0, total - 1);
+    if (target == _currentIndex) return;
+    _controller.animateToPage(
+      target,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+    );
+  }
+}
+
+class _NavButton extends StatelessWidget {
+  const _NavButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xB3000000),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 32,
+          height: 32,
+          child: Icon(icon, color: Colors.white, size: 22),
+        ),
+      ),
+    );
+  }
+}
+
+class _CoverScrollBehavior extends MaterialScrollBehavior {
+  const _CoverScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => const {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.invertedStylus,
+        PointerDeviceKind.unknown,
+      };
 }
