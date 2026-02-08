@@ -30,7 +30,10 @@ class _SearchPageState extends State<SearchPage>
     super.dispose();
   }
 
-  late final fetchData = retryThrottle(c.searchData);
+  late final fetchData = retryThrottle(
+    c.searchData,
+    const Duration(milliseconds: 500),
+  );
 
   @override
   Widget build(BuildContext context) {

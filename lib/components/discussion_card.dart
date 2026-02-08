@@ -27,163 +27,207 @@ class DiscussionCard extends StatefulWidget {
 }
 
 class _DiscussionCardState extends State<DiscussionCard>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   double elevation = 1.0;
+  late final AnimationController _borderController;
+  late final Animation<Color?> _borderAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _borderController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _borderAnimation = ColorTween(
+      begin: Colors.black,
+      end: const Color.fromARGB(164, 0, 255, 0), // Pure Neon Green
+    ).animate(_borderController);
+  }
+
+  @override
+  void dispose() {
+    _borderController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return Hover3D(
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        elevation: elevation,
-        color: const Color(0xff222222),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-            bottomLeft: Radius.circular(16),
+    final isCompact = MediaQuery.of(context).size.width < 640;
+
+    final child = AnimatedBuilder(
+      animation: _borderController,
+      builder: (context, child) {
+        return Card(
+          clipBehavior: Clip.antiAlias,
+          elevation: elevation,
+          color: const Color(0xff222222),
+          shape: RoundedRectangleBorder(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+              bottomLeft: Radius.circular(16),
+            ),
+            side: BorderSide(
+              width: 4,
+              color: _borderAnimation.value ?? Colors.black,
+            ),
           ),
-          side: BorderSide(
-            width: 4,
-          ),
-        ),
-        child: Obx(() {
-          if (!c.canVisit(widget.discussion, widget.hData.isPin)) {
-            return AspectRatio(
-              aspectRatio: 5 / 6,
-              child: InkWell(
-                splashColor: Colors.transparent,
-                highlightColor: Colors.transparent,
-                onTap: () => launchUrlString(widget.discussion.url),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        '此讨论涉嫌违规',
+          child: child,
+        );
+      },
+      child: Obx(() {
+        if (!c.canVisit(widget.discussion, widget.hData.isPin)) {
+          return AspectRatio(
+            aspectRatio: 5 / 6,
+            child: InkWell(
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
+              onTap: () => launchUrlString(widget.discussion.url),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      '此讨论涉嫌违规',
+                    ),
+                    Text(
+                      '这篇讨论被 ${c.report[widget.discussion.id]!.length} 人举报',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        return InkWell(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          onTap: () {
+            _borderController.forward().then((_) {
+              if (mounted) _borderController.reverse();
+            });
+            widget.onTap?.call();
+          },
+          onTapDown: (_) {
+            setState(() => elevation = 4);
+            _borderController.forward();
+          },
+          onTapUp: (_) {
+            setState(() => elevation = 1);
+          },
+          onTapCancel: () {
+            setState(() => elevation = 1);
+            _borderController.reverse();
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxHeight: 600,
+                      minHeight: 100,
+                    ),
+                    child: Cover(discussion: widget.discussion),
+                  ),
+                  Positioned(
+                    top: 8,
+                    left: 12,
+                    child: CommentCount(
+                      discussion: widget.discussion,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (widget.hData.isPin)
+                    const Positioned(
+                      top: 8,
+                      right: 12,
+                      child: Text(
+                        '置顶',
+                        style: TextStyle(color: Colors.white),
                       ),
-                      Text(
-                        '这篇讨论被 ${c.report[widget.discussion.id]!.length} 人举报',
+                    ),
+                ],
+              ),
+              SizedBox(
+                width: double.infinity,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      Positioned(
+                        top: -26,
+                        child: Avatar(
+                          widget.discussion.author.avatar,
+                          size: 50,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 54),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.discussion.author.name,
+                              style: const TextStyle(
+                                color: Color(0xff626262),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            const Divider(height: 1),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-            );
-          }
-          return InkWell(
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-            hoverColor: Colors.transparent,
-            onTap: () => widget.onTap?.call(),
-            onTapDown: (_) => setState(() => elevation = 4),
-            onTapUp: (_) => setState(() => elevation = 1),
-            onTapCancel: () => setState(() => elevation = 1),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Stack(
-                  children: [
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxHeight: 600,
-                        minHeight: 100,
-                      ),
-                      child: Cover(discussion: widget.discussion),
-                    ),
-                    Positioned(
-                      top: 8,
-                      left: 12,
-                      child: CommentCount(
-                        discussion: widget.discussion,
-                        color: Colors.white,
-                      ),
-                    ),
-                    if (widget.hData.isPin)
-                      const Positioned(
-                        top: 8,
-                        right: 12,
-                        child: Text(
-                          '置顶',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                  ],
-                ),
-                SizedBox(
-                  width: double.infinity,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.centerLeft,
-                      children: [
-                        Positioned(
-                          top: -26,
-                          child: Avatar(
-                            widget.discussion.author.avatar,
-                            size: 50,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 54),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              Text(
-                                widget.discussion.author.name,
-                                style: const TextStyle(
-                                  color: Color(0xff626262),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              const Divider(height: 1),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  widget.discussion.title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
                 ),
-                const SizedBox(height: 8),
+              ),
+              if (widget.discussion.rawBodyText.trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
-                    widget.discussion.title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    widget.discussion.bodyText,
+                    style: const TextStyle(color: Color(0xffB3B3B1)),
                     overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
+                    maxLines: 3,
                   ),
                 ),
-                if (widget.discussion.rawBodyText.trim().isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      widget.discussion.bodyText,
-                      style: const TextStyle(color: Color(0xffB3B3B1)),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 3,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
               ],
-            ),
-          );
-        }),
-      ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      }),
     );
+
+    if (isCompact) return child;
+    return Hover3D(child: child);
   }
 
   @override
@@ -224,5 +268,98 @@ class Cover extends StatelessWidget {
               fit: BoxFit.cover,
             ),
           );
+  }
+}
+
+class DiscussionCardSkeleton extends StatelessWidget {
+  const DiscussionCardSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      elevation: 1,
+      color: const Color(0xff222222),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+          bottomLeft: Radius.circular(16),
+        ),
+        side: BorderSide(width: 4),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Cover placeholder
+          const AspectRatio(
+            aspectRatio: 643 / 408,
+            child: ColoredBox(color: Colors.white10),
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.centerLeft,
+                children: [
+                  // Avatar placeholder
+                  Positioned(
+                    top: -26,
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: const BoxDecoration(
+                        color: Colors.white10,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 54),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        // Author name placeholder
+                        Container(
+                          width: 80,
+                          height: 14,
+                          color: Colors.white10,
+                        ),
+                        const SizedBox(height: 4),
+                        const Divider(height: 1),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Title placeholder
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Container(
+              width: double.infinity,
+              height: 16,
+              color: Colors.white10,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Container(
+              width: 200,
+              height: 16,
+              color: Colors.white10,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
   }
 }

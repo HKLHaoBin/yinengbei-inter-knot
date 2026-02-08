@@ -725,7 +725,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                           ),
                           const SizedBox(height: 4),
                           const Text(
-                            '图片',
+                            '封面',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -822,12 +822,6 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                   ListTile(
                                     leading: const Icon(Icons.article_outlined),
                                     title: const Text('正文'),
-                                    dense: true,
-                                    visualDensity: VisualDensity.compact,
-                                    minLeadingWidth: 0,
-                                    horizontalTitleGap: 8,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 8),
                                     selected: _selectedIndex == 0,
                                     onTap: () {
                                       setState(() {
@@ -837,13 +831,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                   ),
                                   ListTile(
                                     leading: const Icon(Icons.image_outlined),
-                                    title: const Text('图片'),
-                                    dense: true,
-                                    visualDensity: VisualDensity.compact,
-                                    minLeadingWidth: 0,
-                                    horizontalTitleGap: 8,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 8),
+                                    title: const Text('封面'),
                                     selected: _selectedIndex == 1,
                                     onTap: () {
                                       setState(() {

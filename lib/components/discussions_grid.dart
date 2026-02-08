@@ -49,8 +49,8 @@ class _DiscussionGridState extends State<DiscussionGrid> {
           padding: const EdgeInsets.all(4),
           gridDelegate: SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
             maxCrossAxisExtent: 275,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
             lastChildLayoutTypeBuilder: (index) => index == list.length
                 ? LastChildLayoutType.foot
                 : LastChildLayoutType.none,
@@ -150,22 +150,7 @@ class _DiscussionGridState extends State<DiscussionGrid> {
                     ),
                   );
                 }
-                return Card(
-                  clipBehavior: Clip.antiAlias,
-                  color: const Color(0xff222222),
-                  child: InkWell(
-                    splashColor: Colors.transparent,
-                    highlightColor: Colors.transparent,
-                    onTap: () => launchUrlString(item.url),
-                    child: const AspectRatio(
-                      aspectRatio: 5 / 6,
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                    ),
-                  ),
-                );
+                return const DiscussionCardSkeleton();
               },
             );
           },

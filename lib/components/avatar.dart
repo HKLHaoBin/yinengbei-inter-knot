@@ -30,15 +30,10 @@ class Avatar extends StatelessWidget {
               height: size,
               fit: BoxFit.cover,
 
-              progressIndicatorBuilder: (context, url, p) => SizedBox.square(
-                dimension: size,
-                child: Center(
-                  child: CircularProgressIndicator(
-                    value: p.totalSize != null
-                        ? p.downloaded / p.totalSize!
-                        : null,
-                  ),
-                ),
+              placeholder: (context, url) => Assets.images.profilePhoto.image(
+                height: size,
+                width: size,
+                fit: BoxFit.cover,
               ),
               errorWidget: (context, url, error) =>
                   Assets.images.profilePhoto.image(
