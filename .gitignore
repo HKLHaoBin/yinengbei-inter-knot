@@ -49,5 +49,5 @@ app.*.map.json
 /android/app/release
 
 lib/secret.dart
-GraphQL API View LLMs/
 *.md
+API View LLMs/*
