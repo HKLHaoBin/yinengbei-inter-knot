@@ -72,6 +72,26 @@ class _DiscussionPageState extends State<DiscussionPage> {
         });
       }
     });
+
+    // Delay initial loading until transition animation completes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final route = ModalRoute.of(context);
+      if (route != null && route.animation != null && !route.animation!.isCompleted) {
+        void listener(AnimationStatus status) {
+          if (status == AnimationStatus.completed) {
+            route.animation!.removeStatusListener(listener);
+            _startInitialLoad();
+          }
+        }
+        route.animation!.addStatusListener(listener);
+      } else {
+        _startInitialLoad();
+      }
+    });
+  }
+
+  void _startInitialLoad() {
+    if (!mounted) return;
     widget.discussion.fetchComments().then((e) async {
       try {
         while (scrollController.hasClients &&
