@@ -588,6 +588,7 @@ class _DiscussionDetailBoxState extends State<DiscussionDetailBox> {
                   discussion.bodyHTML,
                   textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontSize: 16,
+                    color: const Color(0xffE0E0E0),
                     fontFamily: 'ZhCn',
                     fontFamilyFallback: const ['ZhCn'],
                   ),
@@ -717,7 +718,31 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
 
   void _handleTap() {
     if (!c.isLogin.value) {
-      Get.to(() => const LoginPage());
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: '取消',
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return const LoginPage();
+        },
+        transitionDuration: 300.ms,
+        transitionBuilder: (context, animation, secondaryAnimation, child) {
+          final curvedAnimation = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutQuart,
+          );
+          return FadeTransition(
+            opacity: curvedAnimation,
+            child: SlideTransition(
+              position: Tween(
+                begin: const Offset(0.05, 0.0),
+                end: Offset.zero,
+              ).animate(curvedAnimation),
+              child: RepaintBoundary(child: child),
+            ),
+          );
+        },
+      );
       return;
     }
 

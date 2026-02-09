@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/controllers/data.dart';
+import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/smooth_scroll.dart';
 import 'package:inter_knot/pages/history_page.dart';
 import 'package:inter_knot/pages/liked_page.dart';
@@ -34,6 +35,7 @@ class _HomePageState extends State<HomePage> {
             onTap: () => Get.to(() => const LikedPage()),
             subtitle: Text(
               '共 ${c.bookmarks.length} 项',
+              style: const TextStyle(color: Color(0xff808080)),
             ),
           ),
         ),
@@ -44,6 +46,7 @@ class _HomePageState extends State<HomePage> {
             onTap: () => Get.to(() => const HistoryPage()),
             subtitle: Text(
               '共 ${c.history.length} 项',
+              style: const TextStyle(color: Color(0xff808080)),
             ),
           ),
         ),
@@ -60,7 +63,34 @@ class _HomePageState extends State<HomePage> {
             );
           } else {
             return ListTile(
-              onTap: () => Get.to(() => const LoginPage()),
+              onTap: () {
+                showGeneralDialog(
+                  context: context,
+                  barrierDismissible: true,
+                  barrierLabel: '取消',
+                  pageBuilder: (context, animation, secondaryAnimation) {
+                    return const LoginPage();
+                  },
+                  transitionDuration: 300.ms,
+                  transitionBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    final curvedAnimation = CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutQuart,
+                    );
+                    return FadeTransition(
+                      opacity: curvedAnimation,
+                      child: SlideTransition(
+                        position: Tween(
+                          begin: const Offset(0.05, 0.0),
+                          end: Offset.zero,
+                        ).animate(curvedAnimation),
+                        child: RepaintBoundary(child: child),
+                      ),
+                    );
+                  },
+                );
+              },
               title: const Text('登录'),
               leading: const Icon(Icons.login),
             );
@@ -72,7 +102,7 @@ class _HomePageState extends State<HomePage> {
     // Desktop/expanded layout uses SmoothScroll with NeverScrollableScrollPhysics
     // Compact layout uses standard scrolling
     final isCompact = MediaQuery.of(context).size.width < 640;
-    
+
     if (!isCompact) {
       return SmoothScroll(
         controller: scrollController,

@@ -184,41 +184,41 @@ class Controller extends GetxController {
     logger.i(isLogin());
     accelerator(pref.getString('accelerator') ?? '');
     ever(accelerator, (v) => pref.setString('accelerator', v));
-    
+
     // Always check for user info if token exists
     if (getToken().isNotEmpty) {
-       isLogin(true);
-       try {
-         await refreshSelfUserInfo();
-         await refreshFavorites();
-       } catch (e) {
-         // Keep login state; token will be cleared on 401 by BaseConnect
-         logger.e('Failed to get user info', error: e);
-       }
+      isLogin(true);
+      try {
+        await refreshSelfUserInfo();
+        await refreshFavorites();
+      } catch (e) {
+        // Keep login state; token will be cleared on 401 by BaseConnect
+        logger.e('Failed to get user info', error: e);
+      }
     }
 
     ever(isLogin, (v) async {
-       if (v) {
-          // fetch user info if not present
-          if (user.value == null) {
-              try {
-                await refreshSelfUserInfo();
-                await refreshFavorites();
-              } catch(e) {
-                logger.e('Failed to fetch user after login', error: e);
-              }
-          } else {
+      if (v) {
+        // fetch user info if not present
+        if (user.value == null) {
+          try {
+            await refreshSelfUserInfo();
             await refreshFavorites();
+          } catch (e) {
+            logger.e('Failed to fetch user after login', error: e);
           }
-       } else {
-         final u = user.value;
-         user.value = null;
-         authorId.value = null;
-         _clearCachedAvatarForUser(u);
-         box.remove('access_token');
-         bookmarks.clear();
-         favoriteIds.clear();
-       }
+        } else {
+          await refreshFavorites();
+        }
+      } else {
+        final u = user.value;
+        user.value = null;
+        authorId.value = null;
+        _clearCachedAvatarForUser(u);
+        box.remove('access_token');
+        bookmarks.clear();
+        favoriteIds.clear();
+      }
     });
 
     debounce(
@@ -234,8 +234,13 @@ class Controller extends GetxController {
       time: 500.ms,
     );
     searchData();
-    history.addAll(pref.getStringList('history')?.map((e) => HDataModel.fromJson(jsonDecode(e) as Map<String, dynamic>)).cast<HDataModel>() ?? []);
-    
+    history.addAll(pref
+            .getStringList('history')
+            ?.map((e) =>
+                HDataModel.fromJson(jsonDecode(e) as Map<String, dynamic>))
+            .cast<HDataModel>() ??
+        []);
+
     // Reports and Version
     // api.getAllReports...
     // api.getNewVersion...
@@ -393,8 +398,9 @@ class Controller extends GetxController {
     isUploadingAvatar(true);
     try {
       final curUser = user.value;
-      final targetAuthorId =
-          authorId.value ?? curUser?.authorId ?? await ensureAuthorForUser(curUser);
+      final targetAuthorId = authorId.value ??
+          curUser?.authorId ??
+          await ensureAuthorForUser(curUser);
       if (targetAuthorId == null || targetAuthorId.isEmpty) {
         throw Exception('未找到作者信息');
       }

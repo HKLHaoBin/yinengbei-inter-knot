@@ -3,6 +3,7 @@ import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/discussions_grid.dart';
 import 'package:inter_knot/controllers/data.dart';
+import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/throttle.dart';
 import 'package:inter_knot/pages/create_discussion_page.dart';
 import 'package:inter_knot/pages/login_page.dart';
@@ -65,6 +66,12 @@ class _SearchPageState extends State<SearchPage>
                   child: Icon(Icons.search),
                 ),
                 hintText: '搜索',
+                hintStyle: const WidgetStatePropertyAll(
+                  TextStyle(color: Color(0xff808080)),
+                ),
+                textStyle: const WidgetStatePropertyAll(
+                  TextStyle(color: Color(0xffE0E0E0)),
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -159,7 +166,33 @@ class _SearchPageState extends State<SearchPage>
                         if (c.isLogin.value) {
                           Get.to(() => const CreateDiscussionPage());
                         } else {
-                          Get.to(() => const LoginPage());
+                          showGeneralDialog(
+                            context: context,
+                            barrierDismissible: true,
+                            barrierLabel: '取消',
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) {
+                              return const LoginPage();
+                            },
+                            transitionDuration: 300.ms,
+                            transitionBuilder: (context, animation,
+                                secondaryAnimation, child) {
+                              final curvedAnimation = CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeOutQuart,
+                              );
+                              return FadeTransition(
+                                opacity: curvedAnimation,
+                                child: SlideTransition(
+                                  position: Tween(
+                                    begin: const Offset(0.05, 0.0),
+                                    end: Offset.zero,
+                                  ).animate(curvedAnimation),
+                                  child: RepaintBoundary(child: child),
+                                ),
+                              );
+                            },
+                          );
                         }
                       },
                       child: Container(

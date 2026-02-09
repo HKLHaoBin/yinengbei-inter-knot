@@ -210,8 +210,8 @@ class _DiscussionCardState extends State<DiscussionCard>
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
                     widget.discussion.bodyText,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                    style: const TextStyle(
+                      color: Color(0xffE0E0E0),
                       fontSize: 15,
                     ),
                     overflow: TextOverflow.ellipsis,

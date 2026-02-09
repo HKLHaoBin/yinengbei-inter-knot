@@ -38,14 +38,28 @@ class MyApp extends StatelessWidget {
         splashFactory: NoSplash.splashFactory,
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
+        dividerColor: const Color(0xff2D2D2D),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+          seedColor: const Color(0xffD7FF00),
+          primary: const Color(0xffD7FF00),
+          secondary: const Color(0xff00E5FF), // 辅助青色
+          surface: const Color(0xff121212),
+          onSurface: Colors.white,
           brightness: Brightness.dark,
         ),
+        scaffoldBackgroundColor: const Color(0xff0A0A0A), // 更深的背景
         textTheme: const TextTheme(
-          titleMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          bodyMedium: TextStyle(fontSize: 15),
-          labelMedium: TextStyle(fontSize: 12),
+          titleMedium: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w900, // 更粗的字体符合 ZZZ 风格
+            letterSpacing: 1.2,
+          ),
+          bodyMedium: TextStyle(fontSize: 15, color: Color(0xffE0E0E0)),
+          labelMedium: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Color(0xffD7FF00),
+          ),
         ),
       ),
       localizationsDelegates: const [

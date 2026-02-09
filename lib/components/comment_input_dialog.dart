@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/controllers/data.dart';
+import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/pages/login_page.dart';
 
 class CommentInputDialog extends StatefulWidget {
@@ -40,7 +41,31 @@ class _CommentInputDialogState extends State<CommentInputDialog> {
 
     if (!c.isLogin.value) {
       Get.back();
-      Get.to(() => const LoginPage());
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: '取消',
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return const LoginPage();
+        },
+        transitionDuration: 300.ms,
+        transitionBuilder: (context, animation, secondaryAnimation, child) {
+          final curvedAnimation = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutQuart,
+          );
+          return FadeTransition(
+            opacity: curvedAnimation,
+            child: SlideTransition(
+              position: Tween(
+                begin: const Offset(0.05, 0.0),
+                end: Offset.zero,
+              ).animate(curvedAnimation),
+              child: RepaintBoundary(child: child),
+            ),
+          );
+        },
+      );
       return;
     }
 

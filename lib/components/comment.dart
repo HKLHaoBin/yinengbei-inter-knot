@@ -102,7 +102,7 @@ class _CommentState extends State<Comment> {
               comment.bodyHTML,
               textStyle: const TextStyle(
                 fontSize: 16,
-                // Removed explicit color to allow animation
+                color: Color(0xffE0E0E0), // Force light grey color
               ),
             ),
           ),
@@ -257,9 +257,12 @@ class _ScrollItemEffectState extends State<_ScrollItemEffect> {
 
         final scale = 0.85 + 0.15 * easeCurve;
         final opacity = 0.4 + 0.6 * easeCurve;
+        // Text color interpolation:
+        // Unfocused: Grey (0xff808080)
+        // Focused: Light Grey (0xffE0E0E0)
         final color = Color.lerp(
-          Colors.grey.shade500,
-          Colors.black87,
+          const Color(0xff808080),
+          const Color(0xffE0E0E0),
           easeCurve,
         )!;
         final yOffset = (1 - easeCurve) * 12;

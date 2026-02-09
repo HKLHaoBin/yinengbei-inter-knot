@@ -80,7 +80,10 @@ class Replies extends StatelessWidget {
                 SelectionArea(
                   child: HtmlWidget(
                     reply.bodyHTML,
-                    textStyle: const TextStyle(fontSize: 16),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xffE0E0E0), // Light grey for replies
+                    ),
                   ),
                 ),
                 const Divider(),

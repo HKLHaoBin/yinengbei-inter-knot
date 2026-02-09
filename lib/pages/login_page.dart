@@ -82,90 +82,224 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(isRegister ? '注册' : '登录')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Card(
-            child: Padding(
+    // Shared ZZZ style input decoration
+    final inputDecoration = InputDecoration(
+      labelStyle: const TextStyle(color: Color(0xff808080)),
+      enabledBorder: const OutlineInputBorder(
+        borderSide: BorderSide(color: Color(0xff333333)),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderSide: BorderSide(color: Color(0xffD7FF00)),
+      ),
+      border: const OutlineInputBorder(),
+      prefixIconColor: const Color(0xffE0E0E0),
+    );
+
+    // Using Scaffold with backgroundColor transparent to act as a dialog content
+    return GestureDetector(
+      onTap: () => Get.back(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: GestureDetector(
+            onTap: () {}, // Prevent tap from closing when clicking on the card
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (error != null) ...[
-                      Text(
-                        error!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
+              child: Card(
+                color: const Color(0xff1A1A1A), // Dark card background
+                shape: RoundedRectangleBorder(
+                  side: const BorderSide(color: Color(0xff333333)),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves
+                          .elasticOut, // Use elasticOut for ZZZ style bounciness
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            switchInCurve:
+                                Curves.easeOutBack, // Add bounce to text entry
+                            switchOutCurve:
+                                Curves.easeInBack, // Add bounce to text exit
+                            transitionBuilder: (child, animation) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(
+                                        0, -0.5), // Increased slide distance
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            layoutBuilder: (currentChild, previousChildren) {
+                              return Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  ...previousChildren,
+                                  if (currentChild != null) currentChild,
+                                ],
+                              );
+                            },
+                            child: Text(
+                              key: ValueKey(isRegister),
+                              isRegister ? '注册' : '登录',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          if (error != null) ...[
+                            Text(
+                              error!,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 400),
+                            switchInCurve: Curves.easeOutQuart,
+                            switchOutCurve: Curves.easeInQuart,
+                            transitionBuilder: (child, animation) {
+                              return SizeTransition(
+                                sizeFactor: animation,
+                                axis: Axis.vertical,
+                                child: FadeTransition(
+                                  opacity: animation,
+                                  child: SlideTransition(
+                                    position: Tween<Offset>(
+                                      begin: const Offset(0, -0.2),
+                                      end: Offset.zero,
+                                    ).animate(animation),
+                                    child: child,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: isRegister
+                                ? Column(
+                                    children: [
+                                      TextField(
+                                        controller: usernameController,
+                                        style: const TextStyle(
+                                            color: Color(0xffE0E0E0)),
+                                        decoration: inputDecoration.copyWith(
+                                          labelText: '用户名',
+                                          prefixIcon: const Icon(Icons.person),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                    ],
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                          TextField(
+                            controller: emailController,
+                            style: const TextStyle(color: Color(0xffE0E0E0)),
+                            decoration: inputDecoration.copyWith(
+                              labelText: '邮箱',
+                              prefixIcon: const Icon(Icons.email),
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: passwordController,
+                            style: const TextStyle(color: Color(0xffE0E0E0)),
+                            decoration: inputDecoration.copyWith(
+                              labelText: '密码',
+                              prefixIcon: const Icon(Icons.lock),
+                            ),
+                            obscureText: true,
+                          ),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: FilledButton(
+                              style: ButtonStyle(
+                                backgroundColor: const WidgetStatePropertyAll(
+                                    Color(0xffD7FF00)),
+                                foregroundColor:
+                                    const WidgetStatePropertyAll(Colors.black),
+                                overlayColor: WidgetStatePropertyAll(
+                                    Colors.white.withValues(alpha: 0.3)),
+                              ),
+                              onPressed: isLoading ? null : _submit,
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 300),
+                                transitionBuilder: (child, animation) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: ScaleTransition(
+                                      scale: animation,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: isLoading
+                                    ? const SizedBox(
+                                        height: 24,
+                                        width: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.black,
+                                        ),
+                                      )
+                                    : Text(
+                                        key: ValueKey(isRegister),
+                                        isRegister ? '注册' : '登录',
+                                      ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextButton(
+                            style: const ButtonStyle(
+                              overlayColor:
+                                  WidgetStatePropertyAll(Colors.transparent),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                isRegister = !isRegister;
+                                error = null;
+                              });
+                            },
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              transitionBuilder: (child, animation) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: child,
+                                );
+                              },
+                              child: Text(
+                                key: ValueKey(isRegister),
+                                isRegister ? '登录' : '注册账号',
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                    ],
-                    if (isRegister) ...[
-                      TextField(
-                        controller: usernameController,
-                        decoration: const InputDecoration(
-                          labelText: '用户名',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.person),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    TextField(
-                      controller: emailController,
-                      decoration: const InputDecoration(
-                        labelText: '邮箱',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.email),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
                     ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: passwordController,
-                      decoration: const InputDecoration(
-                        labelText: '密码',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.lock),
-                      ),
-                      obscureText: true,
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: FilledButton(
-                        style: const ButtonStyle(
-                          overlayColor:
-                              WidgetStatePropertyAll(Colors.transparent),
-                        ),
-                        onPressed: isLoading ? null : _submit,
-                        child: isLoading
-                            ? const CircularProgressIndicator()
-                            : Text(isRegister ? '注册' : '登录'),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      style: const ButtonStyle(
-                        overlayColor:
-                            WidgetStatePropertyAll(Colors.transparent),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          isRegister = !isRegister;
-                          error = null;
-                        });
-                      },
-                      child: Text(
-                        isRegister ? '登录' : '注册账号',
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
