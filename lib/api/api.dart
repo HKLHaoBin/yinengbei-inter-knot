@@ -38,7 +38,7 @@ class AuthApi extends GetConnect {
     return msg;
   }
 
-  Future<({String token, AuthorModel user})> login(
+  Future<({String? token, AuthorModel user})> login(
       String email, String password) async {
     final res = await post(
       '/api/auth/local',
@@ -52,12 +52,12 @@ class AuthApi extends GetConnect {
 
     final body = res.body as Map<String, dynamic>;
     return (
-      token: body['jwt'] as String,
+      token: body['jwt'] as String?,
       user: AuthorModel.fromJson(body['user'] as Map<String, dynamic>)
     );
   }
 
-  Future<({String token, AuthorModel user})> register(
+  Future<({String? token, AuthorModel user})> register(
       String username, String email, String password) async {
     final res = await post(
       '/api/auth/local/register',
@@ -71,7 +71,7 @@ class AuthApi extends GetConnect {
 
     final body = res.body as Map<String, dynamic>;
     return (
-      token: body['jwt'] as String,
+      token: body['jwt'] as String?,
       user: AuthorModel.fromJson(body['user'] as Map<String, dynamic>)
     );
   }
@@ -103,8 +103,11 @@ class BaseConnect extends GetConnect {
     });
     httpClient.addResponseModifier((req, rep) {
       if (rep.statusCode == 401) {
+        // Token is invalid/expired
         box.remove('access_token');
-        Get.offAll(() => const LoginPage());
+        // Do NOT redirect to login page automatically, let the UI handle the unauthenticated state
+        // or let the user choose to login again.
+        // Get.offAll(() => const LoginPage()); 
       }
       return rep;
     });

@@ -150,10 +150,7 @@ class MyHomePage extends GetView<Controller> {
                       customBorder: const CircleBorder(),
                       onTap: () {
                         if (controller.isLogin.value) {
-                          Get.to(
-                            () => const CreateDiscussionPage(),
-                            routeName: '/create_discussion',
-                          );
+                          CreateDiscussionPage.show(context);
                         } else {
                           showGeneralDialog(
                             context: context,

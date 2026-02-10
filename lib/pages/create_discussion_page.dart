@@ -12,11 +12,41 @@ import 'package:inter_knot/components/click_region.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/helpers/normalize_markdown.dart';
+import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/web_hooks.dart';
 import 'package:markdown_quill/markdown_quill.dart';
 
 class CreateDiscussionPage extends StatefulWidget {
   const CreateDiscussionPage({super.key});
+
+  static Future<void> show(BuildContext context) {
+    return showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '取消',
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const CreateDiscussionPage();
+      },
+      transitionDuration: 300.ms,
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween(
+              begin: const Offset(0.1, 0.0),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.ease,
+              ),
+            ),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
 
   @override
   State<CreateDiscussionPage> createState() => _CreateDiscussionPageState();
@@ -472,7 +502,12 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   @override
   Widget build(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
+    final isWindowed = screenW >= 800;
     final isDesktop = screenW >= 600;
+
+    final double baseFactor = isWindowed ? 0.7 : 1.0;
+    final double zoomScale = isWindowed ? 1.1 : 1.0;
+    final double layoutFactor = baseFactor * zoomScale;
 
     final content = IndexedStack(
       index: _selectedIndex,
@@ -643,7 +678,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       ],
     );
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: const Color(0xff121212),
       bottomNavigationBar: isDesktop
           ? null
@@ -945,6 +980,63 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                     ),
             ),
           ],
+        ),
+      ),
+    );
+
+    return SafeArea(
+      child: Center(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final safeW = constraints.maxWidth;
+            final safeH = constraints.maxHeight;
+            return SizedBox(
+              width: safeW * layoutFactor,
+              height: safeH * layoutFactor,
+              child: FittedBox(
+                child: SizedBox(
+                  width: safeW * baseFactor,
+                  height: safeH * baseFactor,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(59, 255, 255, 255),
+                      borderRadius: isWindowed
+                          ? const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              bottomLeft: Radius.circular(16),
+                              bottomRight: Radius.circular(16),
+                            )
+                          : BorderRadius.zero,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: isWindowed
+                            ? const BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
+                              )
+                            : BorderRadius.zero,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: isWindowed
+                            ? const BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
+                              )
+                            : BorderRadius.zero,
+                        child: scaffold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

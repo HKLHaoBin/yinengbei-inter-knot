@@ -17,6 +17,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
   final usernameController = TextEditingController();
 
   bool isRegister = false;
@@ -27,6 +28,7 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     emailController.dispose();
     passwordController.dispose();
+    confirmPasswordController.dispose();
     usernameController.dispose();
     super.dispose();
   }
@@ -40,39 +42,54 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final email = emailController.text.trim();
       final password = passwordController.text.trim();
+      final confirmPassword = confirmPasswordController.text.trim();
       final username = usernameController.text.trim();
 
       if (email.isEmpty || password.isEmpty) {
         throw Exception('请输入邮箱和密码');
       }
-      if (isRegister && username.isEmpty) {
-        throw Exception('请输入用户名');
+      if (isRegister) {
+        if (username.isEmpty) {
+          throw Exception('请输入用户名');
+        }
+        if (password != confirmPassword) {
+          throw Exception('两次输入的密码不一致');
+        }
       }
 
       final res = isRegister
           ? await BaseConnect.authApi.register(username, email, password)
           : await BaseConnect.authApi.login(email, password);
 
-      await box.write('access_token', res.token);
+      if (res.token != null) {
+        await box.write('access_token', res.token);
 
-      // Update Controller state
-      final c = Get.find<Controller>();
-      AuthorModel currentUser = res.user;
-      try {
-        currentUser = await Get.find<Api>().getSelfUserInfo('');
-      } catch (_) {}
-      c.user(currentUser);
-      await c.ensureAuthorForUser(currentUser);
-      c.isLogin(true);
+        // Update Controller state
+        final c = Get.find<Controller>();
+        AuthorModel currentUser = res.user;
+        try {
+          currentUser = await Get.find<Api>().getSelfUserInfo('');
+        } catch (_) {}
+        c.user(currentUser);
+        await c.ensureAuthorForUser(currentUser);
+        c.isLogin(true);
 
-      Get.back();
-      Get.rawSnackbar(message: '登录成功：欢迎回来，绳匠！');
-    } catch (e) {
-      logger.e('Login failed', error: e);
+        Get.back();
+        Get.rawSnackbar(message: '登录成功：欢迎回来，绳匠！');
+      } else {
+        Get.back();
+        Get.rawSnackbar(message: '注册成功：请查收邮件并激活账号');
+      }
+    } catch (e, s) {
+      logger.e('Login failed', error: e, stackTrace: s);
       setState(() {
         if (e is ApiException) {
           if (!isRegister && e.statusCode == 400) {
-            error = '邮箱或密码错误';
+            if (e.message.contains('not confirmed')) {
+              error = '请先激活绳网账号';
+            } else {
+              error = '邮箱或密码错误';
+            }
           } else {
             var msg = e.message;
             if (msg == 'email must be a valid email') {
@@ -83,7 +100,14 @@ class _LoginPageState extends State<LoginPage> {
             error = msg;
           }
         } else {
-          error = e.toString().replaceAll('Exception: ', '');
+          // 处理其他类型的错误，包括 TypeError
+          final errorString = e.toString();
+          if (errorString.contains('TypeError') ||
+              errorString.contains('Null')) {
+            error = '应用状态异常，请尝试重新启动应用';
+          } else {
+            error = errorString.replaceAll('Exception: ', '');
+          }
         }
       });
     } finally {
@@ -211,6 +235,8 @@ class _LoginPageState extends State<LoginPage> {
                             child: isRegister
                                 ? Column(
                                     children: [
+                                      // Add spacing to prevent label clipping by SizeTransition
+                                      const SizedBox(height: 8),
                                       TextField(
                                         controller: usernameController,
                                         style: const TextStyle(
@@ -243,6 +269,45 @@ class _LoginPageState extends State<LoginPage> {
                               prefixIcon: const Icon(Icons.lock),
                             ),
                             obscureText: true,
+                          ),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 400),
+                            switchInCurve: Curves.easeOutQuart,
+                            switchOutCurve: Curves.easeInQuart,
+                            transitionBuilder: (child, animation) {
+                              return SizeTransition(
+                                sizeFactor: animation,
+                                axis: Axis.vertical,
+                                child: FadeTransition(
+                                  opacity: animation,
+                                  child: SlideTransition(
+                                    position: Tween<Offset>(
+                                      begin: const Offset(0, -0.2),
+                                      end: Offset.zero,
+                                    ).animate(animation),
+                                    child: child,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: isRegister
+                                ? Column(
+                                    children: [
+                                      const SizedBox(height: 16),
+                                      TextField(
+                                        controller: confirmPasswordController,
+                                        style: const TextStyle(
+                                            color: Color(0xffE0E0E0)),
+                                        decoration: inputDecoration.copyWith(
+                                          labelText: '确认密码',
+                                          prefixIcon:
+                                              const Icon(Icons.lock_outline),
+                                        ),
+                                        obscureText: true,
+                                      ),
+                                    ],
+                                  )
+                                : const SizedBox.shrink(),
                           ),
                           const SizedBox(height: 24),
                           SizedBox(

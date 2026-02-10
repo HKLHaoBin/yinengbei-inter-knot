@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inter_knot/api/api.dart'; // Import Api
+import 'package:inter_knot/api/api_exception.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/helpers/box.dart';
 import 'package:inter_knot/helpers/logger.dart';
@@ -193,8 +194,15 @@ class Controller extends GetxController {
         await refreshSelfUserInfo();
         await refreshFavorites();
       } catch (e) {
-        // Keep login state; token will be cleared on 401 by BaseConnect
-        logger.e('Failed to get user info', error: e);
+        // Handle 401 explicitly if it bubbles up, though BaseConnect usually handles it globally.
+        // But here we want to show a specific message "Account not found or abnormal".
+        if (e is ApiException && e.statusCode == 401) {
+          logger.e('Failed to get user info: Unauthorized', error: e);
+          isLogin(false);
+          Get.rawSnackbar(message: '账号不存在或异常');
+        } else {
+          logger.e('Failed to get user info', error: e);
+        }
       }
     }
 
