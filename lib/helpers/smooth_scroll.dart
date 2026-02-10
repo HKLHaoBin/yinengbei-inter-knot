@@ -61,7 +61,8 @@ class _DraggableScrollbarState extends State<DraggableScrollbar> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, child) {
-        if (!widget.controller.hasClients) {
+        if (!widget.controller.hasClients ||
+            !widget.controller.position.hasContentDimensions) {
           return const SizedBox.shrink();
         }
 
@@ -76,9 +77,11 @@ class _DraggableScrollbarState extends State<DraggableScrollbar> {
 
         // Calculate thumb size and position
         final scrollRatio = viewportDimension / (maxScroll + viewportDimension);
-        final thumbHeight = (viewportDimension * scrollRatio).clamp(30.0, viewportDimension);
+        final thumbHeight =
+            (viewportDimension * scrollRatio).clamp(30.0, viewportDimension);
         final scrollProgress = currentScroll / maxScroll;
-        final thumbPosition = (currentScroll / (maxScroll + viewportDimension)) * (viewportDimension - thumbHeight);
+        final thumbPosition =
+            scrollProgress * (viewportDimension - thumbHeight);
 
         return GestureDetector(
           behavior: HitTestBehavior.translucent,
@@ -95,15 +98,19 @@ class _DraggableScrollbarState extends State<DraggableScrollbar> {
             final position = widget.controller.position;
             final maxScroll = position.maxScrollExtent;
             final viewportDimension = position.viewportDimension;
-            final scrollRatio = viewportDimension / (maxScroll + viewportDimension);
-            final thumbHeight = (viewportDimension * scrollRatio).clamp(30.0, viewportDimension);
+            final scrollRatio =
+                viewportDimension / (maxScroll + viewportDimension);
+            final thumbHeight = (viewportDimension * scrollRatio)
+                .clamp(30.0, viewportDimension);
 
             // Calculate new position based on drag delta
             final dragDelta = details.localPosition.dy - _dragStartPosition;
-            final newThumbPosition = (_dragStartThumbPosition + dragDelta).clamp(0.0, viewportDimension - thumbHeight);
+            final newThumbPosition = (_dragStartThumbPosition + dragDelta)
+                .clamp(0.0, viewportDimension - thumbHeight);
 
             // Convert thumb position to scroll position
-            final scrollProgress = newThumbPosition / (viewportDimension - thumbHeight);
+            final scrollProgress =
+                newThumbPosition / (viewportDimension - thumbHeight);
             final newScrollPosition = scrollProgress * maxScroll;
 
             widget.controller.jumpTo(newScrollPosition.clamp(0.0, maxScroll));
@@ -127,11 +134,15 @@ class _DraggableScrollbarState extends State<DraggableScrollbar> {
               final maxScroll = position.maxScrollExtent;
               final viewportDimension = position.viewportDimension;
 
-              final scrollRatio = viewportDimension / (maxScroll + viewportDimension);
-              final thumbHeight = (viewportDimension * scrollRatio).clamp(30.0, viewportDimension);
+              final scrollRatio =
+                  viewportDimension / (maxScroll + viewportDimension);
+              final thumbHeight = (viewportDimension * scrollRatio)
+                  .clamp(30.0, viewportDimension);
 
-              final targetScrollProgress = (tapY - thumbHeight / 2) / (viewportDimension - thumbHeight);
-              final targetScrollPosition = targetScrollProgress.clamp(0.0, 1.0) * maxScroll;
+              final targetScrollProgress =
+                  (tapY - thumbHeight / 2) / (viewportDimension - thumbHeight);
+              final targetScrollPosition =
+                  targetScrollProgress.clamp(0.0, 1.0) * maxScroll;
 
               widget.controller.animateTo(
                 targetScrollPosition.clamp(0.0, maxScroll),
