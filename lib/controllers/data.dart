@@ -29,6 +29,7 @@ class Controller extends GetxController {
   final searchResult = <HDataModel>{}.obs; // HData -> HDataModel
   String? searchEndCur;
   final searchHasNextPage = true.obs;
+  final isSearching = false.obs;
 
   String rootToken = '';
 
@@ -223,13 +224,15 @@ class Controller extends GetxController {
 
     debounce(
       searchQuery,
-      (query) {
+      (query) async {
         searchController.text = query;
         searchResult.clear();
         searchEndCur = null;
         searchHasNextPage.value = true;
         searchCache.clear();
-        searchData();
+        isSearching(true);
+        await searchData();
+        isSearching(false);
       },
       time: 500.ms,
     );
@@ -331,14 +334,19 @@ class Controller extends GetxController {
   final searchController = SearchController();
 
   late final refreshSearchData = throttle(() async {
-    logger.i('Refreshing search data...');
-    searchHasNextPage.value = true;
-    searchEndCur = null;
-    searchCache.clear();
-    HDataModel.discussionsCache.clear(); // 清空详情缓存
-    searchResult.clear();
-    await searchData();
-    logger.i('Refreshed. Result count: ${searchResult.length}');
+    isSearching(true);
+    try {
+      logger.i('Refreshing search data...');
+      searchHasNextPage.value = true;
+      searchEndCur = null;
+      searchCache.clear();
+      HDataModel.discussionsCache.clear(); // 清空详情缓存
+      searchResult.clear();
+      await searchData();
+      logger.i('Refreshed. Result count: ${searchResult.length}');
+    } finally {
+      isSearching(false);
+    }
   });
 
   final searchCache = <String?>{};

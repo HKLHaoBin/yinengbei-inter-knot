@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:inter_knot/components/discussion_card.dart';
+import 'package:get/get.dart';
+import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/smooth_scroll.dart';
 import 'package:inter_knot/models/h_data.dart';
@@ -37,7 +39,40 @@ class _DiscussionGridState extends State<DiscussionGrid> {
     final list = widget.list;
     final fetchData = widget.fetchData;
     final hasNextPage = widget.hasNextPage;
-    if (list.isEmpty) return const Center(child: Text('空'));
+    if (list.isEmpty) {
+      return Center(
+        child: Obx(() {
+          final isSearching = Get.find<Controller>().isSearching.value;
+          if (isSearching) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/images/Bangboo.gif',
+                  width: 120,
+                  height: 120,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '正在搜索...',
+                  style: TextStyle(
+                    color: Color(0xff808080),
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            );
+          }
+          return const Text(
+            '暂无相关帖子',
+            style: TextStyle(
+              color: Color.fromARGB(255, 233, 233, 233),
+              fontSize: 16,
+            ),
+          );
+        }),
+      );
+    }
     return LayoutBuilder(
       builder: (context, con) {
         final isCompact = MediaQuery.of(context).size.width < 640;
