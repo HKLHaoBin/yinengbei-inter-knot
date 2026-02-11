@@ -137,19 +137,33 @@ class _DiscussionGridState extends State<DiscussionGrid> {
                             transitionDuration: 300.ms,
                             transitionBuilder: (context, animaton1,
                                 secondaryAnimation, child) {
-                              final curvedAnimation = CurvedAnimation(
-                                parent: animaton1,
-                                curve: Curves.easeOutQuart,
-                              );
-                              return FadeTransition(
-                                opacity: curvedAnimation,
-                                child: SlideTransition(
-                                  position: Tween(
-                                    begin: const Offset(0.1, 0.0),
-                                    end: Offset.zero,
-                                  ).animate(curvedAnimation),
-                                  child: RepaintBoundary(child: child),
-                                ),
+                              return AnimatedBuilder(
+                                animation: animaton1,
+                                builder: (context, child) {
+                                  final curve = Curves.easeOutQuart;
+                                  final double value = animaton1.value;
+                                  final double curvedValue =
+                                      curve.transform(value);
+
+                                  Offset translation;
+                                  if (animaton1.status ==
+                                      AnimationStatus.reverse) {
+                                    translation =
+                                        Offset(-0.05 * (1 - curvedValue), 0.0);
+                                  } else {
+                                    translation =
+                                        Offset(0.05 * (1 - curvedValue), 0.0);
+                                  }
+
+                                  return Opacity(
+                                    opacity: curvedValue,
+                                    child: FractionalTranslation(
+                                      translation: translation,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: RepaintBoundary(child: child),
                               );
                             },
                           );

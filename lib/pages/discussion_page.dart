@@ -13,7 +13,6 @@ import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/helpers/logger.dart';
-import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/smooth_scroll.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
@@ -245,24 +244,18 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                       CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                      '发布时间：${widget.discussion.createdAt.toLocal().toString().split('.').first}',
+                                                      widget
+                                                          .discussion.createdAt
+                                                          .toLocal()
+                                                          .toString()
+                                                          .split('.')
+                                                          .first,
                                                       style: const TextStyle(
                                                         fontSize: 12,
                                                         color:
                                                             Color(0xff808080),
                                                       ),
                                                     ),
-                                                    if (widget.discussion
-                                                            .lastEditedAt !=
-                                                        null)
-                                                      Text(
-                                                        '更新时间：${widget.discussion.lastEditedAt!.toLocal().toString().split('.').first}',
-                                                        style: const TextStyle(
-                                                          fontSize: 12,
-                                                          color:
-                                                              Color(0xff808080),
-                                                        ),
-                                                      ),
                                                   ],
                                                 ),
                                                 if (widget.discussion.author

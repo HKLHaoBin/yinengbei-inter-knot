@@ -29,20 +29,29 @@ class CreateDiscussionPage extends StatefulWidget {
       },
       transitionDuration: 300.ms,
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween(
-              begin: const Offset(0.1, 0.0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.ease,
+        return AnimatedBuilder(
+          animation: animation,
+          builder: (context, child) {
+            final curve = Curves.easeOutQuart;
+            final double value = animation.value;
+            final double curvedValue = curve.transform(value);
+
+            Offset translation;
+            if (animation.status == AnimationStatus.reverse) {
+              translation = Offset(-0.05 * (1 - curvedValue), 0.0);
+            } else {
+              translation = Offset(0.05 * (1 - curvedValue), 0.0);
+            }
+
+            return Opacity(
+              opacity: curvedValue,
+              child: FractionalTranslation(
+                translation: translation,
+                child: child,
               ),
-            ),
-            child: child,
-          ),
+            );
+          },
+          child: RepaintBoundary(child: child),
         );
       },
     );

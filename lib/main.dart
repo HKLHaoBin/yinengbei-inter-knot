@@ -11,7 +11,6 @@ import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/app_scroll_behavior.dart';
 import 'package:inter_knot/pages/create_discussion_page.dart';
 import 'package:inter_knot/pages/home_page.dart';
-import 'package:inter_knot/pages/login_page.dart';
 import 'package:inter_knot/pages/search_page.dart';
 
 Future<void> main() async {
@@ -149,38 +148,9 @@ class MyHomePage extends GetView<Controller> {
                       splashColor: Colors.transparent,
                       highlightColor: Colors.transparent,
                       customBorder: const CircleBorder(),
-                      onTap: () {
-                        if (controller.isLogin.value) {
+                      onTap: () async {
+                        if (await controller.ensureLogin()) {
                           CreateDiscussionPage.show(context);
-                        } else {
-                          showGeneralDialog(
-                            context: context,
-                            barrierDismissible: true,
-                            barrierLabel: '取消',
-                            pageBuilder:
-                                (context, animation, secondaryAnimation) {
-                              return const LoginPage();
-                            },
-                            transitionDuration:
-                                const Duration(milliseconds: 300),
-                            transitionBuilder: (context, animation,
-                                secondaryAnimation, child) {
-                              final curvedAnimation = CurvedAnimation(
-                                parent: animation,
-                                curve: Curves.easeOutQuart,
-                              );
-                              return FadeTransition(
-                                opacity: curvedAnimation,
-                                child: SlideTransition(
-                                  position: Tween(
-                                    begin: const Offset(0.05, 0.0),
-                                    end: Offset.zero,
-                                  ).animate(curvedAnimation),
-                                  child: RepaintBoundary(child: child),
-                                ),
-                              );
-                            },
-                          );
                         }
                       },
                       child: const SizedBox(

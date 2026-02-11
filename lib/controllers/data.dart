@@ -438,19 +438,33 @@ class Controller extends GetxController {
         },
         transitionDuration: const Duration(milliseconds: 300),
         transitionBuilder: (context, animation, secondaryAnimation, child) {
-          final curvedAnimation = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutQuart,
-          );
-          return FadeTransition(
-            opacity: curvedAnimation,
-            child: SlideTransition(
-              position: Tween(
-                begin: const Offset(0.05, 0.0),
-                end: Offset.zero,
-              ).animate(curvedAnimation),
-              child: RepaintBoundary(child: child),
-            ),
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, child) {
+              final curve = Curves.easeOutQuart;
+              final double value = animation.value;
+              final double curvedValue = curve.transform(value);
+
+              // 进：右(0.05) -> 中(0.0)
+              // 出：中(0.0) -> 左(-0.05)
+              Offset translation;
+              if (animation.status == AnimationStatus.reverse) {
+                // 退出阶段：value 从 1.0 -> 0.0
+                translation = Offset(-0.05 * (1 - curvedValue), 0.0);
+              } else {
+                // 进入阶段：value 从 0.0 -> 1.0
+                translation = Offset(0.05 * (1 - curvedValue), 0.0);
+              }
+
+              return Opacity(
+                opacity: curvedValue,
+                child: FractionalTranslation(
+                  translation: translation,
+                  child: child,
+                ),
+              );
+            },
+            child: RepaintBoundary(child: child),
           );
         },
       );
