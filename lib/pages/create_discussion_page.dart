@@ -53,6 +53,7 @@ class CreateDiscussionPage extends StatefulWidget {
 }
 
 class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
+  final PageController _pageController = PageController();
   final titleController = TextEditingController();
   final _quillController = quill.QuillController.basic();
 
@@ -293,6 +294,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     titleController.dispose();
     _quillController.dispose();
     if (kIsWeb) {
@@ -509,8 +511,14 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     final double zoomScale = isWindowed ? 1.1 : 1.0;
     final double layoutFactor = baseFactor * zoomScale;
 
-    final content = IndexedStack(
-      index: _selectedIndex,
+    final content = PageView(
+      scrollDirection: isDesktop ? Axis.vertical : Axis.horizontal,
+      controller: _pageController,
+      onPageChanged: (index) {
+        setState(() {
+          _selectedIndex = index;
+        });
+      },
       children: [
         Column(
           children: [
@@ -693,9 +701,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                       splashColor: Colors.transparent,
                       highlightColor: Colors.transparent,
                       onTap: () {
-                        setState(() {
-                          _selectedIndex = 0;
-                        });
+                        _pageController.animateToPage(
+                          0,
+                          duration: 300.ms,
+                          curve: Curves.easeOutQuart,
+                        );
                       },
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -745,9 +755,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                       splashColor: Colors.transparent,
                       highlightColor: Colors.transparent,
                       onTap: () {
-                        setState(() {
-                          _selectedIndex = 1;
-                        });
+                        _pageController.animateToPage(
+                          1,
+                          duration: 300.ms,
+                          curve: Curves.easeOutQuart,
+                        );
                       },
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -859,9 +871,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                     title: const Text('正文'),
                                     selected: _selectedIndex == 0,
                                     onTap: () {
-                                      setState(() {
-                                        _selectedIndex = 0;
-                                      });
+                                      _pageController.animateToPage(
+                                        0,
+                                        duration: 300.ms,
+                                        curve: Curves.easeOutQuart,
+                                      );
                                     },
                                   ),
                                   ListTile(
@@ -869,9 +883,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                     title: const Text('封面'),
                                     selected: _selectedIndex == 1,
                                     onTap: () {
-                                      setState(() {
-                                        _selectedIndex = 1;
-                                      });
+                                      _pageController.animateToPage(
+                                        1,
+                                        duration: 300.ms,
+                                        curve: Curves.easeOutQuart,
+                                      );
                                     },
                                   ),
                                 ],
