@@ -522,6 +522,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
     final content = PageView(
       scrollDirection: isDesktop ? Axis.vertical : Axis.horizontal,
+      physics: const NeverScrollableScrollPhysics(),
       controller: _pageController,
       onPageChanged: (index) {
         setState(() {
@@ -598,32 +599,36 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                   itemBuilder: (context, index) {
                     if (index == images.length) {
                       // Add Button
-                      return GestureDetector(
-                        onTap: _pickImages,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: const Color(0xff313132),
-                              width: 2,
+                      return MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: _pickImages,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: const Color(0xff313132),
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              color: const Color(0xff1E1E1E),
                             ),
-                            borderRadius: BorderRadius.circular(8),
-                            color: const Color(0xff1E1E1E),
+                            child: _isCoverUploading
+                                ? const Center(
+                                    child: CircularProgressIndicator())
+                                : const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.add,
+                                          size: 32, color: Colors.grey),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        '添加图片',
+                                        style: TextStyle(
+                                            color: Colors.grey, fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
                           ),
-                          child: _isCoverUploading
-                              ? const Center(child: CircularProgressIndicator())
-                              : const Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.add,
-                                        size: 32, color: Colors.grey),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      '添加图片',
-                                      style: TextStyle(
-                                          color: Colors.grey, fontSize: 12),
-                                    ),
-                                  ],
-                                ),
                         ),
                       );
                     }
