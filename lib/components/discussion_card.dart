@@ -1,14 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/comment_count.dart';
 import 'package:inter_knot/components/hover_3d.dart';
-import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 
 class DiscussionCard extends StatefulWidget {
   const DiscussionCard({
@@ -48,137 +45,111 @@ class _DiscussionCardState extends State<DiscussionCard>
           color: Colors.black,
         ),
       ),
-      child: Obx(() {
-        if (!c.canVisit(widget.discussion, widget.hData.isPin)) {
-          return AspectRatio(
-            aspectRatio: 5 / 6,
-            child: InkWell(
-              splashColor: Colors.transparent,
-              highlightColor: Colors.transparent,
-              onTap: () => launchUrlString(widget.discussion.url),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      '此讨论涉嫌违规',
+      child: InkWell(
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        onTap: widget.onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxHeight: 600,
+                    minHeight: 100,
+                  ),
+                  child: Cover(discussion: widget.discussion),
+                ),
+                Positioned(
+                  top: 8,
+                  left: 12,
+                  child: CommentCount(
+                    discussion: widget.discussion,
+                    color: Colors.white,
+                  ),
+                ),
+                if (widget.hData.isPin)
+                  const Positioned(
+                    top: 8,
+                    right: 12,
+                    child: Text(
+                      '置顶',
+                      style: TextStyle(color: Colors.white),
                     ),
-                    Text(
-                      '这篇讨论被 ${c.report[widget.discussion.id]!.length} 人举报',
+                  ),
+              ],
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.centerLeft,
+                  children: [
+                    Positioned(
+                      top: -26,
+                      child: Avatar(
+                        widget.discussion.author.avatar,
+                        size: 50,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 54),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.discussion.author.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          const Divider(height: 1),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-          );
-        }
-        return InkWell(
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-          hoverColor: Colors.transparent,
-          onTap: widget.onTap,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxHeight: 600,
-                      minHeight: 100,
-                    ),
-                    child: Cover(discussion: widget.discussion),
-                  ),
-                  Positioned(
-                    top: 8,
-                    left: 12,
-                    child: CommentCount(
-                      discussion: widget.discussion,
-                      color: Colors.white,
-                    ),
-                  ),
-                  if (widget.hData.isPin)
-                    const Positioned(
-                      top: 8,
-                      right: 12,
-                      child: Text(
-                        '置顶',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                ],
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                widget.discussion.title,
+                style: Theme.of(context).textTheme.titleMedium,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
-              SizedBox(
-                width: double.infinity,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.centerLeft,
-                    children: [
-                      Positioned(
-                        top: -26,
-                        child: Avatar(
-                          widget.discussion.author.avatar,
-                          size: 50,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 54),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text(
-                              widget.discussion.author.name,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            const Divider(height: 1),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
+            ),
+            if (widget.discussion.rawBodyText.trim().isNotEmpty) ...[
+              const SizedBox(height: 4),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  widget.discussion.title,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  widget.discussion.bodyText,
+                  style: const TextStyle(
+                    color: Color(0xffE0E0E0),
+                    fontSize: 15,
+                  ),
                   overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
+                  maxLines: 3,
                 ),
               ),
-              if (widget.discussion.rawBodyText.trim().isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    widget.discussion.bodyText,
-                    style: const TextStyle(
-                      color: Color(0xffE0E0E0),
-                      fontSize: 15,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 3,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
             ],
-          ),
-        );
-      }),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
     );
 
     if (isCompact) return child;

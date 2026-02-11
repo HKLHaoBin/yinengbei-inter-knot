@@ -5,7 +5,6 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inter_knot/api/api.dart'; // Import Api
 import 'package:inter_knot/api/api_exception.dart';
-import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/helpers/box.dart';
 import 'package:inter_knot/helpers/logger.dart';
 import 'package:inter_knot/helpers/num2dur.dart';
@@ -14,7 +13,6 @@ import 'package:inter_knot/models/author.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/models/release.dart';
-import 'package:inter_knot/models/report_comment.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Standard shared_preferences or specific wrapper?
 // The file used SharedPreferencesWithCache which is new in flutter/packages?
@@ -43,8 +41,6 @@ class Controller extends GetxController {
   final user = Rx<AuthorModel?>(null); // Author -> AuthorModel
   final authorId = RxnString();
   final isUploadingAvatar = false.obs;
-
-  final report = <String, Set<ReportCommentModel>>{}.obs;
 
   final bookmarks = <HDataModel>{}.obs;
   final favoriteIds = <String, String>{}.obs;
@@ -162,11 +158,7 @@ class Controller extends GetxController {
     }
   }
 
-  bool canVisit(DiscussionModel discussion, bool isPin) =>
-      report[discussion.id] == null ||
-      [owner, ...collaborators].contains(discussion.author.login) ||
-      isPin ||
-      report[discussion.id]!.length < 6;
+  bool canVisit(DiscussionModel discussion, bool isPin) => true;
 
   final curPage = 0.obs;
 
@@ -454,6 +446,3 @@ class Controller extends GetxController {
     }
   }
 }
-
-bool canReport(DiscussionModel discussion, bool isPin) =>
-    ![owner, ...collaborators].contains(discussion.author.login) && !isPin;

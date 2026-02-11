@@ -9,11 +9,9 @@ import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/click_region.dart';
 import 'package:inter_knot/components/comment.dart';
 import 'package:inter_knot/components/my_chip.dart';
-import 'package:inter_knot/components/report_discussion_comment.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
-import 'package:inter_knot/helpers/copy_text.dart';
 import 'package:inter_knot/helpers/logger.dart';
 import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/smooth_scroll.dart';
@@ -330,15 +328,10 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                 ),
                                                 const SizedBox(height: 16),
                                                 const Divider(),
-                                                if (widget.discussion.id ==
-                                                    reportDiscussionNumber)
-                                                  const ReportDiscussionComment()
-                                                else
-                                                  Comment(
-                                                      discussion:
-                                                          widget.discussion,
-                                                      loading:
-                                                          _isInitialLoading),
+                                                Comment(
+                                                    discussion:
+                                                        widget.discussion,
+                                                    loading: _isInitialLoading),
                                               ],
                                             ),
                                           ),
@@ -483,18 +476,11 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                                   .all(16.0),
                                                           child: Column(
                                                             children: [
-                                                              if (widget
-                                                                      .discussion
-                                                                      .id ==
-                                                                  reportDiscussionNumber)
-                                                                const ReportDiscussionComment()
-                                                              else
-                                                                Comment(
-                                                                    discussion:
-                                                                        widget
-                                                                            .discussion,
-                                                                    loading:
-                                                                        _isInitialLoading),
+                                                              Comment(
+                                                                  discussion: widget
+                                                                      .discussion,
+                                                                  loading:
+                                                                      _isInitialLoading),
                                                             ],
                                                           ),
                                                         ),
@@ -933,36 +919,6 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
               opacity: _fadeAnimation,
               child: Row(
                 children: [
-                  if (canReport(widget.discussion, widget.hData.isPin)) ...[
-                    const SizedBox(width: 8),
-                    Tooltip(
-                      message: '举报',
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xff222222),
-                          borderRadius: BorderRadius.circular(maxRadius),
-                          border: Border.all(
-                              color: const Color(0xff2D2D2D), width: 4),
-                        ),
-                        child: ClickRegion(
-                          onTap: () {
-                            Future.delayed(3.s).then(
-                              (_) => launchUrlString(
-                                'https://github.com/share121/inter-knot/discussions/$reportDiscussionNumber#new_comment_form',
-                              ),
-                            );
-                            copyText(
-                              '违规讨论：#${widget.discussion.id}\n举报原因：',
-                              title: '举报模板已复制',
-                              msg: '3 秒后跳转到举报页',
-                            );
-                          },
-                          child: const Icon(Icons.report_outlined),
-                        ),
-                      ),
-                    ),
-                  ],
                   const SizedBox(width: 8),
                   Obx(() {
                     final isLiked = c.bookmarks

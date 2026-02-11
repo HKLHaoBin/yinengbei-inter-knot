@@ -5,14 +5,12 @@ import 'package:get/get.dart';
 import 'package:inter_knot/api/api_exception.dart';
 import 'package:inter_knot/constants/api_config.dart';
 import 'package:inter_knot/helpers/box.dart';
-import 'package:inter_knot/helpers/transform_reports.dart';
 import 'package:inter_knot/models/author.dart';
 import 'package:inter_knot/models/comment.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/models/pagination.dart';
 import 'package:inter_knot/models/release.dart';
-import 'package:inter_knot/models/report_comment.dart';
 
 class AuthApi extends GetConnect {
   @override
@@ -606,11 +604,6 @@ class Api extends BaseConnect {
   Future<ReleaseModel?> getNewVersion(String login) async {
     // Disabled/Mocked
     return null;
-  }
-
-  Future<Report> getAllReports(String id) {
-    // Mocked empty report list as backend doesn't support it yet
-    return Future.value(<int, Set<ReportCommentModel>>{});
   }
 
   Future<String?> uploadAvatar({
