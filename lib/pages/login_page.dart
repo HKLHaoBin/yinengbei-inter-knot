@@ -246,7 +246,7 @@ class _LoginPageState extends State<LoginPage> {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.mark_email_read,
+                                    const Icon(Icons.mark_email_unread,
                                         size: 64, color: Color(0xffD7FF00)),
                                     const SizedBox(height: 16),
                                     const Text('注册成功',
