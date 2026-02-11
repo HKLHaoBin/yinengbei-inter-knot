@@ -180,7 +180,8 @@ class Controller extends GetxController {
     ever(accelerator, (v) => pref.setString('accelerator', v));
 
     // Always check for user info if token exists
-    if (getToken().isNotEmpty) {
+    final token = getToken();
+    if (token.isNotEmpty) {
       isLogin(true);
       try {
         await refreshSelfUserInfo();
@@ -194,6 +195,32 @@ class Controller extends GetxController {
           Get.rawSnackbar(message: '账号不存在或异常');
         } else {
           logger.e('Failed to get user info', error: e);
+        }
+      }
+    } else {
+      // Check for pending activation credentials
+      final pendingEmail = box.read<String>('pending_activation_email');
+      final pendingPassword = box.read<String>('pending_activation_password');
+      if (pendingEmail != null && pendingPassword != null) {
+        // Try to login silently
+        try {
+          final res = await BaseConnect.authApi
+              .login(pendingEmail, pendingPassword);
+          if (res.token != null) {
+            await setToken(res.token!);
+            user(res.user);
+            await ensureAuthorForUser(res.user);
+            isLogin(true);
+            await refreshSelfUserInfo();
+            await refreshFavorites();
+            // Clear pending credentials
+            box.remove('pending_activation_email');
+            box.remove('pending_activation_password');
+            Get.rawSnackbar(message: '登录成功：欢迎回来，绳匠！');
+          }
+        } catch (e) {
+          // Ignore failures, user will see waiting screen in LoginPage if they go there
+          logger.w('Auto-login from pending activation failed: $e');
         }
       }
     }
