@@ -12,7 +12,6 @@ class HDataModel {
   DateTime updatedAt;
   bool isPinned;
   bool get isPin => isPinned;
-  // TODO: Implement URL
   String get url => '';
 
   // 临时存储原始 documentId，以便 API 调用

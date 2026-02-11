@@ -13,6 +13,7 @@ import 'package:inter_knot/models/author.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/models/release.dart';
+import 'package:inter_knot/pages/login_page.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Standard shared_preferences or specific wrapper?
 // The file used SharedPreferencesWithCache which is new in flutter/packages?
@@ -204,8 +205,8 @@ class Controller extends GetxController {
       if (pendingEmail != null && pendingPassword != null) {
         // Try to login silently
         try {
-          final res = await BaseConnect.authApi
-              .login(pendingEmail, pendingPassword);
+          final res =
+              await BaseConnect.authApi.login(pendingEmail, pendingPassword);
           if (res.token != null) {
             await setToken(res.token!);
             user(res.user);
@@ -424,10 +425,42 @@ class Controller extends GetxController {
     return id;
   }
 
+  Future<bool> ensureLogin() async {
+    if (isLogin.value) return true;
+    final context = Get.context;
+    if (context != null) {
+      await showGeneralDialog(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: '取消',
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return const LoginPage();
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+        transitionBuilder: (context, animation, secondaryAnimation, child) {
+          final curvedAnimation = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutQuart,
+          );
+          return FadeTransition(
+            opacity: curvedAnimation,
+            child: SlideTransition(
+              position: Tween(
+                begin: const Offset(0.05, 0.0),
+                end: Offset.zero,
+              ).animate(curvedAnimation),
+              child: RepaintBoundary(child: child),
+            ),
+          );
+        },
+      );
+    }
+    return isLogin.value;
+  }
+
   Future<void> pickAndUploadAvatar() async {
     if (isLogin.isFalse) {
-      Get.rawSnackbar(message: '请先登录'.tr);
-      return;
+      if (!await ensureLogin()) return;
     }
     if (isUploadingAvatar.value) return;
 

@@ -23,6 +23,129 @@ class CoverImage {
   });
 }
 
+DiscussionModel parseDiscussionData(Map<String, dynamic> json) {
+  final textVal = json['text'];
+  String rawBody = textVal is String ? textVal : '';
+
+  if (json['blocks'] != null) {
+    final blocks = json['blocks'] as List<dynamic>;
+    for (final block in blocks) {
+      if (block is! Map<String, dynamic>) continue;
+      final type = block['__typename'] as String?;
+      // ComponentSharedRichText -> body
+      if (type == 'ComponentSharedRichText' && block['body'] != null) {
+        rawBody += '\n\n${block['body'] as String}';
+      }
+      // ComponentSharedQuote -> body
+      else if (type == 'ComponentSharedQuote' && block['body'] != null) {
+        rawBody += '\n\n> ${block['body'] as String}';
+      }
+    }
+  }
+
+  final normalized = normalizeMarkdown(rawBody);
+
+  // Convert Markdown to HTML
+  final htmlBody = md.markdownToHtml(
+    normalized,
+    extensionSet: md.ExtensionSet.gitHubWeb,
+  );
+
+  final (:cover, :html) = parseHtml(htmlBody);
+  final List<CoverImage> parsedCovers = [];
+
+  CoverImage? normalizeCover(String? url, int? width, int? height) {
+    if (url == null || url.isEmpty) return null;
+    String finalUrl = url;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      finalUrl = url;
+    } else if (url.startsWith('/')) {
+      finalUrl = '${ApiConfig.baseUrl}$url';
+    } else {
+      finalUrl = '${ApiConfig.baseUrl}/$url';
+    }
+    return CoverImage(url: finalUrl, width: width, height: height);
+  }
+
+  final coverData = json['cover'];
+  if (coverData is List) {
+    for (final item in coverData) {
+      if (item is Map<String, dynamic> && item['url'] != null) {
+        final width = item['width'] as int?;
+        final height = item['height'] as int?;
+        final cover = normalizeCover(item['url'] as String?, width, height);
+        if (cover != null) parsedCovers.add(cover);
+      }
+    }
+  } else if (coverData is Map<String, dynamic> && coverData['url'] != null) {
+    final width = coverData['width'] as int?;
+    final height = coverData['height'] as int?;
+    final cover = normalizeCover(coverData['url'] as String?, width, height);
+    if (cover != null) parsedCovers.add(cover);
+  }
+
+  final List<CoverImage> covers = [];
+
+  if (parsedCovers.isNotEmpty) {
+    covers.addAll(parsedCovers);
+  } else {
+    final fragment = parseFragment(htmlBody);
+    final firstImg = fragment.querySelector('img');
+    final src = firstImg?.attributes['src'];
+    // Try to parse width/height from img attributes if available (often not reliable in HTML strings but worth a try)
+    final width = int.tryParse(firstImg?.attributes['width'] ?? '');
+    final height = int.tryParse(firstImg?.attributes['height'] ?? '');
+
+    final firstCover = normalizeCover(src ?? cover, width, height);
+    if (firstCover != null) covers.add(firstCover);
+  }
+
+  final commentsJson = json['comments'] as Map<String, dynamic>?;
+
+  final authorData = json['author'];
+  final author = authorData is Map<String, dynamic>
+      ? AuthorModel.fromJson(authorData)
+      : AuthorModel(
+          login: 'unknown',
+          avatar: '',
+          name: 'Unknown',
+        );
+
+  return DiscussionModel(
+    title: json['title'] is String
+        ? json['title'] as String
+        : (json['title']?.toString() ?? ''),
+    bodyHTML: html,
+    coverImages: covers,
+    rawBodyText: normalized,
+    // number: ... Removed
+    id: json['documentId'] as String? ??
+        json['id']?.toString() ??
+        '', // 优先 documentId
+    createdAt: json['createdAt'] is String
+        ? DateTime.parse(json['createdAt'] as String)
+        : DateTime.now(),
+    commentsCount: (json['commentsCount'] ?? json['commentscount']) is int
+        ? (json['commentsCount'] ?? json['commentscount']) as int
+        : int.tryParse(
+              (json['commentsCount'] ?? json['commentscount']).toString(),
+            ) ??
+            0,
+    lastEditedAt:
+        (json['updatedAt'] is String ? json['updatedAt'] as String : null)
+            .use((v) => DateTime.parse(v)),
+    author: author,
+    comments: commentsJson != null
+        ? [
+            PaginationModel.fromJson(
+              commentsJson,
+              CommentModel.fromJson,
+            ),
+          ]
+        : [],
+  );
+}
+
 class DiscussionModel {
   String title;
   String bodyHTML;
@@ -102,128 +225,8 @@ class DiscussionModel {
     required this.comments,
   });
 
-  factory DiscussionModel.fromJson(Map<String, dynamic> json) {
-    final textVal = json['text'];
-    String rawBody = textVal is String ? textVal : '';
-
-    if (json['blocks'] != null) {
-      final blocks = json['blocks'] as List<dynamic>;
-      for (final block in blocks) {
-        if (block is! Map<String, dynamic>) continue;
-        final type = block['__typename'] as String?;
-        // ComponentSharedRichText -> body
-        if (type == 'ComponentSharedRichText' && block['body'] != null) {
-          rawBody += '\n\n${block['body'] as String}';
-        }
-        // ComponentSharedQuote -> body
-        else if (type == 'ComponentSharedQuote' && block['body'] != null) {
-          rawBody += '\n\n> ${block['body'] as String}';
-        }
-      }
-    }
-
-    final normalized = normalizeMarkdown(rawBody);
-
-    // Convert Markdown to HTML
-    final htmlBody = md.markdownToHtml(
-      normalized,
-      extensionSet: md.ExtensionSet.gitHubWeb,
-    );
-
-    final (:cover, :html) = parseHtml(htmlBody);
-    final List<CoverImage> parsedCovers = [];
-
-    CoverImage? normalizeCover(String? url, int? width, int? height) {
-      if (url == null || url.isEmpty) return null;
-      String finalUrl = url;
-      if (url.startsWith('http://') || url.startsWith('https://')) {
-        finalUrl = url;
-      } else if (url.startsWith('/')) {
-        finalUrl = '${ApiConfig.baseUrl}$url';
-      } else {
-        finalUrl = '${ApiConfig.baseUrl}/$url';
-      }
-      return CoverImage(url: finalUrl, width: width, height: height);
-    }
-
-    final coverData = json['cover'];
-    if (coverData is List) {
-      for (final item in coverData) {
-        if (item is Map<String, dynamic> && item['url'] != null) {
-          final width = item['width'] as int?;
-          final height = item['height'] as int?;
-          final cover = normalizeCover(item['url'] as String?, width, height);
-          if (cover != null) parsedCovers.add(cover);
-        }
-      }
-    } else if (coverData is Map<String, dynamic> && coverData['url'] != null) {
-      final width = coverData['width'] as int?;
-      final height = coverData['height'] as int?;
-      final cover = normalizeCover(coverData['url'] as String?, width, height);
-      if (cover != null) parsedCovers.add(cover);
-    }
-
-    final List<CoverImage> covers = [];
-
-    if (parsedCovers.isNotEmpty) {
-      covers.addAll(parsedCovers);
-    } else {
-      final fragment = parseFragment(htmlBody);
-      final firstImg = fragment.querySelector('img');
-      final src = firstImg?.attributes['src'];
-      // Try to parse width/height from img attributes if available (often not reliable in HTML strings but worth a try)
-      final width = int.tryParse(firstImg?.attributes['width'] ?? '');
-      final height = int.tryParse(firstImg?.attributes['height'] ?? '');
-
-      final firstCover = normalizeCover(src ?? cover, width, height);
-      if (firstCover != null) covers.add(firstCover);
-    }
-
-    final commentsJson = json['comments'] as Map<String, dynamic>?;
-
-    final authorData = json['author'];
-    final author = authorData is Map<String, dynamic>
-        ? AuthorModel.fromJson(authorData)
-        : AuthorModel(
-            login: 'unknown',
-            avatar: '',
-            name: 'Unknown',
-          );
-
-    return DiscussionModel(
-      title: json['title'] is String
-          ? json['title'] as String
-          : (json['title']?.toString() ?? ''),
-      bodyHTML: html,
-      coverImages: covers,
-      rawBodyText: normalized,
-      // number: ... Removed
-      id: json['documentId'] as String? ??
-          json['id']?.toString() ??
-          '', // 优先 documentId
-      createdAt: json['createdAt'] is String
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.now(),
-      commentsCount: (json['commentsCount'] ?? json['commentscount']) is int
-          ? (json['commentsCount'] ?? json['commentscount']) as int
-          : int.tryParse(
-                (json['commentsCount'] ?? json['commentscount']).toString(),
-              ) ??
-              0,
-      lastEditedAt:
-          (json['updatedAt'] is String ? json['updatedAt'] as String : null)
-              .use((v) => DateTime.parse(v)),
-      author: author,
-      comments: commentsJson != null
-          ? [
-              PaginationModel.fromJson(
-                commentsJson,
-                CommentModel.fromJson,
-              ),
-            ]
-          : [],
-    );
-  }
+  factory DiscussionModel.fromJson(Map<String, dynamic> json) =>
+      parseDiscussionData(json);
 
   @override
   bool operator ==(Object other) => other is DiscussionModel && other.id == id;

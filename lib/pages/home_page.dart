@@ -6,7 +6,6 @@ import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/smooth_scroll.dart';
 import 'package:inter_knot/pages/history_page.dart';
 import 'package:inter_knot/pages/liked_page.dart';
-import 'package:inter_knot/pages/login_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -171,34 +170,7 @@ class _HomePageState extends State<HomePage>
               color: const Color(0xff1E1E1E),
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: ListTile(
-                onTap: () {
-                  showGeneralDialog(
-                    context: context,
-                    barrierDismissible: true,
-                    barrierLabel: '取消',
-                    pageBuilder: (context, animation, secondaryAnimation) {
-                      return const LoginPage();
-                    },
-                    transitionDuration: 300.ms,
-                    transitionBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                      final curvedAnimation = CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeOutQuart,
-                      );
-                      return FadeTransition(
-                        opacity: curvedAnimation,
-                        child: SlideTransition(
-                          position: Tween(
-                            begin: const Offset(0.05, 0.0),
-                            end: Offset.zero,
-                          ).animate(curvedAnimation),
-                          child: RepaintBoundary(child: child),
-                        ),
-                      );
-                    },
-                  );
-                },
+                onTap: c.ensureLogin,
                 title: const Text('登录'),
                 leading: const Icon(Icons.login),
                 trailing: const Icon(Icons.chevron_right, color: Colors.grey),

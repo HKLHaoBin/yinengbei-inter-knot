@@ -17,7 +17,6 @@ import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/smooth_scroll.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
-import 'package:inter_knot/pages/login_page.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class DiscussionPage extends StatefulWidget {
@@ -652,34 +651,7 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
       return;
     }
 
-    if (!c.isLogin.value) {
-      showGeneralDialog(
-        context: context,
-        barrierDismissible: true,
-        barrierLabel: '取消',
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return const LoginPage();
-        },
-        transitionDuration: 300.ms,
-        transitionBuilder: (context, animation, secondaryAnimation, child) {
-          final curvedAnimation = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutQuart,
-          );
-          return FadeTransition(
-            opacity: curvedAnimation,
-            child: SlideTransition(
-              position: Tween(
-                begin: const Offset(0.05, 0.0),
-                end: Offset.zero,
-              ).animate(curvedAnimation),
-              child: RepaintBoundary(child: child),
-            ),
-          );
-        },
-      );
-      return;
-    }
+    if (!await c.ensureLogin()) return;
 
     setState(() => _isLoading = true);
 
@@ -722,35 +694,8 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
     }
   }
 
-  void _handleTap() {
-    if (!c.isLogin.value) {
-      showGeneralDialog(
-        context: context,
-        barrierDismissible: true,
-        barrierLabel: '取消',
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return const LoginPage();
-        },
-        transitionDuration: 300.ms,
-        transitionBuilder: (context, animation, secondaryAnimation, child) {
-          final curvedAnimation = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutQuart,
-          );
-          return FadeTransition(
-            opacity: curvedAnimation,
-            child: SlideTransition(
-              position: Tween(
-                begin: const Offset(0.05, 0.0),
-                end: Offset.zero,
-              ).animate(curvedAnimation),
-              child: RepaintBoundary(child: child),
-            ),
-          );
-        },
-      );
-      return;
-    }
+  void _handleTap() async {
+    if (!await c.ensureLogin()) return;
 
     if (_isWriting) {
       _submit();

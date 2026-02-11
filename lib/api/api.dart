@@ -116,14 +116,18 @@ class BaseConnect extends GetConnect {
     if (response.hasError) {
       debugPrint('API Error: ${response.statusCode} - ${response.bodyString}');
       final body = response.body;
-      String? message;
+      String? message = response.statusText;
+
       if (body is Map) {
         final error = body['error'];
         if (error is Map) {
           message = error['message']?.toString();
+        } else if (error is String) {
+          message = error;
         }
       }
-      throw ApiException(message ?? response.statusText ?? 'Unknown error',
+
+      throw ApiException(message ?? 'Unknown error',
           statusCode: response.statusCode, details: response.bodyString);
     }
 
@@ -136,6 +140,11 @@ class BaseConnect extends GetConnect {
     }
     return body as T;
   }
+}
+
+// Top-level function for compute
+DiscussionModel _parseDiscussionSync(Map<String, dynamic> data) {
+  return parseDiscussionData(data);
 }
 
 class Api extends BaseConnect {
@@ -205,7 +214,8 @@ class Api extends BaseConnect {
     );
 
     final data = unwrapData<Map<String, dynamic>>(res);
-    return DiscussionModel.fromJson(data);
+    // Use compute to parse heavy markdown/html in isolate
+    return compute(_parseDiscussionSync, data);
   }
 
   Future<PaginationModel<HDataModel>> search(
@@ -533,18 +543,7 @@ class Api extends BaseConnect {
     return search('', endCur ?? '');
   }
 
-  Future<AuthorModel> getSelfUserInfo(String login) async {
-    // /api/users/me returns the user directly
-    final res = await get(
-      '/api/users/me',
-      query: {'populate': '*'},
-    );
-
-    // Note: /api/users/me often returns the user object directly, or wrapped in some versions.
-    // unwrapData handles checking for 'data' key.
-
-    final data = unwrapData<Map<String, dynamic>>(res);
-    final user = AuthorModel.fromJson(data);
+  Future<void> _fetchAndSetAvatar(AuthorModel user) async {
     if (user.avatar.isEmpty &&
         user.authorId != null &&
         user.authorId!.isNotEmpty) {
@@ -554,9 +553,21 @@ class Api extends BaseConnect {
           user.avatar = url;
         }
       } catch (_) {
-        // Ignore avatar fetch errors; user info is still valid.
+        // Ignore avatar fetch errors
       }
     }
+  }
+
+  Future<AuthorModel> getSelfUserInfo(String login) async {
+    // /api/users/me returns the user directly
+    final res = await get(
+      '/api/users/me',
+      query: {'populate': '*'},
+    );
+
+    final data = unwrapData<Map<String, dynamic>>(res);
+    final user = AuthorModel.fromJson(data);
+    await _fetchAndSetAvatar(user);
     return user;
   }
 
@@ -574,18 +585,7 @@ class Api extends BaseConnect {
     if (list.isEmpty) throw ApiException('User not found');
 
     final user = AuthorModel.fromJson(list.first as Map<String, dynamic>);
-    if (user.avatar.isEmpty &&
-        user.authorId != null &&
-        user.authorId!.isNotEmpty) {
-      try {
-        final url = await getAuthorAvatarUrl(user.authorId!);
-        if (url != null && url.isNotEmpty) {
-          user.avatar = url;
-        }
-      } catch (_) {
-        // Ignore avatar fetch errors; user info is still valid.
-      }
-    }
+    await _fetchAndSetAvatar(user);
     return user;
   }
 
