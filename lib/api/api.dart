@@ -80,6 +80,7 @@ class BaseConnect extends GetConnect {
   @override
   void onInit() {
     httpClient.baseUrl = ApiConfig.baseUrl;
+    httpClient.timeout = ApiConfig.timeout;
     httpClient.defaultContentType = 'application/json';
     httpClient.addRequestModifier<dynamic>((request) {
       final token = box.read<String>('access_token') ?? '';

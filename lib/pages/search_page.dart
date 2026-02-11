@@ -56,21 +56,39 @@ class _SearchPageState extends State<SearchPage>
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: SearchBar(
-                controller: c.searchController,
-                onSubmitted: c.searchQuery.call,
-                backgroundColor:
-                    const WidgetStatePropertyAll(Color(0xff222222)),
-                leading: const Padding(
-                  padding: EdgeInsets.only(left: 8),
-                  child: Icon(Icons.search),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                hintText: '搜索',
-                hintStyle: const WidgetStatePropertyAll(
-                  TextStyle(color: Color(0xff808080)),
-                ),
-                textStyle: const WidgetStatePropertyAll(
-                  TextStyle(color: Color(0xffE0E0E0)),
+                child: SearchBar(
+                  controller: c.searchController,
+                  onSubmitted: c.searchQuery.call,
+                  backgroundColor:
+                      const WidgetStatePropertyAll(Color(0xff1E1E1E)),
+                  leading: const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Icon(Icons.search, color: Color(0xffB0B0B0)),
+                  ),
+                  hintText: '搜索',
+                  hintStyle: const WidgetStatePropertyAll(
+                    TextStyle(color: Color(0xff808080)),
+                  ),
+                  textStyle: const WidgetStatePropertyAll(
+                    TextStyle(color: Color(0xffE0E0E0)),
+                  ),
+                  side: WidgetStatePropertyAll(
+                    BorderSide(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
+                  ),
                 ),
               ),
             ),

@@ -137,7 +137,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
   Widget build(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
     final isDesktop = screenW >= 800;
-    final double baseFactor = isDesktop ? 0.7 : 1.0;
+    final double baseFactor = isDesktop ? 0.7 : 0.9;
     final double zoomScale = isDesktop ? 1.1 : 1.0;
     final double layoutFactor = baseFactor * zoomScale;
 
@@ -156,36 +156,30 @@ class _DiscussionPageState extends State<DiscussionPage> {
                   height: safeH * baseFactor,
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(59, 255, 255, 255),
-                      borderRadius: screenW < 800
-                          ? BorderRadius.zero
-                          : const BorderRadius.only(
-                              topLeft: Radius.circular(16),
-                              bottomLeft: Radius.circular(16),
-                              bottomRight: Radius.circular(16),
-                            ),
+                    decoration: const BoxDecoration(
+                      color: Color.fromARGB(59, 255, 255, 255),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                      ),
                     ),
                     child: Container(
                       padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Colors.black,
-                        borderRadius: screenW < 800
-                            ? BorderRadius.zero
-                            : const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                bottomLeft: Radius.circular(16),
-                                bottomRight: Radius.circular(16),
-                              ),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          bottomLeft: Radius.circular(16),
+                          bottomRight: Radius.circular(16),
+                        ),
                       ),
                       child: ClipRRect(
-                        borderRadius: screenW < 800
-                            ? BorderRadius.zero
-                            : const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                bottomLeft: Radius.circular(16),
-                                bottomRight: Radius.circular(16),
-                              ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          bottomLeft: Radius.circular(16),
+                          bottomRight: Radius.circular(16),
+                        ),
                         child: Scaffold(
                           backgroundColor: const Color(0xff121212),
                           body: Column(

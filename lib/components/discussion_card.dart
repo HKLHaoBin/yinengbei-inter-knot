@@ -56,13 +56,7 @@ class _DiscussionCardState extends State<DiscussionCard>
           children: [
             Stack(
               children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxHeight: 600,
-                    minHeight: 100,
-                  ),
-                  child: Cover(discussion: widget.discussion),
-                ),
+                Cover(discussion: widget.discussion),
                 Positioned(
                   top: 8,
                   left: 12,
@@ -180,38 +174,23 @@ class Cover extends StatelessWidget {
     final coverImage = discussion.coverImages.first;
     final double imgW = coverImage.width?.toDouble() ?? 643;
     final double imgH = coverImage.height?.toDouble() ?? 408;
-    final double aspectRatio = imgW / imgH;
+    final double rawAspectRatio = imgW / imgH;
+    // Limit aspect ratio to avoid extremely tall images
+    // Using 0.75 (3:4) as the threshold.
+    final double displayAspectRatio =
+        rawAspectRatio < 0.75 ? 0.75 : rawAspectRatio;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Calculate the height the image wants to be
-        final width = constraints.maxWidth;
-        double height = width / aspectRatio;
-
-        // Manually clamp the height to match the parent ConstrainedBox constraints
-        // This prevents the placeholder from shrinking horizontally to maintain aspect ratio
-        if (height > constraints.maxHeight) height = constraints.maxHeight;
-        if (height < constraints.minHeight) height = constraints.minHeight;
-
-        return CachedNetworkImage(
-          imageUrl: discussion.cover!,
-          width: width,
-          height: height,
+    return AspectRatio(
+      aspectRatio: displayAspectRatio,
+      child: CachedNetworkImage(
+        imageUrl: discussion.cover!,
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
+        placeholder: (context, url) => const ColoredBox(color: Colors.white10),
+        errorWidget: (context, url, error) => Assets.images.defaultCover.image(
           fit: BoxFit.cover,
-          alignment: Alignment.topCenter,
-          placeholder: (context, url) => SizedBox(
-            width: width,
-            height: height,
-          ),
-          errorWidget: (context, url, error) => SizedBox(
-            width: width,
-            height: height,
-            child: Assets.images.defaultCover.image(
-              fit: BoxFit.cover,
-            ),
-          ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

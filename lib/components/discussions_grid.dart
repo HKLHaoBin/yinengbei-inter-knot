@@ -76,118 +76,124 @@ class _DiscussionGridState extends State<DiscussionGrid> {
     return LayoutBuilder(
       builder: (context, con) {
         final isCompact = MediaQuery.of(context).size.width < 640;
-        final child = WaterfallFlow.builder(
-          controller: scrollController,
-          physics: !isCompact
-              ? const NeverScrollableScrollPhysics()
-              : const BouncingScrollPhysics(),
-          padding: const EdgeInsets.all(4),
-          gridDelegate: SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 275,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            lastChildLayoutTypeBuilder: (index) => index == list.length
-                ? LastChildLayoutType.foot
-                : LastChildLayoutType.none,
-            viewportBuilder: (firstIndex, lastIndex) {
-              if (lastIndex == list.length) fetchData?.call();
-            },
-          ),
-          itemCount: list.length + 1,
-          itemBuilder: (context, index) {
-            if (index == list.length) {
-              if (hasNextPage) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(8),
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Text('没有更多数据了'),
-                ),
-              );
-            }
-            final item = list.elementAt(index);
-            return FutureBuilder(
-              future: item.discussion,
-              builder: (context, snaphost) {
-                if (snaphost.hasData) {
-                  return DiscussionCard(
-                    discussion: snaphost.data!,
-                    hData: item,
-                    onTap: () {
-                      showGeneralDialog(
-                        context: context,
-                        barrierDismissible: true,
-                        barrierLabel: '取消',
-                        pageBuilder: (context, animation, secondaryAnimation) {
-                          return DiscussionPage(
-                            discussion: snaphost.data!,
-                            hData: item,
-                          );
-                        },
-                        transitionDuration: 300.ms,
-                        transitionBuilder:
-                            (context, animaton1, secondaryAnimation, child) {
-                          final curvedAnimation = CurvedAnimation(
-                            parent: animaton1,
-                            curve: Curves.easeOutQuart,
-                          );
-                          return FadeTransition(
-                            opacity: curvedAnimation,
-                            child: SlideTransition(
-                              position: Tween(
-                                begin: const Offset(0.1, 0.0),
-                                end: Offset.zero,
-                              ).animate(curvedAnimation),
-                              child: RepaintBoundary(child: child),
-                            ),
+        final child = Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1450),
+            child: WaterfallFlow.builder(
+              controller: scrollController,
+              physics: !isCompact
+                  ? const NeverScrollableScrollPhysics()
+                  : const BouncingScrollPhysics(),
+              padding: const EdgeInsets.all(4),
+              gridDelegate: SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 275,
+                mainAxisSpacing: 2,
+                crossAxisSpacing: 1,
+                lastChildLayoutTypeBuilder: (index) => index == list.length
+                    ? LastChildLayoutType.foot
+                    : LastChildLayoutType.none,
+                viewportBuilder: (firstIndex, lastIndex) {
+                  if (lastIndex == list.length) fetchData?.call();
+                },
+              ),
+              itemCount: list.length + 1,
+              itemBuilder: (context, index) {
+                if (index == list.length) {
+                  if (hasNextPage) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text('没有更多数据了'),
+                    ),
+                  );
+                }
+                final item = list.elementAt(index);
+                return FutureBuilder(
+                  future: item.discussion,
+                  builder: (context, snaphost) {
+                    if (snaphost.hasData) {
+                      return DiscussionCard(
+                        discussion: snaphost.data!,
+                        hData: item,
+                        onTap: () {
+                          showGeneralDialog(
+                            context: context,
+                            barrierDismissible: true,
+                            barrierLabel: '取消',
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) {
+                              return DiscussionPage(
+                                discussion: snaphost.data!,
+                                hData: item,
+                              );
+                            },
+                            transitionDuration: 300.ms,
+                            transitionBuilder: (context, animaton1,
+                                secondaryAnimation, child) {
+                              final curvedAnimation = CurvedAnimation(
+                                parent: animaton1,
+                                curve: Curves.easeOutQuart,
+                              );
+                              return FadeTransition(
+                                opacity: curvedAnimation,
+                                child: SlideTransition(
+                                  position: Tween(
+                                    begin: const Offset(0.1, 0.0),
+                                    end: Offset.zero,
+                                  ).animate(curvedAnimation),
+                                  child: RepaintBoundary(child: child),
+                                ),
+                              );
+                            },
                           );
                         },
                       );
-                    },
-                  );
-                }
-                if (snaphost.hasError) {
-                  return Card(
-                    clipBehavior: Clip.antiAlias,
-                    color: const Color(0xff222222),
-                    child: AspectRatio(
-                      aspectRatio: 5 / 6,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child:
-                            Center(child: SelectableText('${snaphost.error}')),
-                      ),
-                    ),
-                  );
-                }
-                if (snaphost.connectionState == ConnectionState.done) {
-                  return Card(
-                    clipBehavior: Clip.antiAlias,
-                    color: const Color(0xff222222),
-                    child: InkWell(
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      onTap: () => launchUrlString(item.url),
-                      child: const AspectRatio(
-                        aspectRatio: 5 / 6,
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(child: Text('讨论已删除')),
+                    }
+                    if (snaphost.hasError) {
+                      return Card(
+                        clipBehavior: Clip.antiAlias,
+                        color: const Color(0xff222222),
+                        child: AspectRatio(
+                          aspectRatio: 5 / 6,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Center(
+                                child: SelectableText('${snaphost.error}')),
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                }
-                return const DiscussionCardSkeleton();
+                      );
+                    }
+                    if (snaphost.connectionState == ConnectionState.done) {
+                      return Card(
+                        clipBehavior: Clip.antiAlias,
+                        color: const Color(0xff222222),
+                        child: InkWell(
+                          splashColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          onTap: () => launchUrlString(item.url),
+                          child: const AspectRatio(
+                            aspectRatio: 5 / 6,
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Center(child: Text('讨论已删除')),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    return const DiscussionCardSkeleton();
+                  },
+                );
               },
-            );
-          },
+            ),
+          ),
         );
         if (!isCompact) {
           return SmoothScroll(
