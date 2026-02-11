@@ -51,9 +51,8 @@ class _DiscussionPageState extends State<DiscussionPage> {
       c.history({widget.hData, ...c.history});
     });
 
-    if (widget.discussion.comments.isEmpty) {
-      _isInitialLoading = true;
-    }
+    widget.discussion.comments.clear();
+    _isInitialLoading = true;
 
     scrollController.addListener(() {
       if (_isLoadingMore) return;
