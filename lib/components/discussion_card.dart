@@ -1,7 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:inter_knot/components/avatar.dart';
-import 'package:inter_knot/components/comment_count.dart';
 import 'package:inter_knot/components/hover_3d.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/models/discussion.dart';
@@ -57,14 +56,6 @@ class _DiscussionCardState extends State<DiscussionCard>
             Stack(
               children: [
                 Cover(discussion: widget.discussion),
-                Positioned(
-                  top: 8,
-                  left: 12,
-                  child: CommentCount(
-                    discussion: widget.discussion,
-                    color: Colors.white,
-                  ),
-                ),
                 if (widget.hData.isPin)
                   const Positioned(
                     top: 8,

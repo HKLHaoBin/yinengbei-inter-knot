@@ -677,6 +677,7 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
       _cancel();
 
       widget.discussion.comments.clear();
+      widget.discussion.commentsCount++;
       await widget.discussion.fetchComments();
       widget.onCommentAdded?.call();
       Get.rawSnackbar(message: '评论发布成功');
@@ -814,7 +815,7 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
                                     child: Transform.translate(
                                       offset: Offset(-50 * curve,
                                           0), // Slide left slightly
-                                      child: const UnconstrainedBox(
+                                      child: UnconstrainedBox(
                                         constrainedAxis: Axis.vertical,
                                         child: Row(
                                           mainAxisAlignment:
@@ -823,7 +824,13 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
                                             Icon(Icons.add_comment_outlined),
                                             SizedBox(width: 8),
                                             Text(
-                                              '写评论',
+                                              '评论',
+                                              style: TextStyle(fontSize: 16),
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              widget.discussion.commentsCount
+                                                  .toString(),
                                               style: TextStyle(fontSize: 16),
                                             ),
                                           ],
