@@ -5,15 +5,12 @@ import 'package:get/get.dart';
 import 'package:inter_knot/api/api_exception.dart';
 import 'package:inter_knot/constants/api_config.dart';
 import 'package:inter_knot/helpers/box.dart';
-import 'package:inter_knot/helpers/transform_reports.dart';
 import 'package:inter_knot/models/author.dart';
 import 'package:inter_knot/models/comment.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/models/pagination.dart';
 import 'package:inter_knot/models/release.dart';
-import 'package:inter_knot/models/report_comment.dart';
-import 'package:inter_knot/pages/login_page.dart';
 
 class AuthApi extends GetConnect {
   @override
@@ -23,7 +20,22 @@ class AuthApi extends GetConnect {
     httpClient.defaultContentType = 'application/json';
   }
 
-  Future<({String token, AuthorModel user})> login(
+  String _getErrorMessage(Response res) {
+    String msg = res.statusText ?? 'Request failed';
+    try {
+      if (res.body is Map && res.body['error'] != null) {
+        final error = res.body['error'];
+        if (error is Map && error['message'] != null) {
+          msg = error['message'];
+        } else if (error is String) {
+          msg = error;
+        }
+      }
+    } catch (_) {}
+    return msg;
+  }
+
+  Future<({String? token, AuthorModel user})> login(
       String email, String password) async {
     final res = await post(
       '/api/auth/local',
@@ -32,18 +44,17 @@ class AuthApi extends GetConnect {
 
     if (res.hasError) {
       debugPrint('Login Error: ${res.statusCode} - ${res.bodyString}');
-      throw ApiException(res.statusText ?? 'Login failed',
-          statusCode: res.statusCode);
+      throw ApiException(_getErrorMessage(res), statusCode: res.statusCode);
     }
 
     final body = res.body as Map<String, dynamic>;
     return (
-      token: body['jwt'] as String,
+      token: body['jwt'] as String?,
       user: AuthorModel.fromJson(body['user'] as Map<String, dynamic>)
     );
   }
 
-  Future<({String token, AuthorModel user})> register(
+  Future<({String? token, AuthorModel user})> register(
       String username, String email, String password) async {
     final res = await post(
       '/api/auth/local/register',
@@ -52,13 +63,12 @@ class AuthApi extends GetConnect {
 
     if (res.hasError) {
       debugPrint('Register Error: ${res.statusCode} - ${res.bodyString}');
-      throw ApiException(res.statusText ?? 'Registration failed',
-          statusCode: res.statusCode);
+      throw ApiException(_getErrorMessage(res), statusCode: res.statusCode);
     }
 
     final body = res.body as Map<String, dynamic>;
     return (
-      token: body['jwt'] as String,
+      token: body['jwt'] as String?,
       user: AuthorModel.fromJson(body['user'] as Map<String, dynamic>)
     );
   }
@@ -70,6 +80,7 @@ class BaseConnect extends GetConnect {
   @override
   void onInit() {
     httpClient.baseUrl = ApiConfig.baseUrl;
+    httpClient.timeout = ApiConfig.timeout;
     httpClient.defaultContentType = 'application/json';
     httpClient.addRequestModifier<dynamic>((request) {
       final token = box.read<String>('access_token') ?? '';
@@ -90,8 +101,11 @@ class BaseConnect extends GetConnect {
     });
     httpClient.addResponseModifier((req, rep) {
       if (rep.statusCode == 401) {
+        // Token is invalid/expired
         box.remove('access_token');
-        Get.offAll(() => const LoginPage());
+        // Do NOT redirect to login page automatically, let the UI handle the unauthenticated state
+        // or let the user choose to login again.
+        // Get.offAll(() => const LoginPage());
       }
       return rep;
     });
@@ -102,14 +116,18 @@ class BaseConnect extends GetConnect {
     if (response.hasError) {
       debugPrint('API Error: ${response.statusCode} - ${response.bodyString}');
       final body = response.body;
-      String? message;
+      String? message = response.statusText;
+
       if (body is Map) {
         final error = body['error'];
         if (error is Map) {
           message = error['message']?.toString();
+        } else if (error is String) {
+          message = error;
         }
       }
-      throw ApiException(message ?? response.statusText ?? 'Unknown error',
+
+      throw ApiException(message ?? 'Unknown error',
           statusCode: response.statusCode, details: response.bodyString);
     }
 
@@ -122,6 +140,11 @@ class BaseConnect extends GetConnect {
     }
     return body as T;
   }
+}
+
+// Top-level function for compute
+DiscussionModel _parseDiscussionSync(Map<String, dynamic> data) {
+  return parseDiscussionData(data);
 }
 
 class Api extends BaseConnect {
@@ -191,7 +214,8 @@ class Api extends BaseConnect {
     );
 
     final data = unwrapData<Map<String, dynamic>>(res);
-    return DiscussionModel.fromJson(data);
+    // Use compute to parse heavy markdown/html in isolate
+    return compute(_parseDiscussionSync, data);
   }
 
   Future<PaginationModel<HDataModel>> search(
@@ -206,7 +230,7 @@ class Api extends BaseConnect {
 
     final queryParams = _buildPaginationQuery(
       start: start,
-      sort: 'createdAt:desc',
+      sort: 'updatedAt:desc',
       filters: filters,
     );
 
@@ -519,18 +543,7 @@ class Api extends BaseConnect {
     return search('', endCur ?? '');
   }
 
-  Future<AuthorModel> getSelfUserInfo(String login) async {
-    // /api/users/me returns the user directly
-    final res = await get(
-      '/api/users/me',
-      query: {'populate': '*'},
-    );
-
-    // Note: /api/users/me often returns the user object directly, or wrapped in some versions.
-    // unwrapData handles checking for 'data' key.
-
-    final data = unwrapData<Map<String, dynamic>>(res);
-    final user = AuthorModel.fromJson(data);
+  Future<void> _fetchAndSetAvatar(AuthorModel user) async {
     if (user.avatar.isEmpty &&
         user.authorId != null &&
         user.authorId!.isNotEmpty) {
@@ -540,9 +553,21 @@ class Api extends BaseConnect {
           user.avatar = url;
         }
       } catch (_) {
-        // Ignore avatar fetch errors; user info is still valid.
+        // Ignore avatar fetch errors
       }
     }
+  }
+
+  Future<AuthorModel> getSelfUserInfo(String login) async {
+    // /api/users/me returns the user directly
+    final res = await get(
+      '/api/users/me',
+      query: {'populate': '*'},
+    );
+
+    final data = unwrapData<Map<String, dynamic>>(res);
+    final user = AuthorModel.fromJson(data);
+    await _fetchAndSetAvatar(user);
     return user;
   }
 
@@ -560,18 +585,7 @@ class Api extends BaseConnect {
     if (list.isEmpty) throw ApiException('User not found');
 
     final user = AuthorModel.fromJson(list.first as Map<String, dynamic>);
-    if (user.avatar.isEmpty &&
-        user.authorId != null &&
-        user.authorId!.isNotEmpty) {
-      try {
-        final url = await getAuthorAvatarUrl(user.authorId!);
-        if (url != null && url.isNotEmpty) {
-          user.avatar = url;
-        }
-      } catch (_) {
-        // Ignore avatar fetch errors; user info is still valid.
-      }
-    }
+    await _fetchAndSetAvatar(user);
     return user;
   }
 
@@ -591,11 +605,6 @@ class Api extends BaseConnect {
   Future<ReleaseModel?> getNewVersion(String login) async {
     // Disabled/Mocked
     return null;
-  }
-
-  Future<Report> getAllReports(String id) {
-    // Mocked empty report list as backend doesn't support it yet
-    return Future.value(<int, Set<ReportCommentModel>>{});
   }
 
   Future<String?> uploadAvatar({

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inter_knot/api/api.dart'; // Import Api
-import 'package:inter_knot/constants/globals.dart';
+import 'package:inter_knot/api/api_exception.dart';
 import 'package:inter_knot/helpers/box.dart';
 import 'package:inter_knot/helpers/logger.dart';
 import 'package:inter_knot/helpers/num2dur.dart';
@@ -13,7 +13,7 @@ import 'package:inter_knot/models/author.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/models/release.dart';
-import 'package:inter_knot/models/report_comment.dart';
+import 'package:inter_knot/pages/login_page.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Standard shared_preferences or specific wrapper?
 // The file used SharedPreferencesWithCache which is new in flutter/packages?
@@ -29,6 +29,7 @@ class Controller extends GetxController {
   final searchResult = <HDataModel>{}.obs; // HData -> HDataModel
   String? searchEndCur;
   final searchHasNextPage = true.obs;
+  final isSearching = false.obs;
 
   String rootToken = '';
 
@@ -41,8 +42,6 @@ class Controller extends GetxController {
   final user = Rx<AuthorModel?>(null); // Author -> AuthorModel
   final authorId = RxnString();
   final isUploadingAvatar = false.obs;
-
-  final report = <String, Set<ReportCommentModel>>{}.obs;
 
   final bookmarks = <HDataModel>{}.obs;
   final favoriteIds = <String, String>{}.obs;
@@ -160,11 +159,7 @@ class Controller extends GetxController {
     }
   }
 
-  bool canVisit(DiscussionModel discussion, bool isPin) =>
-      report[discussion.id] == null ||
-      [owner, ...collaborators].contains(discussion.author.login) ||
-      isPin ||
-      report[discussion.id]!.length < 6;
+  bool canVisit(DiscussionModel discussion, bool isPin) => true;
 
   final curPage = 0.obs;
 
@@ -186,14 +181,48 @@ class Controller extends GetxController {
     ever(accelerator, (v) => pref.setString('accelerator', v));
 
     // Always check for user info if token exists
-    if (getToken().isNotEmpty) {
+    final token = getToken();
+    if (token.isNotEmpty) {
       isLogin(true);
       try {
         await refreshSelfUserInfo();
         await refreshFavorites();
       } catch (e) {
-        // Keep login state; token will be cleared on 401 by BaseConnect
-        logger.e('Failed to get user info', error: e);
+        // Handle 401 explicitly if it bubbles up, though BaseConnect usually handles it globally.
+        // But here we want to show a specific message "Account not found or abnormal".
+        if (e is ApiException && e.statusCode == 401) {
+          logger.e('Failed to get user info: Unauthorized', error: e);
+          isLogin(false);
+          Get.rawSnackbar(message: '账号不存在或异常');
+        } else {
+          logger.e('Failed to get user info', error: e);
+        }
+      }
+    } else {
+      // Check for pending activation credentials
+      final pendingEmail = box.read<String>('pending_activation_email');
+      final pendingPassword = box.read<String>('pending_activation_password');
+      if (pendingEmail != null && pendingPassword != null) {
+        // Try to login silently
+        try {
+          final res =
+              await BaseConnect.authApi.login(pendingEmail, pendingPassword);
+          if (res.token != null) {
+            await setToken(res.token!);
+            user(res.user);
+            await ensureAuthorForUser(res.user);
+            isLogin(true);
+            await refreshSelfUserInfo();
+            await refreshFavorites();
+            // Clear pending credentials
+            box.remove('pending_activation_email');
+            box.remove('pending_activation_password');
+            Get.rawSnackbar(message: '登录成功：欢迎回来，绳匠！');
+          }
+        } catch (e) {
+          // Ignore failures, user will see waiting screen in LoginPage if they go there
+          logger.w('Auto-login from pending activation failed: $e');
+        }
       }
     }
 
@@ -223,13 +252,15 @@ class Controller extends GetxController {
 
     debounce(
       searchQuery,
-      (query) {
+      (query) async {
         searchController.text = query;
         searchResult.clear();
         searchEndCur = null;
         searchHasNextPage.value = true;
         searchCache.clear();
-        searchData();
+        isSearching(true);
+        await searchData();
+        isSearching(false);
       },
       time: 500.ms,
     );
@@ -318,28 +349,43 @@ class Controller extends GetxController {
   final selectedIndex = 0.obs;
   final pageController = PageController();
 
-  Future<void> animateToPage(int index) {
+  Future<void> animateToPage(int index, {bool animate = false}) {
     selectedIndex.value = index;
-    return pageController.animateToPage(
-      index,
-      duration: 0.5.s,
-      curve: Curves.ease,
-    );
+    if (animate) {
+      return pageController.animateToPage(
+        index,
+        duration: 0.5.s,
+        curve: Curves.ease,
+      );
+    } else {
+      if (pageController.hasClients) {
+        pageController.jumpToPage(index);
+      } else {
+        // Desktop/Compact mode where PageView is not used
+        curPage.value = index;
+      }
+      return Future.value();
+    }
   }
 
   bool isFetchPinDiscussions = true;
   final searchController = SearchController();
 
   late final refreshSearchData = throttle(() async {
-    logger.i('Refreshing search data...');
-    searchHasNextPage.value = true;
-    searchEndCur = null;
-    searchCache.clear();
-    HDataModel.discussionsCache.clear(); // 清空详情缓存
-    searchResult.clear();
-    await searchData();
-    logger.i('Refreshed. Result count: ${searchResult.length}');
-  });
+    isSearching(true);
+    try {
+      logger.i('Refreshing search data...');
+      searchHasNextPage.value = true;
+      searchEndCur = null;
+      searchCache.clear();
+      HDataModel.discussionsCache.clear(); // 清空详情缓存
+      searchResult.clear();
+      await searchData();
+      logger.i('Refreshed. Result count: ${searchResult.length}');
+    } finally {
+      isSearching(false);
+    }
+  }, Duration.zero);
 
   final searchCache = <String?>{};
   Future<void> searchData() async {
@@ -379,10 +425,56 @@ class Controller extends GetxController {
     return id;
   }
 
+  Future<bool> ensureLogin() async {
+    if (isLogin.value) return true;
+    final context = Get.context;
+    if (context != null) {
+      await showGeneralDialog(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: '取消',
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return const LoginPage();
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+        transitionBuilder: (context, animation, secondaryAnimation, child) {
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, child) {
+              final curve = Curves.easeOutQuart;
+              final double value = animation.value;
+              final double curvedValue = curve.transform(value);
+
+              // 进：右(0.05) -> 中(0.0)
+              // 出：中(0.0) -> 左(-0.05)
+              Offset translation;
+              if (animation.status == AnimationStatus.reverse) {
+                // 退出阶段：value 从 1.0 -> 0.0
+                translation = Offset(-0.05 * (1 - curvedValue), 0.0);
+              } else {
+                // 进入阶段：value 从 0.0 -> 1.0
+                translation = Offset(0.05 * (1 - curvedValue), 0.0);
+              }
+
+              return Opacity(
+                opacity: curvedValue,
+                child: FractionalTranslation(
+                  translation: translation,
+                  child: child,
+                ),
+              );
+            },
+            child: RepaintBoundary(child: child),
+          );
+        },
+      );
+    }
+    return isLogin.value;
+  }
+
   Future<void> pickAndUploadAvatar() async {
     if (isLogin.isFalse) {
-      Get.rawSnackbar(message: '请先登录'.tr);
-      return;
+      if (!await ensureLogin()) return;
     }
     if (isUploadingAvatar.value) return;
 
@@ -428,6 +520,3 @@ class Controller extends GetxController {
     }
   }
 }
-
-bool canReport(DiscussionModel discussion, bool isPin) =>
-    ![owner, ...collaborators].contains(discussion.author.login) && !isPin;

@@ -3,10 +3,8 @@ import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/discussions_grid.dart';
 import 'package:inter_knot/controllers/data.dart';
-import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/throttle.dart';
 import 'package:inter_knot/pages/create_discussion_page.dart';
-import 'package:inter_knot/pages/login_page.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -56,21 +54,39 @@ class _SearchPageState extends State<SearchPage>
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: SearchBar(
-                controller: c.searchController,
-                onSubmitted: c.searchQuery.call,
-                backgroundColor:
-                    const WidgetStatePropertyAll(Color(0xff222222)),
-                leading: const Padding(
-                  padding: EdgeInsets.only(left: 8),
-                  child: Icon(Icons.search),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                hintText: '搜索',
-                hintStyle: const WidgetStatePropertyAll(
-                  TextStyle(color: Color(0xff808080)),
-                ),
-                textStyle: const WidgetStatePropertyAll(
-                  TextStyle(color: Color(0xffE0E0E0)),
+                child: SearchBar(
+                  controller: c.searchController,
+                  onSubmitted: c.searchQuery.call,
+                  backgroundColor:
+                      const WidgetStatePropertyAll(Color(0xff1E1E1E)),
+                  leading: const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Icon(Icons.search, color: Color(0xffB0B0B0)),
+                  ),
+                  hintText: '搜索',
+                  hintStyle: const WidgetStatePropertyAll(
+                    TextStyle(color: Color(0xff808080)),
+                  ),
+                  textStyle: const WidgetStatePropertyAll(
+                    TextStyle(color: Color(0xffE0E0E0)),
+                  ),
+                  side: WidgetStatePropertyAll(
+                    BorderSide(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -162,37 +178,9 @@ class _SearchPageState extends State<SearchPage>
                       splashColor: Colors.transparent,
                       highlightColor: Colors.transparent,
                       borderRadius: BorderRadius.circular(28),
-                      onTap: () {
-                        if (c.isLogin.value) {
-                          Get.to(() => const CreateDiscussionPage());
-                        } else {
-                          showGeneralDialog(
-                            context: context,
-                            barrierDismissible: true,
-                            barrierLabel: '取消',
-                            pageBuilder:
-                                (context, animation, secondaryAnimation) {
-                              return const LoginPage();
-                            },
-                            transitionDuration: 300.ms,
-                            transitionBuilder: (context, animation,
-                                secondaryAnimation, child) {
-                              final curvedAnimation = CurvedAnimation(
-                                parent: animation,
-                                curve: Curves.easeOutQuart,
-                              );
-                              return FadeTransition(
-                                opacity: curvedAnimation,
-                                child: SlideTransition(
-                                  position: Tween(
-                                    begin: const Offset(0.05, 0.0),
-                                    end: Offset.zero,
-                                  ).animate(curvedAnimation),
-                                  child: RepaintBoundary(child: child),
-                                ),
-                              );
-                            },
-                          );
+                      onTap: () async {
+                        if (await c.ensureLogin()) {
+                          CreateDiscussionPage.show(context);
                         }
                       },
                       child: Container(

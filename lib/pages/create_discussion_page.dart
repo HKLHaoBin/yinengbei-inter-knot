@@ -12,17 +12,57 @@ import 'package:inter_knot/components/click_region.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/helpers/normalize_markdown.dart';
+import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/web_hooks.dart';
 import 'package:markdown_quill/markdown_quill.dart';
 
 class CreateDiscussionPage extends StatefulWidget {
   const CreateDiscussionPage({super.key});
 
+  static Future<void> show(BuildContext context) {
+    return showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '取消',
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const CreateDiscussionPage();
+      },
+      transitionDuration: 300.ms,
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return AnimatedBuilder(
+          animation: animation,
+          builder: (context, child) {
+            final curve = Curves.easeOutQuart;
+            final double value = animation.value;
+            final double curvedValue = curve.transform(value);
+
+            Offset translation;
+            if (animation.status == AnimationStatus.reverse) {
+              translation = Offset(-0.05 * (1 - curvedValue), 0.0);
+            } else {
+              translation = Offset(0.05 * (1 - curvedValue), 0.0);
+            }
+
+            return Opacity(
+              opacity: curvedValue,
+              child: FractionalTranslation(
+                translation: translation,
+                child: child,
+              ),
+            );
+          },
+          child: RepaintBoundary(child: child),
+        );
+      },
+    );
+  }
+
   @override
   State<CreateDiscussionPage> createState() => _CreateDiscussionPageState();
 }
 
 class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
+  final PageController _pageController = PageController();
   final titleController = TextEditingController();
   final _quillController = quill.QuillController.basic();
 
@@ -263,6 +303,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     titleController.dispose();
     _quillController.dispose();
     if (kIsWeb) {
@@ -472,10 +513,22 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   @override
   Widget build(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
+    final isWindowed = screenW >= 800;
     final isDesktop = screenW >= 600;
 
-    final content = IndexedStack(
-      index: _selectedIndex,
+    final double baseFactor = isWindowed ? 0.7 : 1.0;
+    final double zoomScale = isWindowed ? 1.1 : 1.0;
+    final double layoutFactor = baseFactor * zoomScale;
+
+    final content = PageView(
+      scrollDirection: isDesktop ? Axis.vertical : Axis.horizontal,
+      physics: const NeverScrollableScrollPhysics(),
+      controller: _pageController,
+      onPageChanged: (index) {
+        setState(() {
+          _selectedIndex = index;
+        });
+      },
       children: [
         Column(
           children: [
@@ -546,32 +599,36 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                   itemBuilder: (context, index) {
                     if (index == images.length) {
                       // Add Button
-                      return GestureDetector(
-                        onTap: _pickImages,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: const Color(0xff313132),
-                              width: 2,
+                      return MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: _pickImages,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: const Color(0xff313132),
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              color: const Color(0xff1E1E1E),
                             ),
-                            borderRadius: BorderRadius.circular(8),
-                            color: const Color(0xff1E1E1E),
+                            child: _isCoverUploading
+                                ? const Center(
+                                    child: CircularProgressIndicator())
+                                : const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.add,
+                                          size: 32, color: Colors.grey),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        '添加图片',
+                                        style: TextStyle(
+                                            color: Colors.grey, fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
                           ),
-                          child: _isCoverUploading
-                              ? const Center(child: CircularProgressIndicator())
-                              : const Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.add,
-                                        size: 32, color: Colors.grey),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      '添加图片',
-                                      style: TextStyle(
-                                          color: Colors.grey, fontSize: 12),
-                                    ),
-                                  ],
-                                ),
                         ),
                       );
                     }
@@ -643,7 +700,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       ],
     );
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: const Color(0xff121212),
       bottomNavigationBar: isDesktop
           ? null
@@ -658,9 +715,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                       splashColor: Colors.transparent,
                       highlightColor: Colors.transparent,
                       onTap: () {
-                        setState(() {
-                          _selectedIndex = 0;
-                        });
+                        _pageController.animateToPage(
+                          0,
+                          duration: 300.ms,
+                          curve: Curves.easeOutQuart,
+                        );
                       },
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -710,9 +769,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                       splashColor: Colors.transparent,
                       highlightColor: Colors.transparent,
                       onTap: () {
-                        setState(() {
-                          _selectedIndex = 1;
-                        });
+                        _pageController.animateToPage(
+                          1,
+                          duration: 300.ms,
+                          curve: Curves.easeOutQuart,
+                        );
                       },
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -824,9 +885,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                     title: const Text('正文'),
                                     selected: _selectedIndex == 0,
                                     onTap: () {
-                                      setState(() {
-                                        _selectedIndex = 0;
-                                      });
+                                      _pageController.animateToPage(
+                                        0,
+                                        duration: 300.ms,
+                                        curve: Curves.easeOutQuart,
+                                      );
                                     },
                                   ),
                                   ListTile(
@@ -834,9 +897,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                     title: const Text('封面'),
                                     selected: _selectedIndex == 1,
                                     onTap: () {
-                                      setState(() {
-                                        _selectedIndex = 1;
-                                      });
+                                      _pageController.animateToPage(
+                                        1,
+                                        duration: 300.ms,
+                                        curve: Curves.easeOutQuart,
+                                      );
                                     },
                                   ),
                                 ],
@@ -945,6 +1010,63 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                     ),
             ),
           ],
+        ),
+      ),
+    );
+
+    return SafeArea(
+      child: Center(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final safeW = constraints.maxWidth;
+            final safeH = constraints.maxHeight;
+            return SizedBox(
+              width: safeW * layoutFactor,
+              height: safeH * layoutFactor,
+              child: FittedBox(
+                child: SizedBox(
+                  width: safeW * baseFactor,
+                  height: safeH * baseFactor,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(59, 255, 255, 255),
+                      borderRadius: isWindowed
+                          ? const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              bottomLeft: Radius.circular(16),
+                              bottomRight: Radius.circular(16),
+                            )
+                          : BorderRadius.zero,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: isWindowed
+                            ? const BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
+                              )
+                            : BorderRadius.zero,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: isWindowed
+                            ? const BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(16),
+                              )
+                            : BorderRadius.zero,
+                        child: scaffold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

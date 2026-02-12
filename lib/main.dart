@@ -5,12 +5,12 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:inter_knot/api/api.dart';
+import 'package:inter_knot/components/fade_indexed_stack.dart';
 import 'package:inter_knot/components/my_app_bar.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/app_scroll_behavior.dart';
 import 'package:inter_knot/pages/create_discussion_page.dart';
 import 'package:inter_knot/pages/home_page.dart';
-import 'package:inter_knot/pages/login_page.dart';
 import 'package:inter_knot/pages/search_page.dart';
 
 Future<void> main() async {
@@ -75,6 +75,28 @@ class MyApp extends StatelessWidget {
       ],
       home: const MyHomePage(),
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        final mediaQueryData = MediaQuery.of(context);
+        const scale = 1.1;
+        final scaledWidth = mediaQueryData.size.width / scale;
+        final scaledHeight = mediaQueryData.size.height / scale;
+
+        return MediaQuery(
+          data: mediaQueryData.copyWith(
+            size: Size(scaledWidth, scaledHeight),
+            devicePixelRatio: mediaQueryData.devicePixelRatio * scale,
+          ),
+          child: FittedBox(
+            fit: BoxFit.contain,
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: scaledWidth,
+              height: scaledHeight,
+              child: child,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -118,7 +140,7 @@ class MyHomePage extends GetView<Controller> {
                   child: InkWell(
                     splashColor: Colors.transparent,
                     highlightColor: Colors.transparent,
-                    onTap: () => controller.animateToPage(0),
+                    onTap: () => controller.animateToPage(0, animate: true),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -148,11 +170,9 @@ class MyHomePage extends GetView<Controller> {
                       splashColor: Colors.transparent,
                       highlightColor: Colors.transparent,
                       customBorder: const CircleBorder(),
-                      onTap: () {
-                        if (controller.isLogin.value) {
-                          Get.to(() => const CreateDiscussionPage());
-                        } else {
-                          Get.to(() => const LoginPage());
+                      onTap: () async {
+                        if (await controller.ensureLogin()) {
+                          CreateDiscussionPage.show(context);
                         }
                       },
                       child: const SizedBox(
@@ -167,7 +187,7 @@ class MyHomePage extends GetView<Controller> {
                   child: InkWell(
                     splashColor: Colors.transparent,
                     highlightColor: Colors.transparent,
-                    onTap: () => controller.animateToPage(1),
+                    onTap: () => controller.animateToPage(1, animate: true),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -202,12 +222,14 @@ class MyHomePage extends GetView<Controller> {
         children: [
           const MyAppBar(),
           Expanded(
-            child: PageView(
-              controller: controller.pageController,
-              children: const [
-                SearchPage(),
-                HomePage(),
-              ],
+            child: Obx(
+              () => FadeIndexedStack(
+                index: controller.selectedIndex.value,
+                children: const [
+                  SearchPage(),
+                  HomePage(),
+                ],
+              ),
             ),
           ),
         ],

@@ -9,17 +9,13 @@ import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/click_region.dart';
 import 'package:inter_knot/components/comment.dart';
 import 'package:inter_knot/components/my_chip.dart';
-import 'package:inter_knot/components/report_discussion_comment.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
-import 'package:inter_knot/helpers/copy_text.dart';
 import 'package:inter_knot/helpers/logger.dart';
-import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/smooth_scroll.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
-import 'package:inter_knot/pages/login_page.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class DiscussionPage extends StatefulWidget {
@@ -51,9 +47,8 @@ class _DiscussionPageState extends State<DiscussionPage> {
       c.history({widget.hData, ...c.history});
     });
 
-    if (widget.discussion.comments.isEmpty) {
-      _isInitialLoading = true;
-    }
+    widget.discussion.comments.clear();
+    _isInitialLoading = true;
 
     scrollController.addListener(() {
       if (_isLoadingMore) return;
@@ -76,13 +71,16 @@ class _DiscussionPageState extends State<DiscussionPage> {
     // Delay initial loading until transition animation completes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final route = ModalRoute.of(context);
-      if (route != null && route.animation != null && !route.animation!.isCompleted) {
+      if (route != null &&
+          route.animation != null &&
+          !route.animation!.isCompleted) {
         void listener(AnimationStatus status) {
           if (status == AnimationStatus.completed) {
             route.animation!.removeStatusListener(listener);
             _startInitialLoad();
           }
         }
+
         route.animation!.addStatusListener(listener);
       } else {
         _startInitialLoad();
@@ -137,7 +135,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
   Widget build(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
     final isDesktop = screenW >= 800;
-    final double baseFactor = isDesktop ? 0.7 : 1.0;
+    final double baseFactor = isDesktop ? 0.7 : 0.9;
     final double zoomScale = isDesktop ? 1.1 : 1.0;
     final double layoutFactor = baseFactor * zoomScale;
 
@@ -156,36 +154,30 @@ class _DiscussionPageState extends State<DiscussionPage> {
                   height: safeH * baseFactor,
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(59, 255, 255, 255),
-                      borderRadius: screenW < 800
-                          ? BorderRadius.zero
-                          : const BorderRadius.only(
-                              topLeft: Radius.circular(16),
-                              bottomLeft: Radius.circular(16),
-                              bottomRight: Radius.circular(16),
-                            ),
+                    decoration: const BoxDecoration(
+                      color: Color.fromARGB(59, 255, 255, 255),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                      ),
                     ),
                     child: Container(
                       padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Colors.black,
-                        borderRadius: screenW < 800
-                            ? BorderRadius.zero
-                            : const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                bottomLeft: Radius.circular(16),
-                                bottomRight: Radius.circular(16),
-                              ),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          bottomLeft: Radius.circular(16),
+                          bottomRight: Radius.circular(16),
+                        ),
                       ),
                       child: ClipRRect(
-                        borderRadius: screenW < 800
-                            ? BorderRadius.zero
-                            : const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                bottomLeft: Radius.circular(16),
-                                bottomRight: Radius.circular(16),
-                              ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          bottomLeft: Radius.circular(16),
+                          bottomRight: Radius.circular(16),
+                        ),
                         child: Scaffold(
                           backgroundColor: const Color(0xff121212),
                           body: Column(
@@ -252,24 +244,18 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                       CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                      '发布时间：${widget.discussion.createdAt.toLocal().toString().split('.').first}',
+                                                      widget
+                                                          .discussion.createdAt
+                                                          .toLocal()
+                                                          .toString()
+                                                          .split('.')
+                                                          .first,
                                                       style: const TextStyle(
                                                         fontSize: 12,
                                                         color:
                                                             Color(0xff808080),
                                                       ),
                                                     ),
-                                                    if (widget.discussion
-                                                            .lastEditedAt !=
-                                                        null)
-                                                      Text(
-                                                        '更新时间：${widget.discussion.lastEditedAt!.toLocal().toString().split('.').first}',
-                                                        style: const TextStyle(
-                                                          fontSize: 12,
-                                                          color:
-                                                              Color(0xff808080),
-                                                        ),
-                                                      ),
                                                   ],
                                                 ),
                                                 if (widget.discussion.author
@@ -328,15 +314,10 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                 ),
                                                 const SizedBox(height: 16),
                                                 const Divider(),
-                                                if (widget.discussion.id ==
-                                                    reportDiscussionNumber)
-                                                  const ReportDiscussionComment()
-                                                else
-                                                  Comment(
-                                                      discussion:
-                                                          widget.discussion,
-                                                      loading:
-                                                          _isInitialLoading),
+                                                Comment(
+                                                    discussion:
+                                                        widget.discussion,
+                                                    loading: _isInitialLoading),
                                               ],
                                             ),
                                           ),
@@ -481,18 +462,11 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                                   .all(16.0),
                                                           child: Column(
                                                             children: [
-                                                              if (widget
-                                                                      .discussion
-                                                                      .id ==
-                                                                  reportDiscussionNumber)
-                                                                const ReportDiscussionComment()
-                                                              else
-                                                                Comment(
-                                                                    discussion:
-                                                                        widget
-                                                                            .discussion,
-                                                                    loading:
-                                                                        _isInitialLoading),
+                                                              Comment(
+                                                                  discussion: widget
+                                                                      .discussion,
+                                                                  loading:
+                                                                      _isInitialLoading),
                                                             ],
                                                           ),
                                                         ),
@@ -670,10 +644,7 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
       return;
     }
 
-    if (!c.isLogin.value) {
-      Get.to(() => const LoginPage());
-      return;
-    }
+    if (!await c.ensureLogin()) return;
 
     setState(() => _isLoading = true);
 
@@ -706,6 +677,7 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
       _cancel();
 
       widget.discussion.comments.clear();
+      widget.discussion.commentsCount++;
       await widget.discussion.fetchComments();
       widget.onCommentAdded?.call();
       Get.rawSnackbar(message: '评论发布成功');
@@ -716,35 +688,8 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
     }
   }
 
-  void _handleTap() {
-    if (!c.isLogin.value) {
-      showGeneralDialog(
-        context: context,
-        barrierDismissible: true,
-        barrierLabel: '取消',
-        pageBuilder: (context, animation, secondaryAnimation) {
-          return const LoginPage();
-        },
-        transitionDuration: 300.ms,
-        transitionBuilder: (context, animation, secondaryAnimation, child) {
-          final curvedAnimation = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutQuart,
-          );
-          return FadeTransition(
-            opacity: curvedAnimation,
-            child: SlideTransition(
-              position: Tween(
-                begin: const Offset(0.05, 0.0),
-                end: Offset.zero,
-              ).animate(curvedAnimation),
-              child: RepaintBoundary(child: child),
-            ),
-          );
-        },
-      );
-      return;
-    }
+  void _handleTap() async {
+    if (!await c.ensureLogin()) return;
 
     if (_isWriting) {
       _submit();
@@ -870,7 +815,7 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
                                     child: Transform.translate(
                                       offset: Offset(-50 * curve,
                                           0), // Slide left slightly
-                                      child: const UnconstrainedBox(
+                                      child: UnconstrainedBox(
                                         constrainedAxis: Axis.vertical,
                                         child: Row(
                                           mainAxisAlignment:
@@ -879,7 +824,13 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
                                             Icon(Icons.add_comment_outlined),
                                             SizedBox(width: 8),
                                             Text(
-                                              '写评论',
+                                              '评论',
+                                              style: TextStyle(fontSize: 16),
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              widget.discussion.commentsCount
+                                                  .toString(),
                                               style: TextStyle(fontSize: 16),
                                             ),
                                           ],
@@ -907,36 +858,6 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
               opacity: _fadeAnimation,
               child: Row(
                 children: [
-                  if (canReport(widget.discussion, widget.hData.isPin)) ...[
-                    const SizedBox(width: 8),
-                    Tooltip(
-                      message: '举报',
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xff222222),
-                          borderRadius: BorderRadius.circular(maxRadius),
-                          border: Border.all(
-                              color: const Color(0xff2D2D2D), width: 4),
-                        ),
-                        child: ClickRegion(
-                          onTap: () {
-                            Future.delayed(3.s).then(
-                              (_) => launchUrlString(
-                                'https://github.com/share121/inter-knot/discussions/$reportDiscussionNumber#new_comment_form',
-                              ),
-                            );
-                            copyText(
-                              '违规讨论：#${widget.discussion.id}\n举报原因：',
-                              title: '举报模板已复制',
-                              msg: '3 秒后跳转到举报页',
-                            );
-                          },
-                          child: const Icon(Icons.report_outlined),
-                        ),
-                      ),
-                    ),
-                  ],
                   const SizedBox(width: 8),
                   Obx(() {
                     final isLiked = c.bookmarks

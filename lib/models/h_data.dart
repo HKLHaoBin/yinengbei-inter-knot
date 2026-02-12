@@ -12,7 +12,6 @@ class HDataModel {
   DateTime updatedAt;
   bool isPinned;
   bool get isPin => isPinned;
-  // TODO: Implement URL
   String get url => '';
 
   // 临时存储原始 documentId，以便 API 调用
@@ -25,13 +24,16 @@ class HDataModel {
   }) : updatedAt = updatedAt ?? _zeroDate;
 
   Future<DiscussionModel?> get discussion {
-      return discussionsCache[id] ??= api.getDiscussion(id);
+    return discussionsCache[id] ??= api.getDiscussion(id);
   }
 
   factory HDataModel.fromJson(Map<String, dynamic> json) {
     // 优先取 documentId，其次是 id (转 String)，最后 fallback 到 number (转 String)
-    final docId = json['documentId'] as String? ?? json['id']?.toString() ?? json['number']?.toString() ?? '';
-    
+    final docId = json['documentId'] as String? ??
+        json['id']?.toString() ??
+        json['number']?.toString() ??
+        '';
+
     return HDataModel(
       id: docId,
       updatedAt: (json['updatedAt'] as String?).use((v) => DateTime.parse(v)),
@@ -40,7 +42,10 @@ class HDataModel {
   }
 
   factory HDataModel.fromPinnedJson(Map<String, dynamic> json) {
-    final docId = json['documentId'] as String? ?? json['id']?.toString() ?? json['number']?.toString() ?? '';
+    final docId = json['documentId'] as String? ??
+        json['id']?.toString() ??
+        json['number']?.toString() ??
+        '';
 
     return HDataModel(
       id: docId,
@@ -59,8 +64,7 @@ class HDataModel {
   }
 
   @override
-  bool operator ==(Object other) =>
-      other is HDataModel && id == other.id;
+  bool operator ==(Object other) => other is HDataModel && id == other.id;
 
   @override
   int get hashCode => id.hashCode;

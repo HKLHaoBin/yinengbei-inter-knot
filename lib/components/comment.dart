@@ -34,9 +34,15 @@ class _CommentState extends State<Comment> {
   Widget _buildFooter() {
     if (widget.discussion.comments.isNotEmpty &&
         widget.discussion.comments.last.hasNextPage) {
-      return const Padding(
-        padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: Image.asset(
+            'assets/images/Bangboo.gif',
+            width: 80,
+            height: 80,
+          ),
+        ),
       );
     }
     return const Padding(
@@ -134,9 +140,15 @@ class _CommentState extends State<Comment> {
   @override
   Widget build(BuildContext context) {
     if (widget.loading) {
-      return const Padding(
-        padding: EdgeInsets.all(32.0),
-        child: Center(child: CircularProgressIndicator()),
+      return Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Center(
+          child: Image.asset(
+            'assets/images/Bangboo.gif',
+            width: 80,
+            height: 80,
+          ),
+        ),
       );
     }
 

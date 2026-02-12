@@ -1,4 +1,3 @@
-const reportDiscussionNumber = '4497'; // TODO: Update with real Strapi documentId
 const owner = 'share121';
 const repo = 'inter-knot';
 const collaborators = ['VacuolePaoo', 'nostalgiatan'];
