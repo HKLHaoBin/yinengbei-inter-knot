@@ -75,6 +75,28 @@ class MyApp extends StatelessWidget {
       ],
       home: const MyHomePage(),
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        final mediaQueryData = MediaQuery.of(context);
+        const scale = 1.1;
+        final scaledWidth = mediaQueryData.size.width / scale;
+        final scaledHeight = mediaQueryData.size.height / scale;
+
+        return MediaQuery(
+          data: mediaQueryData.copyWith(
+            size: Size(scaledWidth, scaledHeight),
+            devicePixelRatio: mediaQueryData.devicePixelRatio * scale,
+          ),
+          child: FittedBox(
+            fit: BoxFit.contain,
+            alignment: Alignment.center,
+            child: SizedBox(
+              width: scaledWidth,
+              height: scaledHeight,
+              child: child,
+            ),
+          ),
+        );
+      },
     );
   }
 }
