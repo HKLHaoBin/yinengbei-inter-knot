@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:get/get.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/my_chip.dart';
 import 'package:inter_knot/components/replies.dart';
 import 'package:inter_knot/constants/globals.dart';
+import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/flatten.dart';
 import 'package:inter_knot/models/comment.dart';
 import 'package:inter_knot/models/discussion.dart';
@@ -73,11 +75,20 @@ class _CommentState extends State<Comment> {
               splashColor: Colors.transparent,
               highlightColor: Colors.transparent,
               onTap: () => launchUrlString(comment.url),
-              child: Text(
-                comment.author.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+              child: Obx(() {
+                final user = c.user.value;
+                final currentAuthorId = c.authorId.value ?? user?.authorId;
+                final isMe = currentAuthorId != null &&
+                    currentAuthorId == comment.author.authorId;
+
+                return Text(
+                  isMe
+                      ? (user?.name ?? comment.author.name)
+                      : comment.author.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                );
+              }),
             ),
           ),
           const SizedBox(width: 8),
