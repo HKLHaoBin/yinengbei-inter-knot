@@ -328,6 +328,8 @@ class Api extends BaseConnect {
       filters: {'filters[article][documentId][\$eq]': id},
       populate: {'populate[author][populate]': 'avatar'},
     );
+    // Add cache buster
+    queryParams['ts'] = DateTime.now().millisecondsSinceEpoch.toString();
 
     final res = await get(
       '/api/comments',
