@@ -110,7 +110,10 @@ class _DiscussionCardState extends State<DiscussionCard>
             children: [
               Stack(
                 children: [
-                  Cover(discussion: widget.discussion),
+                  Cover(
+                    discussion: widget.discussion,
+                    isHovering: _isHovering,
+                  ),
                   if (widget.hData.isPin)
                     const Positioned(
                       top: 8,
@@ -206,59 +209,69 @@ class _DiscussionCardState extends State<DiscussionCard>
 }
 
 class Cover extends StatelessWidget {
-  const Cover({super.key, required this.discussion});
+  const Cover({
+    super.key,
+    required this.discussion,
+    required this.isHovering,
+  });
 
   final DiscussionModel discussion;
+  final bool isHovering;
 
   @override
   Widget build(BuildContext context) {
+    Widget image;
     if (discussion.cover == null) {
-      return AspectRatio(
-        aspectRatio: 643 / 408,
-        child: Assets.images.defaultCover.image(
-          width: double.infinity,
+      image = Assets.images.defaultCover.image(
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    } else if (discussion.cover!.toLowerCase().contains('.gif')) {
+      image = Image.network(
+        discussion.cover!,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        alignment: Alignment.topCenter,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const ColoredBox(color: Colors.white10);
+        },
+        errorBuilder: (context, error, stackTrace) =>
+            Assets.images.defaultCover.image(
+          fit: BoxFit.cover,
+        ),
+      );
+    } else {
+      image = CachedNetworkImage(
+        imageUrl: discussion.cover!,
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
+        placeholder: (context, url) => const ColoredBox(color: Colors.white10),
+        errorWidget: (context, url, error) => Assets.images.defaultCover.image(
           fit: BoxFit.cover,
         ),
       );
     }
 
-    final coverImage = discussion.coverImages.first;
-    final double imgW = coverImage.width?.toDouble() ?? 643;
-    final double imgH = coverImage.height?.toDouble() ?? 408;
+    // Calculate aspect ratio logic...
+    final coverImage =
+        discussion.coverImages.isNotEmpty ? discussion.coverImages.first : null;
+    final double imgW = coverImage?.width?.toDouble() ?? 643;
+    final double imgH = coverImage?.height?.toDouble() ?? 408;
     final double rawAspectRatio = imgW / imgH;
-    // Limit aspect ratio to avoid extremely tall images
-    // Using 0.75 (3:4) as the threshold.
     final double displayAspectRatio =
         rawAspectRatio < 0.75 ? 0.75 : rawAspectRatio;
 
     return AspectRatio(
       aspectRatio: displayAspectRatio,
-      child: discussion.cover!.toLowerCase().contains('.gif')
-          ? Image.network(
-              discussion.cover!,
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-              alignment: Alignment.topCenter,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return const ColoredBox(color: Colors.white10);
-              },
-              errorBuilder: (context, error, stackTrace) =>
-                  Assets.images.defaultCover.image(
-                fit: BoxFit.cover,
-              ),
-            )
-          : CachedNetworkImage(
-              imageUrl: discussion.cover!,
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              placeholder: (context, url) =>
-                  const ColoredBox(color: Colors.white10),
-              errorWidget: (context, url, error) =>
-                  Assets.images.defaultCover.image(
-                fit: BoxFit.cover,
-              ),
-            ),
+      child: ClipRect(
+        child: AnimatedScale(
+          scale: isHovering ? 1.1 : 1.0,
+          duration: const Duration(milliseconds: 1200),
+          curve: Curves.easeOutCubic,
+          child: image,
+        ),
+      ),
     );
   }
 }
