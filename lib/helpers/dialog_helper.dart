@@ -19,7 +19,7 @@ Future<T?> showZZZDialog<T>({
     pageBuilder: (context, animation, secondaryAnimation) {
       return pageBuilder(context);
     },
-    transitionDuration: transitionDuration ?? 300.ms,
+    transitionDuration: transitionDuration ?? 200.ms,
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       return Stack(
         children: [
@@ -38,10 +38,12 @@ Future<T?> showZZZDialog<T>({
                     ),
                     // Texture + Overlay
                     Container(
-                      color: Colors.black.withValues(alpha: 0.6), // Dark overlay
+                      color:
+                          Colors.black.withValues(alpha: 0.6), // Dark overlay
                       child: CustomPaint(
                         painter: PatternPainter(
-                          color: Colors.white.withValues(alpha: 0.1), // Subtle lines
+                          color: Colors.white
+                              .withValues(alpha: 0.1), // Subtle lines
                         ),
                       ),
                     ),
