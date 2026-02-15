@@ -1266,7 +1266,7 @@ class _CoverState extends State<Cover> {
                       child: isGif
                           ? Image.network(
                               url,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
                               loadingBuilder: (context, child, p) {
                                 if (p == null) return child;
                                 return Center(
@@ -1287,7 +1287,7 @@ class _CoverState extends State<Cover> {
                             )
                           : CachedNetworkImage(
                               imageUrl: url,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
                               progressIndicatorBuilder: (context, url, p) {
                                 return Center(
                                   child: CircularProgressIndicator(
