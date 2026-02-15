@@ -11,6 +11,7 @@ class HDataModel {
 
   String id;
   DateTime updatedAt;
+  DateTime createdAt;
   bool isPinned;
   bool get isPin => isPinned;
   String get url => '';
@@ -21,8 +22,10 @@ class HDataModel {
   HDataModel({
     required this.id,
     required DateTime? updatedAt,
+    required DateTime? createdAt,
     required this.isPinned,
-  }) : updatedAt = updatedAt ?? _zeroDate;
+  })  : updatedAt = updatedAt ?? _zeroDate,
+        createdAt = createdAt ?? _zeroDate;
 
   Future<DiscussionModel?> get discussion {
     if (discussionsCache.containsKey(id)) {
@@ -47,9 +50,16 @@ class HDataModel {
         json['number']?.toString() ??
         '';
 
+    final updatedAt =
+        (json['updatedAt'] as String?).use((v) => DateTime.parse(v));
+    final createdAt =
+        (json['createdAt'] as String?).use((v) => DateTime.parse(v)) ??
+            updatedAt;
+
     final hData = HDataModel(
       id: docId,
-      updatedAt: (json['updatedAt'] as String?).use((v) => DateTime.parse(v)),
+      updatedAt: updatedAt,
+      createdAt: createdAt,
       isPinned: false,
     );
 
@@ -73,18 +83,28 @@ class HDataModel {
         json['number']?.toString() ??
         '';
 
+    final updatedAt =
+        (json['updatedAt'] as String?).use((v) => DateTime.parse(v));
+    final createdAt =
+        (json['createdAt'] as String?).use((v) => DateTime.parse(v)) ??
+            updatedAt;
+
     return HDataModel(
       id: docId,
-      updatedAt: (json['updatedAt'] as String?).use((v) => DateTime.parse(v)),
+      updatedAt: updatedAt,
+      createdAt: createdAt,
       isPinned: true,
     );
   }
 
   factory HDataModel.fromStr(String str) {
     final s = str.split(',');
+    final updatedAt = DateTime.parse(s[1]);
+    final createdAt = s.length > 2 ? DateTime.parse(s[2]) : updatedAt;
     return HDataModel(
       id: s[0],
-      updatedAt: DateTime.parse(s[1]),
+      updatedAt: updatedAt,
+      createdAt: createdAt,
       isPinned: false,
     );
   }

@@ -340,45 +340,20 @@ class Controller extends GetxController {
         return;
       }
 
-      final localHead = localList.first;
+      final localNewestCreatedAt = localList
+          .map((e) => e.createdAt)
+          .reduce((a, b) => a.isAfter(b) ? a : b);
 
-      // Check where localHead is in remoteList
-      final index = remoteList.indexWhere((e) => e.id == localHead.id);
+      final count = remoteList
+          .where((e) => e.createdAt.isAfter(localNewestCreatedAt))
+          .length;
 
-      if (index != -1) {
-        // Found localHead in remoteList
-        // The items before it are new
-        if (index > 0) {
-          newPostCount.value = index;
-        } else {
-          // No new posts
-          newPostCount.value = 0;
-          hasContentChange.value = false;
-        }
+      if (count > 0) {
+        newPostCount.value = count;
       } else {
-        // localHead not found in remoteList
-        // Possibilities:
-        // 1. localHead was deleted
-        // 2. localHead is too old (pushed out of first page)
-        // 3. entire first page is new
-
-        // Check if remoteList has items older than localHead
-        // Assuming id is roughly chronological or updatedAt
-        final hasOlder =
-            remoteList.any((e) => e.updatedAt.isBefore(localHead.updatedAt));
-
-        if (hasOlder) {
-          // Remote has items older than localHead, but localHead is missing
-          // -> localHead was likely deleted
-          hasContentChange.value = true;
-          // We can't accurately count new posts, but we know there's a change
-          newPostCount.value = 0;
-        } else {
-          // All remote items are newer than localHead
-          // -> Lots of new posts
-          newPostCount.value = remoteList.length; // At least this many
-        }
+        newPostCount.value = 0;
       }
+      hasContentChange.value = false;
     } catch (e) {
       // Silent error
     }
