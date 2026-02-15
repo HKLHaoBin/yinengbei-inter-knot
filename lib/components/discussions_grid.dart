@@ -44,7 +44,6 @@ class _DiscussionGridState extends State<DiscussionGrid>
       scrollController = ScrollController();
       _isLocalController = true;
     }
-    scrollController.addListener(_onScroll);
   }
 
   @override
@@ -57,11 +56,7 @@ class _DiscussionGridState extends State<DiscussionGrid>
           scrollController.dispose();
           _isLocalController = false;
         }
-      } else {
-        // old was external, remove listener
-        oldWidget.controller!.removeListener(_onScroll);
       }
-
       if (widget.controller != null) {
         scrollController = widget.controller!;
         _isLocalController = false;
@@ -69,23 +64,11 @@ class _DiscussionGridState extends State<DiscussionGrid>
         scrollController = ScrollController();
         _isLocalController = true;
       }
-      scrollController.addListener(_onScroll);
-    }
-  }
-
-  void _onScroll() {
-    if (!widget.hasNextPage) return;
-    if (!scrollController.hasClients) return;
-    final maxScroll = scrollController.position.maxScrollExtent;
-    final currentScroll = scrollController.position.pixels;
-    if (maxScroll - currentScroll <= 100) {
-      widget.fetchData?.call();
     }
   }
 
   @override
   void dispose() {
-    scrollController.removeListener(_onScroll);
     if (_isLocalController) {
       scrollController.dispose();
     }
@@ -96,6 +79,7 @@ class _DiscussionGridState extends State<DiscussionGrid>
   Widget build(BuildContext context) {
     super.build(context);
     final list = widget.list;
+    final items = list.toList(growable: false);
     final fetchData = widget.fetchData;
     final hasNextPage = widget.hasNextPage;
     if (list.isEmpty) {
@@ -148,16 +132,16 @@ class _DiscussionGridState extends State<DiscussionGrid>
                 maxCrossAxisExtent: 275,
                 mainAxisSpacing: 2,
                 crossAxisSpacing: 1,
-                lastChildLayoutTypeBuilder: (index) => index == list.length
+                lastChildLayoutTypeBuilder: (index) => index == items.length
                     ? LastChildLayoutType.foot
                     : LastChildLayoutType.none,
                 viewportBuilder: (firstIndex, lastIndex) {
-                  if (lastIndex == list.length) fetchData?.call();
+                  if (lastIndex == items.length) fetchData?.call();
                 },
               ),
-              itemCount: list.length + 1,
+              itemCount: items.length + 1,
               itemBuilder: (context, index) {
-                if (index == list.length) {
+                if (index == items.length) {
                   if (hasNextPage) {
                     return Center(
                       child: Padding(
@@ -177,8 +161,9 @@ class _DiscussionGridState extends State<DiscussionGrid>
                     ),
                   );
                 }
-                final item = list.elementAt(index);
+                final item = items[index];
                 return FutureBuilder(
+                  key: ValueKey(item.id),
                   future: item.discussion,
                   builder: (context, snaphost) {
                     if (snaphost.hasData) {
