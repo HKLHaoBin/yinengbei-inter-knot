@@ -10,6 +10,7 @@ import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/click_region.dart';
 import 'package:inter_knot/components/comment.dart';
+import 'package:inter_knot/components/image_viewer.dart';
 import 'package:inter_knot/components/my_chip.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/controllers/data.dart';
@@ -694,6 +695,12 @@ class _DiscussionDetailBoxState extends State<DiscussionDetailBox> {
                     launchUrlString(url);
                     return true;
                   },
+                  onTapImage: (data) {
+                    if (data.sources.isEmpty) return;
+                    final url = data.sources.first.url;
+                    ImageViewer.show(context,
+                        imageUrls: [url], heroTagPrefix: null);
+                  },
                 ),
               ),
             ],
@@ -1178,41 +1185,50 @@ class _CoverState extends State<Cover> {
     if (covers.length == 1) {
       final url = covers.first;
       final isGif = url.toLowerCase().contains('.gif');
-      return ClickRegion(
-        onTap: () => launchUrlString(url),
-        child: isGif
-            ? Image.network(
-                url,
-                fit: BoxFit.contain,
-                gaplessPlayback: true,
-                loadingBuilder: (context, child, p) {
-                  if (p == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: p.expectedTotalBytes != null
-                          ? p.cumulativeBytesLoaded / p.expectedTotalBytes!
-                          : null,
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) =>
-                    Assets.images.defaultCover.image(fit: BoxFit.contain),
-              )
-            : CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.contain,
-                progressIndicatorBuilder: (context, url, p) {
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: p.totalSize == null
-                          ? null
-                          : p.downloaded / p.totalSize!,
-                    ),
-                  );
-                },
-                errorWidget: (context, url, error) =>
-                    Assets.images.defaultCover.image(fit: BoxFit.contain),
-              ),
+      final heroTag = 'cover-${widget.discussion.id}-0';
+
+      return Hero(
+        tag: heroTag,
+        child: ClickRegion(
+          onTap: () => ImageViewer.show(
+            context,
+            imageUrls: covers,
+            heroTagPrefix: 'cover-${widget.discussion.id}',
+          ),
+          child: isGif
+              ? Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  gaplessPlayback: true,
+                  loadingBuilder: (context, child, p) {
+                    if (p == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: p.expectedTotalBytes != null
+                            ? p.cumulativeBytesLoaded / p.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) =>
+                      Assets.images.defaultCover.image(fit: BoxFit.contain),
+                )
+              : CachedNetworkImage(
+                  imageUrl: url,
+                  fit: BoxFit.contain,
+                  progressIndicatorBuilder: (context, url, p) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: p.totalSize == null
+                            ? null
+                            : p.downloaded / p.totalSize!,
+                      ),
+                    );
+                  },
+                  errorWidget: (context, url, error) =>
+                      Assets.images.defaultCover.image(fit: BoxFit.contain),
+                ),
+        ),
       );
     }
 
@@ -1234,50 +1250,60 @@ class _CoverState extends State<Cover> {
               itemBuilder: (context, index) {
                 final url = covers[index];
                 final isGif = url.toLowerCase().endsWith('.gif');
-                return ClickRegion(
-                  onTap: () => launchUrlString(url),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: isGif
-                        ? Image.network(
-                            url,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, p) {
-                              if (p == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value: p.expectedTotalBytes != null
-                                      ? p.cumulativeBytesLoaded /
-                                          p.expectedTotalBytes!
-                                      : null,
-                                ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                              color: Colors.grey[800],
-                              child: const Icon(Icons.broken_image,
-                                  color: Colors.white),
+                final heroTag = 'cover-${widget.discussion.id}-$index';
+
+                return Hero(
+                  tag: heroTag,
+                  child: ClickRegion(
+                    onTap: () => ImageViewer.show(
+                      context,
+                      imageUrls: covers,
+                      initialIndex: index,
+                      heroTagPrefix: 'cover-${widget.discussion.id}',
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: isGif
+                          ? Image.network(
+                              url,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, p) {
+                                if (p == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: p.expectedTotalBytes != null
+                                        ? p.cumulativeBytesLoaded /
+                                            p.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                color: Colors.grey[800],
+                                child: const Icon(Icons.broken_image,
+                                    color: Colors.white),
+                              ),
+                            )
+                          : CachedNetworkImage(
+                              imageUrl: url,
+                              fit: BoxFit.cover,
+                              progressIndicatorBuilder: (context, url, p) {
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: p.totalSize == null
+                                        ? null
+                                        : p.downloaded / p.totalSize!,
+                                  ),
+                                );
+                              },
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey[800],
+                                child: const Icon(Icons.broken_image,
+                                    color: Colors.white),
+                              ),
                             ),
-                          )
-                        : CachedNetworkImage(
-                            imageUrl: url,
-                            fit: BoxFit.cover,
-                            progressIndicatorBuilder: (context, url, p) {
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value: p.totalSize == null
-                                      ? null
-                                      : p.downloaded / p.totalSize!,
-                                ),
-                              );
-                            },
-                            errorWidget: (context, url, error) => Container(
-                              color: Colors.grey[800],
-                              child: const Icon(Icons.broken_image,
-                                  color: Colors.white),
-                            ),
-                          ),
+                    ),
                   ),
                 );
               },
