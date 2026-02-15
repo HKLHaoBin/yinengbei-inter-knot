@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/avatar.dart';
+import 'package:inter_knot/components/image_viewer.dart';
 import 'package:inter_knot/components/my_chip.dart';
 import 'package:inter_knot/components/replies.dart';
 import 'package:inter_knot/constants/globals.dart';
@@ -121,6 +122,12 @@ class _CommentState extends State<Comment> {
                 fontSize: 16,
                 color: Color(0xffE0E0E0), // Force light grey color
               ),
+              onTapImage: (data) {
+                if (data.sources.isEmpty) return;
+                final url = data.sources.first.url;
+                ImageViewer.show(context,
+                    imageUrls: [url], heroTagPrefix: null);
+              },
             ),
           ),
           Replies(comment: comment, discussion: widget.discussion),

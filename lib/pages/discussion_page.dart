@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +10,7 @@ import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/click_region.dart';
 import 'package:inter_knot/components/comment.dart';
+import 'package:inter_knot/components/image_viewer.dart';
 import 'package:inter_knot/components/my_chip.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/controllers/data.dart';
@@ -41,6 +44,9 @@ class _DiscussionPageState extends State<DiscussionPage> {
   final c = Get.find<Controller>();
   bool _isLoadingMore = false;
   bool _isInitialLoading = false;
+  Timer? _newCommentCheckTimer;
+  int _newCommentCount = 0;
+  int _serverCommentCount = 0;
 
   @override
   void initState() {
@@ -51,6 +57,13 @@ class _DiscussionPageState extends State<DiscussionPage> {
 
     widget.discussion.comments.clear();
     _isInitialLoading = true;
+    _startNewCommentCheck();
+
+    // Mark as read
+    if (!widget.discussion.isRead) {
+      widget.discussion.isRead = true;
+      Get.find<Api>().markAsRead(widget.discussion.id);
+    }
 
     scrollController.addListener(() {
       if (_isLoadingMore) return;
@@ -111,8 +124,41 @@ class _DiscussionPageState extends State<DiscussionPage> {
     });
   }
 
+  void _startNewCommentCheck() {
+    _newCommentCheckTimer?.cancel();
+    _newCommentCheckTimer =
+        Timer.periodic(const Duration(seconds: 15), (timer) {
+      _checkNewComments();
+    });
+  }
+
+  Future<void> _checkNewComments() async {
+    try {
+      final count = await Get.find<Api>().getCommentCount(widget.discussion.id);
+      if (count > widget.discussion.commentsCount) {
+        if (mounted) {
+          setState(() {
+            _serverCommentCount = count;
+            _newCommentCount = count - widget.discussion.commentsCount;
+          });
+        }
+      } else {
+        // If server count is less or equal (e.g. deletion), sync it?
+        // Or just ignore.
+        if (_newCommentCount > 0 && mounted) {
+          setState(() {
+            _newCommentCount = 0;
+          });
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
   @override
   void dispose() {
+    _newCommentCheckTimer?.cancel();
     scrollController.dispose();
     leftScrollController.dispose();
     super.dispose();
@@ -131,6 +177,66 @@ class _DiscussionPageState extends State<DiscussionPage> {
         }
       });
     }
+  }
+
+  Widget _buildNewCommentNotification() {
+    if (_newCommentCount <= 0) return const SizedBox.shrink();
+
+    return Positioned(
+      bottom: 24,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: Material(
+          color: const Color(0xffD7FF00),
+          borderRadius: BorderRadius.circular(20),
+          elevation: 4,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () async {
+              widget.discussion.commentsCount = _serverCommentCount;
+              setState(() {
+                _newCommentCount = 0;
+              });
+
+              // Always try to fetch if we have new comments
+              if (widget.discussion.comments.isNotEmpty) {
+                // Mark hasNextPage true to force fetch even if we thought we were at end
+                widget.discussion.comments.last.hasNextPage = true;
+              }
+
+              await widget.discussion.fetchComments();
+              if (mounted) setState(() {});
+              _scrollToBottom();
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.arrow_downward,
+                    size: 16,
+                    color: Colors.black,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '有 $_newCommentCount 条新评论',
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -289,41 +395,51 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                 child: LayoutBuilder(
                                   builder: (context, con) {
                                     if (con.maxWidth < 600) {
-                                      return ListView(
-                                        controller: scrollController,
+                                      return Stack(
                                         children: [
-                                          Container(
-                                            constraints: const BoxConstraints(
-                                                maxHeight: 500),
-                                            width: double.infinity,
-                                            child: Cover(
-                                                discussion: widget.discussion),
-                                          ),
-                                          DiscussionDetailBox(
-                                            discussion: widget.discussion,
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 16),
-                                            child: Column(
-                                              children: [
-                                                DiscussionActionButtons(
-                                                  discussion: widget.discussion,
-                                                  hData: widget.hData,
-                                                  onCommentAdded:
-                                                      _scrollToBottom,
-                                                  onEditSuccess: () =>
-                                                      setState(() {}),
-                                                ),
-                                                const SizedBox(height: 16),
-                                                const Divider(),
-                                                Comment(
+                                          ListView(
+                                            controller: scrollController,
+                                            children: [
+                                              Container(
+                                                constraints:
+                                                    const BoxConstraints(
+                                                        maxHeight: 500),
+                                                width: double.infinity,
+                                                child: Cover(
                                                     discussion:
-                                                        widget.discussion,
-                                                    loading: _isInitialLoading),
-                                              ],
-                                            ),
+                                                        widget.discussion),
+                                              ),
+                                              DiscussionDetailBox(
+                                                discussion: widget.discussion,
+                                              ),
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 16),
+                                                child: Column(
+                                                  children: [
+                                                    DiscussionActionButtons(
+                                                      discussion:
+                                                          widget.discussion,
+                                                      hData: widget.hData,
+                                                      onCommentAdded:
+                                                          _scrollToBottom,
+                                                      onEditSuccess: () =>
+                                                          setState(() {}),
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    const Divider(),
+                                                    Comment(
+                                                        discussion:
+                                                            widget.discussion,
+                                                        loading:
+                                                            _isInitialLoading),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
                                           ),
+                                          _buildNewCommentNotification(),
                                         ],
                                       );
                                     }
@@ -448,31 +564,38 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                               child: Column(
                                                 children: [
                                                   Expanded(
-                                                    child: AdaptiveSmoothScroll(
-                                                      controller:
-                                                          scrollController,
-                                                      scrollSpeed: 0.5,
-                                                      builder: (context,
-                                                              physics) =>
-                                                          SingleChildScrollView(
-                                                        controller:
-                                                            scrollController,
-                                                        physics: physics,
-                                                        child: Padding(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .all(16.0),
-                                                          child: Column(
-                                                            children: [
-                                                              Comment(
-                                                                  discussion: widget
-                                                                      .discussion,
-                                                                  loading:
-                                                                      _isInitialLoading),
-                                                            ],
+                                                    child: Stack(
+                                                      children: [
+                                                        AdaptiveSmoothScroll(
+                                                          controller:
+                                                              scrollController,
+                                                          scrollSpeed: 0.5,
+                                                          builder: (context,
+                                                                  physics) =>
+                                                              SingleChildScrollView(
+                                                            controller:
+                                                                scrollController,
+                                                            physics: physics,
+                                                            child: Padding(
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .all(
+                                                                      16.0),
+                                                              child: Column(
+                                                                children: [
+                                                                  Comment(
+                                                                      discussion:
+                                                                          widget
+                                                                              .discussion,
+                                                                      loading:
+                                                                          _isInitialLoading),
+                                                                ],
+                                                              ),
+                                                            ),
                                                           ),
                                                         ),
-                                                      ),
+                                                        _buildNewCommentNotification(),
+                                                      ],
                                                     ),
                                                   ),
                                                   Container(
@@ -571,6 +694,12 @@ class _DiscussionDetailBoxState extends State<DiscussionDetailBox> {
                   onTapUrl: (url) {
                     launchUrlString(url);
                     return true;
+                  },
+                  onTapImage: (data) {
+                    if (data.sources.isEmpty) return;
+                    final url = data.sources.first.url;
+                    ImageViewer.show(context,
+                        imageUrls: [url], heroTagPrefix: null);
                   },
                 ),
               ),
@@ -1056,41 +1185,50 @@ class _CoverState extends State<Cover> {
     if (covers.length == 1) {
       final url = covers.first;
       final isGif = url.toLowerCase().contains('.gif');
-      return ClickRegion(
-        onTap: () => launchUrlString(url),
-        child: isGif
-            ? Image.network(
-                url,
-                fit: BoxFit.contain,
-                gaplessPlayback: true,
-                loadingBuilder: (context, child, p) {
-                  if (p == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: p.expectedTotalBytes != null
-                          ? p.cumulativeBytesLoaded / p.expectedTotalBytes!
-                          : null,
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) =>
-                    Assets.images.defaultCover.image(fit: BoxFit.contain),
-              )
-            : CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.contain,
-                progressIndicatorBuilder: (context, url, p) {
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: p.totalSize == null
-                          ? null
-                          : p.downloaded / p.totalSize!,
-                    ),
-                  );
-                },
-                errorWidget: (context, url, error) =>
-                    Assets.images.defaultCover.image(fit: BoxFit.contain),
-              ),
+      final heroTag = 'cover-${widget.discussion.id}-0';
+
+      return Hero(
+        tag: heroTag,
+        child: ClickRegion(
+          onTap: () => ImageViewer.show(
+            context,
+            imageUrls: covers,
+            heroTagPrefix: 'cover-${widget.discussion.id}',
+          ),
+          child: isGif
+              ? Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  gaplessPlayback: true,
+                  loadingBuilder: (context, child, p) {
+                    if (p == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: p.expectedTotalBytes != null
+                            ? p.cumulativeBytesLoaded / p.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) =>
+                      Assets.images.defaultCover.image(fit: BoxFit.contain),
+                )
+              : CachedNetworkImage(
+                  imageUrl: url,
+                  fit: BoxFit.contain,
+                  progressIndicatorBuilder: (context, url, p) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: p.totalSize == null
+                            ? null
+                            : p.downloaded / p.totalSize!,
+                      ),
+                    );
+                  },
+                  errorWidget: (context, url, error) =>
+                      Assets.images.defaultCover.image(fit: BoxFit.contain),
+                ),
+        ),
       );
     }
 
@@ -1112,50 +1250,60 @@ class _CoverState extends State<Cover> {
               itemBuilder: (context, index) {
                 final url = covers[index];
                 final isGif = url.toLowerCase().endsWith('.gif');
-                return ClickRegion(
-                  onTap: () => launchUrlString(url),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: isGif
-                        ? Image.network(
-                            url,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, p) {
-                              if (p == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value: p.expectedTotalBytes != null
-                                      ? p.cumulativeBytesLoaded /
-                                          p.expectedTotalBytes!
-                                      : null,
-                                ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                              color: Colors.grey[800],
-                              child: const Icon(Icons.broken_image,
-                                  color: Colors.white),
+                final heroTag = 'cover-${widget.discussion.id}-$index';
+
+                return Hero(
+                  tag: heroTag,
+                  child: ClickRegion(
+                    onTap: () => ImageViewer.show(
+                      context,
+                      imageUrls: covers,
+                      initialIndex: index,
+                      heroTagPrefix: 'cover-${widget.discussion.id}',
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: isGif
+                          ? Image.network(
+                              url,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, p) {
+                                if (p == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: p.expectedTotalBytes != null
+                                        ? p.cumulativeBytesLoaded /
+                                            p.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                color: Colors.grey[800],
+                                child: const Icon(Icons.broken_image,
+                                    color: Colors.white),
+                              ),
+                            )
+                          : CachedNetworkImage(
+                              imageUrl: url,
+                              fit: BoxFit.cover,
+                              progressIndicatorBuilder: (context, url, p) {
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: p.totalSize == null
+                                        ? null
+                                        : p.downloaded / p.totalSize!,
+                                  ),
+                                );
+                              },
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey[800],
+                                child: const Icon(Icons.broken_image,
+                                    color: Colors.white),
+                              ),
                             ),
-                          )
-                        : CachedNetworkImage(
-                            imageUrl: url,
-                            fit: BoxFit.cover,
-                            progressIndicatorBuilder: (context, url, p) {
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value: p.totalSize == null
-                                      ? null
-                                      : p.downloaded / p.totalSize!,
-                                ),
-                              );
-                            },
-                            errorWidget: (context, url, error) => Container(
-                              color: Colors.grey[800],
-                              child: const Icon(Icons.broken_image,
-                                  color: Colors.white),
-                            ),
-                          ),
+                    ),
                   ),
                 );
               },

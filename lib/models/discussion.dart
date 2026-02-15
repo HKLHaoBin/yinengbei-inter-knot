@@ -135,6 +135,7 @@ DiscussionModel parseDiscussionData(Map<String, dynamic> json) {
         (json['updatedAt'] is String ? json['updatedAt'] as String : null)
             .use((v) => DateTime.parse(v)),
     author: author,
+    isRead: json['isRead'] == true,
     comments: commentsJson != null
         ? [
             PaginationModel.fromJson(
@@ -148,6 +149,7 @@ DiscussionModel parseDiscussionData(Map<String, dynamic> json) {
 
 class DiscussionModel {
   String title;
+  bool isRead;
   String bodyHTML;
   String rawBodyText;
   List<CoverImage> coverImages;
@@ -199,7 +201,12 @@ class DiscussionModel {
       if (comments.isEmpty) {
         comments = [pagination];
       } else {
-        comments.last.nodes.addAll(pagination.nodes);
+        // Filter out duplicates based on id
+        final existingIds = comments.last.nodes.map((e) => e.id).toSet();
+        final newNodes =
+            pagination.nodes.where((e) => !existingIds.contains(e.id)).toList();
+
+        comments.last.nodes.addAll(newNodes);
         comments.last.hasNextPage = pagination.hasNextPage;
         comments.last.endCursor = pagination.endCursor;
       }
@@ -222,6 +229,7 @@ class DiscussionModel {
     required this.commentsCount,
     required this.lastEditedAt,
     required this.author,
+    this.isRead = false,
     required this.comments,
   });
 

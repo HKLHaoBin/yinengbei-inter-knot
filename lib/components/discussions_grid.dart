@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:inter_knot/components/discussion_card.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/controllers/data.dart';
-import 'package:inter_knot/helpers/num2dur.dart';
+import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/smooth_scroll.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/pages/discussion_page.dart';
@@ -15,27 +15,67 @@ class DiscussionGrid extends StatefulWidget {
     required this.list,
     required this.hasNextPage,
     this.fetchData,
+    this.controller,
   });
 
   final Set<HDataModel> list;
   final bool hasNextPage;
   final void Function()? fetchData;
+  final ScrollController? controller;
 
   @override
   State<DiscussionGrid> createState() => _DiscussionGridState();
 }
 
-class _DiscussionGridState extends State<DiscussionGrid> {
-  final scrollController = ScrollController();
+class _DiscussionGridState extends State<DiscussionGrid>
+    with AutomaticKeepAliveClientMixin {
+  late final ScrollController scrollController;
+  bool _isLocalController = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
+    if (widget.controller != null) {
+      scrollController = widget.controller!;
+    } else {
+      scrollController = ScrollController();
+      _isLocalController = true;
+    }
     scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void didUpdateWidget(covariant DiscussionGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller) {
+      if (oldWidget.controller == null) {
+        // old was local, dispose it
+        if (_isLocalController) {
+          scrollController.dispose();
+          _isLocalController = false;
+        }
+      } else {
+        // old was external, remove listener
+        oldWidget.controller!.removeListener(_onScroll);
+      }
+
+      if (widget.controller != null) {
+        scrollController = widget.controller!;
+        _isLocalController = false;
+      } else {
+        scrollController = ScrollController();
+        _isLocalController = true;
+      }
+      scrollController.addListener(_onScroll);
+    }
   }
 
   void _onScroll() {
     if (!widget.hasNextPage) return;
+    if (!scrollController.hasClients) return;
     final maxScroll = scrollController.position.maxScrollExtent;
     final currentScroll = scrollController.position.pixels;
     if (maxScroll - currentScroll <= 100) {
@@ -46,12 +86,15 @@ class _DiscussionGridState extends State<DiscussionGrid> {
   @override
   void dispose() {
     scrollController.removeListener(_onScroll);
-    scrollController.dispose();
+    if (_isLocalController) {
+      scrollController.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final list = widget.list;
     final fetchData = widget.fetchData;
     final hasNextPage = widget.hasNextPage;
@@ -143,47 +186,12 @@ class _DiscussionGridState extends State<DiscussionGrid> {
                         discussion: snaphost.data!,
                         hData: item,
                         onTap: () async {
-                          final result = await showGeneralDialog(
+                          final result = await showZZZDialog(
                             context: context,
-                            barrierDismissible: true,
-                            barrierLabel: '取消',
-                            pageBuilder:
-                                (context, animation, secondaryAnimation) {
+                            pageBuilder: (context) {
                               return DiscussionPage(
                                 discussion: snaphost.data!,
                                 hData: item,
-                              );
-                            },
-                            transitionDuration: 300.ms,
-                            transitionBuilder: (context, animaton1,
-                                secondaryAnimation, child) {
-                              return AnimatedBuilder(
-                                animation: animaton1,
-                                builder: (context, child) {
-                                  final curve = Curves.easeOutQuart;
-                                  final double value = animaton1.value;
-                                  final double curvedValue =
-                                      curve.transform(value);
-
-                                  Offset translation;
-                                  if (animaton1.status ==
-                                      AnimationStatus.reverse) {
-                                    translation =
-                                        Offset(-0.05 * (1 - curvedValue), 0.0);
-                                  } else {
-                                    translation =
-                                        Offset(0.05 * (1 - curvedValue), 0.0);
-                                  }
-
-                                  return Opacity(
-                                    opacity: curvedValue,
-                                    child: FractionalTranslation(
-                                      translation: translation,
-                                      child: child,
-                                    ),
-                                  );
-                                },
-                                child: RepaintBoundary(child: child),
                               );
                             },
                           );

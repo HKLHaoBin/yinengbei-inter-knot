@@ -43,6 +43,8 @@
 		</array>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>保存图片到相册</string>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>LSApplicationQueriesSchemes</key>

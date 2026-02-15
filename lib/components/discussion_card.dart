@@ -23,116 +23,179 @@ class DiscussionCard extends StatefulWidget {
 }
 
 class _DiscussionCardState extends State<DiscussionCard>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
+  bool _isHovering = false;
+  late final AnimationController _breathingController;
+  late final Animation<Color?> _breathingAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Controller for the breathing effect (yellow <-> lemon)
+    _breathingController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+
+    _breathingAnimation = ColorTween(
+      begin: const Color(0xfffbfe00),
+      end: const Color(0xffdcfe00),
+    ).animate(CurvedAnimation(
+      parent: _breathingController,
+      curve: Curves.linear,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _breathingController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final isCompact = MediaQuery.of(context).size.width < 640;
 
-    final child = Card(
-      clipBehavior: Clip.antiAlias,
-      elevation: 1,
-      color: const Color(0xff222222),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-          bottomLeft: Radius.circular(16),
+    final child = MouseRegion(
+      onEnter: (_) {
+        setState(() => _isHovering = true);
+        _breathingController.reset();
+        _breathingController.repeat(reverse: true);
+      },
+      onExit: (_) {
+        setState(() => _isHovering = false);
+        _breathingController.stop();
+      },
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        elevation: 1,
+        color: const Color(0xff222222),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomLeft: Radius.circular(16),
+          ),
         ),
-        side: BorderSide(
-          width: 4,
-          color: Colors.black,
-        ),
-      ),
-      child: InkWell(
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
-        hoverColor: Colors.transparent,
-        onTap: widget.onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                Cover(discussion: widget.discussion),
-                if (widget.hData.isPin)
-                  const Positioned(
-                    top: 8,
-                    right: 12,
-                    child: Text(
-                      '置顶',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-              ],
-            ),
-            SizedBox(
-              width: double.infinity,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.centerLeft,
-                  children: [
-                    Positioned(
-                      top: -26,
-                      child: Avatar(
-                        widget.discussion.author.avatar,
-                        size: 50,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 54),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.discussion.author.name,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          const Divider(height: 1),
-                        ],
-                      ),
-                    ),
-                  ],
+        child: AnimatedBuilder(
+          animation: _breathingAnimation,
+          builder: (context, child) {
+            return Container(
+              foregroundDecoration: BoxDecoration(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                ),
+                border: Border.all(
+                  width: 4,
+                  color: _isHovering
+                      ? (_breathingAnimation.value ?? const Color(0xfffbfe00))
+                      : Colors.black,
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                widget.discussion.title,
-                style: Theme.of(context).textTheme.titleMedium,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
+              child: InkWell(
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                hoverColor: Colors.transparent,
+                onTap: widget.onTap,
+                child: child,
               ),
-            ),
-            if (widget.discussion.rawBodyText.trim().isNotEmpty) ...[
-              const SizedBox(height: 4),
+            );
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  Cover(
+                    discussion: widget.discussion,
+                    isHovering: _isHovering,
+                  ),
+                  if (widget.hData.isPin)
+                    const Positioned(
+                      top: 8,
+                      right: 12,
+                      child: Text(
+                        '置顶',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                ],
+              ),
+              SizedBox(
+                width: double.infinity,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      Positioned(
+                        top: -26,
+                        child: Avatar(
+                          widget.discussion.author.avatar,
+                          size: 50,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 54),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.discussion.author.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            const Divider(height: 1),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  widget.discussion.bodyText,
-                  style: const TextStyle(
-                    color: Color(0xffE0E0E0),
-                    fontSize: 15,
-                  ),
+                  widget.discussion.title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: widget.discussion.isRead
+                            ? Colors.grey
+                            : Colors.blue,
+                      ),
                   overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
+                  maxLines: 2,
                 ),
               ),
+              if (widget.discussion.rawBodyText.trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    widget.discussion.bodyText,
+                    style: const TextStyle(
+                      color: Color(0xffE0E0E0),
+                      fontSize: 15,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
             ],
-            const SizedBox(height: 12),
-          ],
+          ),
         ),
       ),
     );
@@ -146,59 +209,69 @@ class _DiscussionCardState extends State<DiscussionCard>
 }
 
 class Cover extends StatelessWidget {
-  const Cover({super.key, required this.discussion});
+  const Cover({
+    super.key,
+    required this.discussion,
+    required this.isHovering,
+  });
 
   final DiscussionModel discussion;
+  final bool isHovering;
 
   @override
   Widget build(BuildContext context) {
+    Widget image;
     if (discussion.cover == null) {
-      return AspectRatio(
-        aspectRatio: 643 / 408,
-        child: Assets.images.defaultCover.image(
-          width: double.infinity,
+      image = Assets.images.defaultCover.image(
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    } else if (discussion.cover!.toLowerCase().contains('.gif')) {
+      image = Image.network(
+        discussion.cover!,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        alignment: Alignment.topCenter,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const ColoredBox(color: Colors.white10);
+        },
+        errorBuilder: (context, error, stackTrace) =>
+            Assets.images.defaultCover.image(
+          fit: BoxFit.cover,
+        ),
+      );
+    } else {
+      image = CachedNetworkImage(
+        imageUrl: discussion.cover!,
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
+        placeholder: (context, url) => const ColoredBox(color: Colors.white10),
+        errorWidget: (context, url, error) => Assets.images.defaultCover.image(
           fit: BoxFit.cover,
         ),
       );
     }
 
-    final coverImage = discussion.coverImages.first;
-    final double imgW = coverImage.width?.toDouble() ?? 643;
-    final double imgH = coverImage.height?.toDouble() ?? 408;
+    // Calculate aspect ratio logic...
+    final coverImage =
+        discussion.coverImages.isNotEmpty ? discussion.coverImages.first : null;
+    final double imgW = coverImage?.width?.toDouble() ?? 643;
+    final double imgH = coverImage?.height?.toDouble() ?? 408;
     final double rawAspectRatio = imgW / imgH;
-    // Limit aspect ratio to avoid extremely tall images
-    // Using 0.75 (3:4) as the threshold.
     final double displayAspectRatio =
         rawAspectRatio < 0.75 ? 0.75 : rawAspectRatio;
 
     return AspectRatio(
       aspectRatio: displayAspectRatio,
-      child: discussion.cover!.toLowerCase().contains('.gif')
-          ? Image.network(
-              discussion.cover!,
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-              alignment: Alignment.topCenter,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return const ColoredBox(color: Colors.white10);
-              },
-              errorBuilder: (context, error, stackTrace) =>
-                  Assets.images.defaultCover.image(
-                fit: BoxFit.cover,
-              ),
-            )
-          : CachedNetworkImage(
-              imageUrl: discussion.cover!,
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              placeholder: (context, url) =>
-                  const ColoredBox(color: Colors.white10),
-              errorWidget: (context, url, error) =>
-                  Assets.images.defaultCover.image(
-                fit: BoxFit.cover,
-              ),
-            ),
+      child: ClipRect(
+        child: AnimatedScale(
+          scale: isHovering ? 1.1 : 1.0,
+          duration: const Duration(milliseconds: 1200),
+          curve: Curves.easeOutCubic,
+          child: image,
+        ),
+      ),
     );
   }
 }
