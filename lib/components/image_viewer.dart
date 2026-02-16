@@ -108,6 +108,7 @@ class _ImageViewerState extends State<ImageViewer> {
                     initialScale: PhotoViewComputedScale.contained,
                     minScale: PhotoViewComputedScale.contained,
                     maxScale: PhotoViewComputedScale.covered * 2,
+                    filterQuality: FilterQuality.medium,
                     heroAttributes: PhotoViewHeroAttributes(tag: heroTag),
                     errorBuilder: (context, error, stackTrace) {
                       return const Center(

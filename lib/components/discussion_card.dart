@@ -232,6 +232,7 @@ class Cover extends StatelessWidget {
         fit: BoxFit.cover,
         gaplessPlayback: true,
         alignment: Alignment.topCenter,
+        filterQuality: FilterQuality.medium,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
           return const ColoredBox(color: Colors.white10);
@@ -246,6 +247,7 @@ class Cover extends StatelessWidget {
         imageUrl: discussion.cover!,
         fit: BoxFit.cover,
         alignment: Alignment.topCenter,
+        filterQuality: FilterQuality.medium,
         placeholder: (context, url) => const ColoredBox(color: Colors.white10),
         errorWidget: (context, url, error) => Assets.images.defaultCover.image(
           fit: BoxFit.cover,

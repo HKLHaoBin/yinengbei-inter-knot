@@ -688,8 +688,6 @@ class _DiscussionDetailBoxState extends State<DiscussionDetailBox> {
                   textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontSize: 16,
                     color: const Color(0xffE0E0E0),
-                    fontFamily: 'ZhCn',
-                    fontFamilyFallback: const ['ZhCn'],
                   ),
                   onTapUrl: (url) {
                     launchUrlString(url);
@@ -1267,6 +1265,7 @@ class _CoverState extends State<Cover> {
                           ? Image.network(
                               url,
                               fit: BoxFit.contain,
+                              filterQuality: FilterQuality.medium,
                               loadingBuilder: (context, child, p) {
                                 if (p == null) return child;
                                 return Center(
@@ -1288,6 +1287,7 @@ class _CoverState extends State<Cover> {
                           : CachedNetworkImage(
                               imageUrl: url,
                               fit: BoxFit.contain,
+                              filterQuality: FilterQuality.medium,
                               progressIndicatorBuilder: (context, url, p) {
                                 return Center(
                                   child: CircularProgressIndicator(

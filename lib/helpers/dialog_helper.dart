@@ -43,7 +43,7 @@ Future<T?> showZZZDialog<T>({
                       child: CustomPaint(
                         painter: PatternPainter(
                           color: Colors.white
-                              .withValues(alpha: 0.1), // Subtle lines
+                              .withValues(alpha: 0.15), // Subtle lines
                         ),
                       ),
                     ),
