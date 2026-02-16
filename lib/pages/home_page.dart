@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/controllers/data.dart';
-import 'package:inter_knot/helpers/dialog_helper.dart';
-import 'package:inter_knot/helpers/smooth_scroll.dart';
+import 'package:inter_knot/helpers/profile_dialogs.dart';
 import 'package:inter_knot/pages/history_page.dart';
 import 'package:inter_knot/pages/liked_page.dart';
 import 'package:inter_knot/pages/my_discussions_page.dart';
+
+import 'package:inter_knot/pages/my_page_desktop.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,61 +29,28 @@ class _HomePageState extends State<HomePage>
     super.dispose();
   }
 
-  void _showEditUsernameDialog(BuildContext context, String? currentName) {
-    final controller = TextEditingController(text: currentName);
-    showZZZDialog(
-      context: context,
-      pageBuilder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xff1E1E1E),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(
-              color: Color.fromARGB(59, 255, 255, 255),
-              width: 3,
-            ),
-          ),
-          title: const Text('修改用户名', style: TextStyle(color: Colors.white)),
-          content: TextField(
-            controller: controller,
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              labelText: '新用户名',
-              hintText: '请输入新用户名',
-              labelStyle: TextStyle(color: Colors.grey),
-              hintStyle: TextStyle(color: Colors.grey),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.grey),
-              ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
-            ),
-            TextButton(
-              onPressed: () {
-                final newName = controller.text.trim();
-                if (newName.isNotEmpty) {
-                  c.updateUsername(newName);
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('确定'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
+    // Desktop/expanded layout uses new modern forum UI
+    // Compact layout uses standard scrolling
+    final isCompact = MediaQuery.of(context).size.width < 640;
+
+    if (!isCompact) {
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/pc-page-bg.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+          const MyPageDesktop(),
+        ],
+      );
+    }
+
     final child = Column(
       children: [
         const SizedBox(height: 16),
@@ -135,14 +103,6 @@ class _HomePageState extends State<HomePage>
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            if (isLogin)
-                              IconButton(
-                                icon: const Icon(Icons.edit,
-                                    size: 16, color: Colors.grey),
-                                onPressed: () {
-                                  _showEditUsernameDialog(context, user?.name);
-                                },
-                              ),
                           ],
                         ),
                         if (isLogin) ...[
@@ -157,9 +117,9 @@ class _HomePageState extends State<HomePage>
                           ),
                           const SizedBox(height: 4),
                           InkWell(
-                            onTap: c.pickAndUploadAvatar,
+                            onTap: () => showEditProfileDialog(context),
                             child: Text(
-                              '点击上传头像',
+                              '编辑资料',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey[400],
@@ -243,11 +203,7 @@ class _HomePageState extends State<HomePage>
               color: const Color(0xff1E1E1E),
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: ListTile(
-                onTap: () async {
-                  await c.setToken('');
-                  c.isLogin(false);
-                  Get.rawSnackbar(message: '已退出登录');
-                },
+                onTap: () => showLogoutDialog(context),
                 title: const Text('退出登录'),
                 leading: const Icon(Icons.logout),
                 trailing: const Icon(Icons.chevron_right, color: Colors.grey),
@@ -269,46 +225,6 @@ class _HomePageState extends State<HomePage>
       ],
     );
 
-    // Desktop/expanded layout uses SmoothScroll with DraggableScrollbar
-    // Compact layout uses standard scrolling
-    final isCompact = MediaQuery.of(context).size.width < 640;
-
-    if (!isCompact) {
-      return Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/pc-page-bg.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-          SmoothScroll(
-            controller: scrollController,
-            child: DraggableScrollbar(
-              controller: scrollController,
-              child: ScrollConfiguration(
-                behavior: ScrollConfiguration.of(context).copyWith(
-                  scrollbars: false,
-                ),
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 800),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: child,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
     return Stack(
       children: [
         Positioned.fill(
