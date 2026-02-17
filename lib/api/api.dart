@@ -80,6 +80,11 @@ class AuthApi extends GetConnect {
 class BaseConnect extends GetConnect {
   static final authApi = Get.put(AuthApi());
 
+  // 重试配置
+  static const int _maxRetries = 3;
+  static const Duration _baseRetryDelay = Duration(milliseconds: 500);
+  static const Duration _maxRetryDelay = Duration(seconds: 5);
+
   @override
   void onInit() {
     httpClient.baseUrl = ApiConfig.baseUrl;
@@ -112,6 +117,158 @@ class BaseConnect extends GetConnect {
       }
       return rep;
     });
+  }
+
+  bool _shouldRetry(Response? response, dynamic error) {
+    if (response == null) return true;
+
+    final code = response.statusCode;
+    if (code != null) {
+      final s = code.toString();
+      if (s.startsWith('5') ||
+          s.startsWith('6') ||
+          s.startsWith('7') ||
+          code == 429) {
+        return true;
+      }
+    }
+
+    String? message;
+    try {
+      final body = response.body;
+      if (body is Map && body['error'] != null) {
+        final error = body['error'];
+        if (error is Map && error['message'] != null) {
+          message = error['message'].toString();
+        } else if (error is String) {
+          message = error;
+        }
+      }
+    } catch (_) {}
+
+    message ??= response.statusText ?? '';
+
+    if (message.contains('短时间内请求数量过多') ||
+        message.contains('XMLHttpRequest error')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  Duration _calculateDelay(int attempt) {
+    final delayMs = _baseRetryDelay.inMilliseconds * (1 << attempt);
+    final clampedDelayMs = delayMs.clamp(
+      _baseRetryDelay.inMilliseconds,
+      _maxRetryDelay.inMilliseconds,
+    );
+    return Duration(milliseconds: clampedDelayMs);
+  }
+
+  Future<Response<T>> retryRequest<T>(
+    Future<Response<T>> Function() requestFn, {
+    String? operationName,
+  }) async {
+    int attempts = 0;
+
+    while (true) {
+      try {
+        final response = await requestFn();
+
+        if (!response.hasError || !_shouldRetry(response, null)) {
+          return response;
+        }
+
+        attempts++;
+        if (attempts > _maxRetries) {
+          debugPrint(
+              '${operationName ?? "Request"} failed after $_maxRetries retries');
+          return response;
+        }
+
+        final delay = _calculateDelay(attempts - 1);
+        debugPrint(
+            '${operationName ?? "Request"} failed with ${response.statusCode}, '
+            'retrying in ${delay.inMilliseconds}ms (attempt $attempts/$_maxRetries)');
+
+        await Future.delayed(delay);
+      } catch (e) {
+        attempts++;
+        if (attempts > _maxRetries) {
+          debugPrint(
+              '${operationName ?? "Request"} failed after $_maxRetries retries: $e');
+          rethrow;
+        }
+
+        final delay = _calculateDelay(attempts - 1);
+        debugPrint('${operationName ?? "Request"} error: $e, '
+            'retrying in ${delay.inMilliseconds}ms (attempt $attempts/$_maxRetries)');
+
+        await Future.delayed(delay);
+      }
+    }
+  }
+
+  Future<Response<T>> getWithRetry<T>(
+    String url, {
+    Map<String, String>? query,
+    String? contentType,
+    Map<String, String>? headers,
+    String? operationName,
+  }) async {
+    return retryRequest(
+      () =>
+          get<T>(url, query: query, contentType: contentType, headers: headers),
+      operationName: operationName ?? 'GET $url',
+    );
+  }
+
+  Future<Response<T>> postWithRetry<T>(
+    String url,
+    dynamic body, {
+    String? contentType,
+    Map<String, String>? headers,
+    Map<String, dynamic>? query,
+    void Function(double)? uploadProgress,
+    String? operationName,
+  }) async {
+    return retryRequest(
+      () => post<T>(url, body,
+          contentType: contentType,
+          headers: headers,
+          query: query,
+          uploadProgress: uploadProgress),
+      operationName: operationName ?? 'POST $url',
+    );
+  }
+
+  Future<Response<T>> putWithRetry<T>(
+    String url,
+    dynamic body, {
+    String? contentType,
+    Map<String, String>? headers,
+    Map<String, dynamic>? query,
+    String? operationName,
+  }) async {
+    return retryRequest(
+      () => put<T>(url, body,
+          contentType: contentType, headers: headers, query: query),
+      operationName: operationName ?? 'PUT $url',
+    );
+  }
+
+  Future<Response<T>> deleteWithRetry<T>(
+    String url, {
+    String? contentType,
+    Map<String, String>? headers,
+    Map<String, dynamic>? query,
+    String? operationName,
+  }) async {
+    return retryRequest(
+      () => delete<T>(url,
+          contentType: contentType, headers: headers, query: query),
+      operationName: operationName ?? 'DELETE $url',
+    );
   }
 
   /// Extracts 'data' from Strapi v5 response and handles errors
@@ -200,20 +357,31 @@ class Api extends BaseConnect {
     return asInt ?? value;
   }
 
-  Map<String, String> _buildPaginationQuery({
+  Map<String, dynamic> _buildPaginationQuery({
     required int start,
     int limit = ApiConfig.defaultPageSize,
     Map<String, String>? filters,
     Map<String, String>? populate,
-    String? sort,
+    dynamic sort, // String or List<String>
   }) {
-    return {
+    final params = <String, dynamic>{
       'pagination[start]': start.toString(),
       'pagination[limit]': limit.toString(),
-      if (sort != null) 'sort': sort,
       ...?filters,
       ...?populate,
     };
+
+    if (sort != null) {
+      if (sort is List) {
+        for (var i = 0; i < sort.length; i++) {
+          params['sort[$i]'] = sort[i];
+        }
+      } else {
+        params['sort'] = sort;
+      }
+    }
+
+    return params;
   }
 
   Future<DiscussionModel> getDiscussion(String id) async {
@@ -277,7 +445,7 @@ class Api extends BaseConnect {
 
     final queryParams = _buildPaginationQuery(
       start: start,
-      sort: 'updatedAt:desc',
+      sort: ['isPinned:desc', 'updatedAt:desc'],
       filters: filters,
       populate: {
         'populate[author][populate]': 'avatar',
@@ -290,7 +458,7 @@ class Api extends BaseConnect {
 
     final res = await get(
       '/api/articles',
-      query: queryParams,
+      query: queryParams.map((k, v) => MapEntry(k, v.toString())),
     );
 
     final data = unwrapData<List<dynamic>>(res);
@@ -819,8 +987,36 @@ class Api extends BaseConnect {
       delete('/api/articles/$id');
 
   Future<PaginationModel<HDataModel>> getPinnedDiscussions(String? endCur) {
-    // Reusing search/list endpoint for now as placeholder
-    return search('', endCur ?? '');
+    // Reusing search/list endpoint with isPinned=true filter
+    final start = int.tryParse(endCur?.isEmpty == true ? '0' : endCur!) ?? 0;
+
+    final queryParams = _buildPaginationQuery(
+      start: start,
+      sort: ['updatedAt:desc'],
+      filters: {'filters[isPinned][\$eq]': 'true'},
+      populate: {
+        'populate[author][populate]': 'avatar',
+        'populate[cover][fields][0]': 'url',
+        'populate[cover][fields][1]': 'width',
+        'populate[cover][fields][2]': 'height',
+        'populate[blocks][populate]': '*',
+      },
+    );
+
+    return get(
+      '/api/articles',
+      query: queryParams.map((k, v) => MapEntry(k, v.toString())),
+    ).then((res) {
+      final data = unwrapData<List<dynamic>>(res);
+      final hasNext = data.length >= ApiConfig.defaultPageSize;
+      return PaginationModel(
+        nodes: data
+            .map((e) => HDataModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        endCursor: (start + ApiConfig.defaultPageSize).toString(),
+        hasNextPage: hasNext,
+      );
+    });
   }
 
   Future<void> _fetchAndSetAvatar(AuthorModel user) async {

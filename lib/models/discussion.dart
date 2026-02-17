@@ -136,6 +136,7 @@ DiscussionModel parseDiscussionData(Map<String, dynamic> json) {
             .use((v) => DateTime.parse(v)),
     author: author,
     isRead: json['isRead'] == true,
+    isPinned: json['isPinned'] == true,
     comments: commentsJson != null
         ? [
             PaginationModel.fromJson(
@@ -150,6 +151,7 @@ DiscussionModel parseDiscussionData(Map<String, dynamic> json) {
 class DiscussionModel {
   String title;
   bool isRead;
+  bool isPinned;
   String bodyHTML;
   String rawBodyText;
   List<CoverImage> coverImages;
@@ -230,6 +232,7 @@ class DiscussionModel {
     required this.lastEditedAt,
     required this.author,
     this.isRead = false,
+    this.isPinned = false,
     required this.comments,
   });
 

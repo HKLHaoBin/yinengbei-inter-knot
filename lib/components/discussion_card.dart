@@ -92,7 +92,9 @@ class _DiscussionCardState extends State<DiscussionCard>
                   width: 4,
                   color: _isHovering
                       ? (_breathingAnimation.value ?? const Color(0xfffbfe00))
-                      : Colors.black,
+                      : (widget.discussion.isPinned
+                          ? Colors.blue
+                          : Colors.black),
                 ),
               ),
               child: InkWell(
@@ -121,6 +123,29 @@ class _DiscussionCardState extends State<DiscussionCard>
                       child: Text(
                         '置顶',
                         style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  if (widget.discussion.isPinned)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: const BoxDecoration(
+                          color: Colors.blue,
+                          borderRadius: BorderRadius.only(
+                            bottomRight: Radius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          '置顶',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                 ],
