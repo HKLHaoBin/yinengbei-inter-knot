@@ -80,6 +80,11 @@ class AuthApi extends GetConnect {
 class BaseConnect extends GetConnect {
   static final authApi = Get.put(AuthApi());
 
+  // 重试配置
+  static const int _maxRetries = 3;
+  static const Duration _baseRetryDelay = Duration(milliseconds: 500);
+  static const Duration _maxRetryDelay = Duration(seconds: 5);
+
   @override
   void onInit() {
     httpClient.baseUrl = ApiConfig.baseUrl;
@@ -112,6 +117,170 @@ class BaseConnect extends GetConnect {
       }
       return rep;
     });
+  }
+
+  /// 判断错误是否需要重试
+  bool _shouldRetry(Response? response, dynamic error) {
+    // 如果是网络错误或特定状态码，需要重试
+    if (response == null) return true;
+
+    final code = response.statusCode;
+    if (code != null) {
+      final s = code.toString();
+      // 5xx 服务器错误、6xx、7xx 以及 429 (Too Many Requests)
+      if (s.startsWith('5') || s.startsWith('6') || s.startsWith('7') || code == 429) {
+        return true;
+      }
+    }
+
+    // 检查错误消息
+    String? message;
+    try {
+      final body = response.body;
+      if (body is Map && body['error'] != null) {
+        final error = body['error'];
+        if (error is Map && error['message'] != null) {
+          message = error['message'].toString();
+        } else if (error is String) {
+          message = error;
+        }
+      }
+    } catch (_) {}
+
+    message ??= response.statusText ?? '';
+
+    // 包含"短时间内请求数量过多"或 XMLHttpRequest error 的错误需要重试
+    if (message.contains('短时间内请求数量过多') ||
+        message.contains('XMLHttpRequest error')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /// 计算指数退避延迟
+  Duration _calculateDelay(int attempt) {
+    // 指数退避: 500ms, 1000ms, 2000ms
+    final delayMs = _baseRetryDelay.inMilliseconds * (1 << attempt);
+    final clampedDelayMs = delayMs.clamp(
+      _baseRetryDelay.inMilliseconds,
+      _maxRetryDelay.inMilliseconds,
+    );
+    return Duration(milliseconds: clampedDelayMs);
+  }
+
+  /// 带重试机制的通用请求方法
+  Future<Response<T>> retryRequest<T>(
+    Future<Response<T>> Function() requestFn, {
+    String? operationName,
+  }) async {
+    int attempts = 0;
+
+    while (true) {
+      try {
+        final response = await requestFn();
+
+        // 如果请求成功或不需要重试的错误，直接返回
+        if (!response.hasError || !_shouldRetry(response, null)) {
+          return response;
+        }
+
+        // 检查是否达到最大重试次数
+        attempts++;
+        if (attempts > _maxRetries) {
+          debugPrint(
+              '${operationName ?? "Request"} failed after $_maxRetries retries');
+          return response;
+        }
+
+        // 计算延迟时间
+        final delay = _calculateDelay(attempts - 1);
+        debugPrint(
+            '${operationName ?? "Request"} failed with ${response.statusCode}, '
+            'retrying in ${delay.inMilliseconds}ms (attempt $attempts/$_maxRetries)');
+
+        await Future.delayed(delay);
+      } catch (e) {
+        // 对于异常（如网络错误），也进行重试
+        attempts++;
+        if (attempts > _maxRetries) {
+          debugPrint(
+              '${operationName ?? "Request"} failed after $_maxRetries retries: $e');
+          rethrow;
+        }
+
+        final delay = _calculateDelay(attempts - 1);
+        debugPrint(
+            '${operationName ?? "Request"} error: $e, '
+            'retrying in ${delay.inMilliseconds}ms (attempt $attempts/$_maxRetries)');
+
+        await Future.delayed(delay);
+      }
+    }
+  }
+
+  /// 带重试的 GET 请求
+  Future<Response<T>> getWithRetry<T>(
+    String url, {
+    Map<String, String>? query,
+    String? contentType,
+    Map<String, String>? headers,
+    String? operationName,
+  }) async {
+    return retryRequest(
+      () => get<T>(url, query: query, contentType: contentType, headers: headers),
+      operationName: operationName ?? 'GET $url',
+    );
+  }
+
+  /// 带重试的 POST 请求
+  Future<Response<T>> postWithRetry<T>(
+    String url,
+    dynamic body, {
+    String? contentType,
+    Map<String, String>? headers,
+    Map<String, dynamic>? query,
+    void Function(double)? uploadProgress,
+    String? operationName,
+  }) async {
+    return retryRequest(
+      () => post<T>(url, body,
+          contentType: contentType,
+          headers: headers,
+          query: query,
+          uploadProgress: uploadProgress),
+      operationName: operationName ?? 'POST $url',
+    );
+  }
+
+  /// 带重试的 PUT 请求
+  Future<Response<T>> putWithRetry<T>(
+    String url,
+    dynamic body, {
+    String? contentType,
+    Map<String, String>? headers,
+    Map<String, dynamic>? query,
+    String? operationName,
+  }) async {
+    return retryRequest(
+      () => put<T>(url, body,
+          contentType: contentType, headers: headers, query: query),
+      operationName: operationName ?? 'PUT $url',
+    );
+  }
+
+  /// 带重试的 DELETE 请求
+  Future<Response<T>> deleteWithRetry<T>(
+    String url, {
+    String? contentType,
+    Map<String, String>? headers,
+    Map<String, dynamic>? query,
+    String? operationName,
+  }) async {
+    return retryRequest(
+      () => delete<T>(url, contentType: contentType, headers: headers, query: query),
+      operationName: operationName ?? 'DELETE $url',
+    );
   }
 
   /// Extracts 'data' from Strapi v5 response and handles errors
