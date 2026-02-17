@@ -288,7 +288,12 @@ class Controller extends GetxController {
       },
       time: 500.ms,
     );
-    searchData();
+    isSearching(true);
+    try {
+      await searchData();
+    } finally {
+      isSearching(false);
+    }
     history.addAll(pref
             .getStringList('history')
             ?.map((e) =>
