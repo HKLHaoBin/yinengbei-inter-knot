@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:get/get.dart';
@@ -24,15 +22,6 @@ class _SearchPageState extends State<SearchPage>
       keyboardVisibilityController.onChange.listen((visible) {
     if (!visible) FocusManager.instance.primaryFocus?.unfocus();
   });
-
-  Timer? _debounce;
-
-  void _onSearchChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(seconds: 1), () {
-      c.searchQuery(query);
-    });
-  }
 
   @override
   void dispose() {
@@ -65,52 +54,12 @@ class _SearchPageState extends State<SearchPage>
         ),
         Column(
           children: [
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: SearchBar(
-                  controller: c.searchController,
-                  onChanged: _onSearchChanged,
-                  onSubmitted: c.searchQuery.call,
-                  backgroundColor:
-                      const WidgetStatePropertyAll(Color(0xff1E1E1E)),
-                  leading: const Padding(
-                    padding: EdgeInsets.only(left: 8),
-                    child: Icon(Icons.search, color: Color(0xffB0B0B0)),
-                  ),
-                  hintText: '搜索',
-                  hintStyle: const WidgetStatePropertyAll(
-                    TextStyle(color: Color(0xff808080)),
-                  ),
-                  textStyle: const WidgetStatePropertyAll(
-                    TextStyle(color: Color(0xffE0E0E0)),
-                  ),
-                  side: WidgetStatePropertyAll(
-                    BorderSide(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      width: 1,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
             Expanded(
               child: Stack(
                 children: [
                   isCompact
                       ? RefreshIndicator(
+                          edgeOffset: 16,
                           onRefresh: () async {
                             await c.refreshSearchData();
                           },

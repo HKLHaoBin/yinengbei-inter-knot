@@ -83,37 +83,53 @@ class _DiscussionGridState extends State<DiscussionGrid>
     final fetchData = widget.fetchData;
     final hasNextPage = widget.hasNextPage;
     if (list.isEmpty) {
-      return Center(
-        child: Obx(() {
-          final isSearching = Get.find<Controller>().isSearching.value;
-          if (isSearching) {
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  'assets/images/Bangboo.gif',
-                  width: 120,
-                  height: 120,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  '正在搜索...',
-                  style: TextStyle(
-                    color: Color(0xff808080),
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            );
-          }
-          return const Text(
-            '暂无相关帖子',
-            style: TextStyle(
-              color: Color.fromARGB(255, 233, 233, 233),
-              fontSize: 16,
+      return LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          controller: scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Obx(() {
+                final isSearching = Get.find<Controller>().isSearching.value;
+                if (isSearching) {
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 16),
+                      Image.asset(
+                        'assets/images/Bangboo.gif',
+                        width: 120,
+                        height: 120,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        '正在搜索...',
+                        style: TextStyle(
+                          color: Color(0xff808080),
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(height: 16),
+                    Text(
+                      '暂无相关帖子',
+                      style: TextStyle(
+                        color: Color.fromARGB(255, 233, 233, 233),
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                );
+              }),
             ),
-          );
-        }),
+          ),
+        ),
       );
     }
     return LayoutBuilder(
@@ -127,7 +143,7 @@ class _DiscussionGridState extends State<DiscussionGrid>
               physics: !isCompact
                   ? const NeverScrollableScrollPhysics()
                   : const BouncingScrollPhysics(),
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.all(4).copyWith(top: 16),
               gridDelegate: SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 275,
                 mainAxisSpacing: 2,
