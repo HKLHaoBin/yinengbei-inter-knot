@@ -68,7 +68,6 @@ class _DiscussionGridState extends State<DiscussionGrid>
     with AutomaticKeepAliveClientMixin {
   late final ScrollController scrollController;
   bool _isLocalController = false;
-  static const double _loadMoreThreshold = 800;
 
   @override
   bool get wantKeepAlive => true;
@@ -82,14 +81,12 @@ class _DiscussionGridState extends State<DiscussionGrid>
       scrollController = ScrollController();
       _isLocalController = true;
     }
-    scrollController.addListener(_handleScroll);
   }
 
   @override
   void didUpdateWidget(covariant DiscussionGrid oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.controller != oldWidget.controller) {
-      scrollController.removeListener(_handleScroll);
       if (oldWidget.controller == null) {
         // old was local, dispose it
         if (_isLocalController) {
@@ -104,27 +101,15 @@ class _DiscussionGridState extends State<DiscussionGrid>
         scrollController = ScrollController();
         _isLocalController = true;
       }
-      scrollController.addListener(_handleScroll);
     }
   }
 
   @override
   void dispose() {
-    scrollController.removeListener(_handleScroll);
     if (_isLocalController) {
       scrollController.dispose();
     }
     super.dispose();
-  }
-
-  void _handleScroll() {
-    if (widget.fetchData == null) return;
-    if (!widget.hasNextPage) return;
-    if (!scrollController.hasClients) return;
-    final position = scrollController.position;
-    if (position.extentAfter <= _loadMoreThreshold) {
-      widget.fetchData?.call();
-    }
   }
 
   @override
@@ -132,6 +117,7 @@ class _DiscussionGridState extends State<DiscussionGrid>
     super.build(context);
     final list = widget.list;
     final items = list.toList(growable: false);
+    final fetchData = widget.fetchData;
     final hasNextPage = widget.hasNextPage;
     if (list.isEmpty) {
       return LayoutBuilder(
@@ -186,6 +172,9 @@ class _DiscussionGridState extends State<DiscussionGrid>
                 lastChildLayoutTypeBuilder: (index) => index == items.length
                     ? LastChildLayoutType.foot
                     : LastChildLayoutType.none,
+                viewportBuilder: (firstIndex, lastIndex) {
+                  if (lastIndex == items.length) fetchData?.call();
+                },
               ),
               itemCount: items.length + 1,
               itemBuilder: (context, index) {
@@ -215,32 +204,30 @@ class _DiscussionGridState extends State<DiscussionGrid>
                   future: item.discussion,
                   builder: (context, snaphost) {
                     if (snaphost.hasData) {
-                      return RepaintBoundary(
-                        child: DiscussionCard(
-                          discussion: snaphost.data!,
-                          hData: item,
-                          onTap: () async {
-                            final result = await showZZZDialog(
-                              context: context,
-                              pageBuilder: (context) {
-                                return DiscussionPage(
-                                  discussion: snaphost.data!,
-                                  hData: item,
-                                );
-                              },
-                            );
+                      return DiscussionCard(
+                        discussion: snaphost.data!,
+                        hData: item,
+                        onTap: () async {
+                          final result = await showZZZDialog(
+                            context: context,
+                            pageBuilder: (context) {
+                              return DiscussionPage(
+                                discussion: snaphost.data!,
+                                hData: item,
+                              );
+                            },
+                          );
 
-                            if (result == true) {
-                              if (widget.list is RxSet) {
+                          if (result == true) {
+                            if (widget.list is RxSet) {
+                              widget.list.remove(item);
+                            } else {
+                              setState(() {
                                 widget.list.remove(item);
-                              } else {
-                                setState(() {
-                                  widget.list.remove(item);
-                                });
-                              }
+                              });
                             }
-                          },
-                        ),
+                          }
+                        },
                       );
                     }
                     if (snaphost.hasError) {
@@ -275,9 +262,7 @@ class _DiscussionGridState extends State<DiscussionGrid>
                         ),
                       );
                     }
-                    return const RepaintBoundary(
-                      child: DiscussionCardSkeleton(),
-                    );
+                    return const DiscussionCardSkeleton();
                   },
                 );
               },
