@@ -80,7 +80,7 @@ flutter:
         - asset: assets/fonts/Roboto-Regular.woff2
 
 msix_config:
-  display_name: 绳网
+  display_name: Inter Knot
   publisher_display_name: tiwat
   identity_name: com.tiwat.inter-knot
   msix_version: 1.0.0.0
