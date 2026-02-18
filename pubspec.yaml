@@ -1,8 +1,8 @@
 name: inter_knot
 description: 绳网是一个游戏、技术交流平台
 publish_to: none
-version: 2.16.9+36
-repository: https://github.com/share121/inter_knot
+version: 0.1.0+1
+repository: https://github.com/yinengbei/inter-knot
 
 environment:
   sdk: ">=3.4.4 <4.0.0"
@@ -81,8 +81,8 @@ flutter:
 
 msix_config:
   display_name: 绳网
-  publisher_display_name: share121
-  identity_name: com.share121.inter-knot
+  publisher_display_name: tiwat
+  identity_name: com.tiwat.inter-knot
   msix_version: 1.0.0.0
   logo_path: icon.webp
   capabilities: internetClient
