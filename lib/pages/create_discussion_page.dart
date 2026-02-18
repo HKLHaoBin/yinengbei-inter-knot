@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/click_region.dart';
+import 'package:inter_knot/components/image_viewer.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
@@ -660,14 +661,26 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                     return Stack(
                       fit: StackFit.expand,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            img.url,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Center(
-                              child:
-                                  Icon(Icons.broken_image, color: Colors.grey),
+                        MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () {
+                              ImageViewer.show(
+                                context,
+                                imageUrls: images.map((e) => e.url).toList(),
+                                initialIndex: index,
+                              );
+                            },
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image.network(
+                                img.url,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(Icons.broken_image,
+                                      color: Colors.grey),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -690,7 +703,6 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                             ),
                           ),
                         ),
-
                       ],
                     );
                   },
@@ -886,25 +898,13 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                     leading: const Icon(Icons.article_outlined),
                                     title: const Text('正文'),
                                     selected: _selectedIndex == 0,
-                                    onTap: () {
-                                      _pageController.animateToPage(
-                                        0,
-                                        duration: 300.ms,
-                                        curve: Curves.easeOutQuart,
-                                      );
-                                    },
+                                    onTap: () => _pageController.jumpToPage(0),
                                   ),
                                   ListTile(
                                     leading: const Icon(Icons.image_outlined),
                                     title: const Text('封面'),
                                     selected: _selectedIndex == 1,
-                                    onTap: () {
-                                      _pageController.animateToPage(
-                                        1,
-                                        duration: 300.ms,
-                                        curve: Curves.easeOutQuart,
-                                      );
-                                    },
+                                    onTap: () => _pageController.jumpToPage(1),
                                   ),
                                 ],
                               ),
