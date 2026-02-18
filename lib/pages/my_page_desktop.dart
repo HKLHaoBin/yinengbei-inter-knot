@@ -394,9 +394,9 @@ class _MyDiscussionsTabState extends State<_MyDiscussionsTab> {
     return Obx(() {
       if (discussions.isEmpty && !hasNextPage.value) {
         return const Center(
-          child: Text(
-            '暂无帖子',
-            style: TextStyle(color: Colors.grey),
+          child: DiscussionEmptyState(
+            message: '暂无帖子',
+            textStyle: TextStyle(color: Colors.grey),
           ),
         );
       }

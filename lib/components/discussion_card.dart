@@ -6,6 +6,66 @@ import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
 
+class NetworkImageBox extends StatelessWidget {
+  const NetworkImageBox({
+    super.key,
+    required this.url,
+    required this.fit,
+    required this.loadingBuilder,
+    required this.errorBuilder,
+    this.alignment = Alignment.center,
+    this.filterQuality = FilterQuality.low,
+    this.gaplessPlayback = false,
+  });
+
+  final String? url;
+  final BoxFit fit;
+  final Alignment alignment;
+  final FilterQuality filterQuality;
+  final bool gaplessPlayback;
+  final Widget Function(BuildContext context, double? progress) loadingBuilder;
+  final Widget Function(BuildContext context) errorBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    final src = url?.trim();
+    if (src == null || src.isEmpty) {
+      return errorBuilder(context);
+    }
+    final isGif = src.toLowerCase().contains('.gif');
+    if (isGif) {
+      return Image.network(
+        src,
+        fit: fit,
+        alignment: alignment,
+        filterQuality: filterQuality,
+        gaplessPlayback: gaplessPlayback,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          final value = progress.expectedTotalBytes != null
+              ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+              : null;
+          return loadingBuilder(context, value);
+        },
+        errorBuilder: (context, error, stackTrace) => errorBuilder(context),
+      );
+    }
+    return CachedNetworkImage(
+      imageUrl: src,
+      fit: fit,
+      alignment: alignment,
+      filterQuality: filterQuality,
+      progressIndicatorBuilder: (context, url, progress) {
+        final value = progress.totalSize == null
+            ? null
+            : progress.downloaded / progress.totalSize!;
+        return loadingBuilder(context, value);
+      },
+      errorWidget: (context, url, error) => errorBuilder(context),
+    );
+  }
+}
+
 class DiscussionCard extends StatefulWidget {
   const DiscussionCard({
     super.key,
@@ -251,32 +311,17 @@ class Cover extends StatelessWidget {
         width: double.infinity,
         fit: BoxFit.cover,
       );
-    } else if (discussion.cover!.toLowerCase().contains('.gif')) {
-      image = Image.network(
-        discussion.cover!,
-        fit: BoxFit.cover,
-        gaplessPlayback: true,
-        alignment: Alignment.topCenter,
-        filterQuality: FilterQuality.medium,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return const ColoredBox(color: Colors.white10);
-        },
-        errorBuilder: (context, error, stackTrace) =>
-            Assets.images.defaultCover.image(
-          fit: BoxFit.cover,
-        ),
-      );
     } else {
-      image = CachedNetworkImage(
-        imageUrl: discussion.cover!,
+      image = NetworkImageBox(
+        url: discussion.cover!,
         fit: BoxFit.cover,
         alignment: Alignment.topCenter,
         filterQuality: FilterQuality.medium,
-        placeholder: (context, url) => const ColoredBox(color: Colors.white10),
-        errorWidget: (context, url, error) => Assets.images.defaultCover.image(
-          fit: BoxFit.cover,
-        ),
+        gaplessPlayback: true,
+        loadingBuilder: (context, progress) =>
+            const ColoredBox(color: Colors.white10),
+        errorBuilder: (context) =>
+            Assets.images.defaultCover.image(fit: BoxFit.cover),
       );
     }
 

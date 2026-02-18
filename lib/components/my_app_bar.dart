@@ -58,7 +58,7 @@ class _MyAppBarState extends State<MyAppBar> {
                   if (!isCompact) ...[
                     const SizedBox(width: 12),
                     const Text(
-                      'Inter-Knot',
+                      'INTER-KNOT',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,

@@ -384,6 +384,60 @@ class Api extends BaseConnect {
     return params;
   }
 
+  Future<void> _mergeReadStatus(List<dynamic> data,
+      {required String tag}) async {
+    final userId = box.read<String>('userId');
+    if (userId == null || userId.isEmpty || data.isEmpty) return;
+
+    final ids = <String>[];
+    for (final item in data) {
+      if (item is Map) {
+        final id = item['documentId'];
+        if (id != null) ids.add(id.toString());
+      }
+    }
+    if (ids.isEmpty) return;
+
+    final readQuery = <String, String>{
+      'filters[user][id][\$eq]': userId,
+      'populate[article][fields][0]': 'documentId',
+      'fields[0]': 'isRead',
+      'pagination[limit]': '${ids.length}',
+    };
+    for (var i = 0; i < ids.length; i++) {
+      readQuery['filters[article][documentId][\$in][$i]'] = ids[i];
+    }
+
+    try {
+      final readRes = await get('/api/article-reads', query: readQuery);
+      final readList = unwrapData<List<dynamic>>(readRes);
+      final readMap = <String, bool>{};
+      for (final r in readList) {
+        if (r is Map) {
+          final article = r['article'];
+          final isRead = r['isRead'] == true;
+          if (isRead && article is Map) {
+            final aId = article['documentId'];
+            if (aId != null) readMap[aId.toString()] = true;
+          }
+        }
+      }
+
+      if (readMap.isEmpty) return;
+
+      for (final d in data) {
+        if (d is Map) {
+          final id = d['documentId'];
+          if (id != null && readMap.containsKey(id.toString())) {
+            d['isRead'] = true;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('$tag Read Status Error: $e');
+    }
+  }
+
   Future<DiscussionModel> getDiscussion(String id) async {
     final userId = box.read<String>('userId');
 
@@ -463,52 +517,7 @@ class Api extends BaseConnect {
 
     final data = unwrapData<List<dynamic>>(res);
 
-    // Optimization: Bulk fetch read status
-    final userId = box.read<String>('userId');
-    if (userId != null && userId.isNotEmpty && data.isNotEmpty) {
-      final ids =
-          data.map((e) => e['documentId']).where((e) => e != null).toList();
-      if (ids.isNotEmpty) {
-        final readQuery = <String, String>{
-          'filters[user][id][\$eq]': userId,
-          'populate[article][fields][0]': 'documentId',
-          'fields[0]': 'isRead',
-          'pagination[limit]': '${ids.length}',
-        };
-        for (var i = 0; i < ids.length; i++) {
-          readQuery['filters[article][documentId][\$in][$i]'] =
-              ids[i].toString();
-        }
-
-        try {
-          final readRes = await get('/api/article-reads', query: readQuery);
-          final readList = unwrapData<List<dynamic>>(readRes);
-          final readMap = <String, bool>{};
-          for (final r in readList) {
-            if (r is Map) {
-              final article = r['article'];
-              final isRead = r['isRead'] == true;
-              String? aId;
-              if (article is Map) aId = article['documentId'];
-              if (aId != null && isRead) {
-                readMap[aId] = true;
-              }
-            }
-          }
-
-          for (final d in data) {
-            if (d is Map) {
-              final id = d['documentId'];
-              if (readMap.containsKey(id)) {
-                d['isRead'] = true;
-              }
-            }
-          }
-        } catch (e) {
-          debugPrint('Search Read Status Error: $e');
-        }
-      }
-    }
+    await _mergeReadStatus(data, tag: 'Search');
 
     final hasNext = data.length >= ApiConfig.defaultPageSize;
 
@@ -545,52 +554,7 @@ class Api extends BaseConnect {
 
     final data = unwrapData<List<dynamic>>(res);
 
-    // Optimization: Bulk fetch read status
-    final userId = box.read<String>('userId');
-    if (userId != null && userId.isNotEmpty && data.isNotEmpty) {
-      final ids =
-          data.map((e) => e['documentId']).where((e) => e != null).toList();
-      if (ids.isNotEmpty) {
-        final readQuery = <String, String>{
-          'filters[user][id][\$eq]': userId,
-          'populate[article][fields][0]': 'documentId',
-          'fields[0]': 'isRead',
-          'pagination[limit]': '${ids.length}',
-        };
-        for (var i = 0; i < ids.length; i++) {
-          readQuery['filters[article][documentId][\$in][$i]'] =
-              ids[i].toString();
-        }
-
-        try {
-          final readRes = await get('/api/article-reads', query: readQuery);
-          final readList = unwrapData<List<dynamic>>(readRes);
-          final readMap = <String, bool>{};
-          for (final r in readList) {
-            if (r is Map) {
-              final article = r['article'];
-              final isRead = r['isRead'] == true;
-              String? aId;
-              if (article is Map) aId = article['documentId'];
-              if (aId != null && isRead) {
-                readMap[aId] = true;
-              }
-            }
-          }
-
-          for (final d in data) {
-            if (d is Map) {
-              final id = d['documentId'];
-              if (readMap.containsKey(id)) {
-                d['isRead'] = true;
-              }
-            }
-          }
-        } catch (e) {
-          debugPrint('UserDiscussions Read Status Error: $e');
-        }
-      }
-    }
+    await _mergeReadStatus(data, tag: 'UserDiscussions');
 
     final hasNext = data.length >= ApiConfig.defaultPageSize;
 

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +9,8 @@ import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/click_region.dart';
 import 'package:inter_knot/components/comment.dart';
+import 'package:inter_knot/components/discussion_card.dart'
+    show NetworkImageBox;
 import 'package:inter_knot/components/image_viewer.dart';
 import 'package:inter_knot/components/my_chip.dart';
 import 'package:inter_knot/constants/globals.dart';
@@ -1232,7 +1233,6 @@ class _CoverState extends State<Cover> {
 
     if (covers.length == 1) {
       final url = covers.first;
-      final isGif = url.toLowerCase().contains('.gif');
       final heroTag = 'cover-${widget.discussion.id}-0';
 
       return Hero(
@@ -1243,39 +1243,18 @@ class _CoverState extends State<Cover> {
             imageUrls: covers,
             heroTagPrefix: 'cover-${widget.discussion.id}',
           ),
-          child: isGif
-              ? Image.network(
-                  url,
-                  fit: BoxFit.contain,
-                  gaplessPlayback: true,
-                  loadingBuilder: (context, child, p) {
-                    if (p == null) return child;
-                    return Center(
-                      child: CircularProgressIndicator(
-                        value: p.expectedTotalBytes != null
-                            ? p.cumulativeBytesLoaded / p.expectedTotalBytes!
-                            : null,
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) =>
-                      Assets.images.defaultCover.image(fit: BoxFit.contain),
-                )
-              : CachedNetworkImage(
-                  imageUrl: url,
-                  fit: BoxFit.contain,
-                  progressIndicatorBuilder: (context, url, p) {
-                    return Center(
-                      child: CircularProgressIndicator(
-                        value: p.totalSize == null
-                            ? null
-                            : p.downloaded / p.totalSize!,
-                      ),
-                    );
-                  },
-                  errorWidget: (context, url, error) =>
-                      Assets.images.defaultCover.image(fit: BoxFit.contain),
-                ),
+          child: NetworkImageBox(
+            url: url,
+            fit: BoxFit.contain,
+            gaplessPlayback: true,
+            loadingBuilder: (context, progress) {
+              return Center(
+                child: CircularProgressIndicator(value: progress),
+              );
+            },
+            errorBuilder: (context) =>
+                Assets.images.defaultCover.image(fit: BoxFit.contain),
+          ),
         ),
       );
     }
@@ -1297,7 +1276,6 @@ class _CoverState extends State<Cover> {
               },
               itemBuilder: (context, index) {
                 final url = covers[index];
-                final isGif = url.toLowerCase().endsWith('.gif');
                 final heroTag = 'cover-${widget.discussion.id}-$index';
 
                 return Hero(
@@ -1311,48 +1289,22 @@ class _CoverState extends State<Cover> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: isGif
-                          ? Image.network(
-                              url,
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.medium,
-                              loadingBuilder: (context, child, p) {
-                                if (p == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: p.expectedTotalBytes != null
-                                        ? p.cumulativeBytesLoaded /
-                                            p.expectedTotalBytes!
-                                        : null,
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                color: Colors.grey[800],
-                                child: const Icon(Icons.broken_image,
-                                    color: Colors.white),
-                              ),
-                            )
-                          : CachedNetworkImage(
-                              imageUrl: url,
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.medium,
-                              progressIndicatorBuilder: (context, url, p) {
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: p.totalSize == null
-                                        ? null
-                                        : p.downloaded / p.totalSize!,
-                                  ),
-                                );
-                              },
-                              errorWidget: (context, url, error) => Container(
-                                color: Colors.grey[800],
-                                child: const Icon(Icons.broken_image,
-                                    color: Colors.white),
-                              ),
-                            ),
+                      child: NetworkImageBox(
+                        url: url,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.medium,
+                        gaplessPlayback: true,
+                        loadingBuilder: (context, progress) {
+                          return Center(
+                            child: CircularProgressIndicator(value: progress),
+                          );
+                        },
+                        errorBuilder: (context) => Container(
+                          color: Colors.grey[800],
+                          child: const Icon(Icons.broken_image,
+                              color: Colors.white),
+                        ),
+                      ),
                     ),
                   ),
                 );

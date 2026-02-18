@@ -9,6 +9,43 @@ import 'package:inter_knot/pages/discussion_page.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:waterfall_flow/waterfall_flow.dart';
 
+class DiscussionEmptyState extends StatelessWidget {
+  const DiscussionEmptyState({
+    super.key,
+    required this.message,
+    this.imageAsset,
+    this.imageSize = 120,
+    this.textStyle,
+  });
+
+  final String message;
+  final String? imageAsset;
+  final double imageSize;
+  final TextStyle? textStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = imageAsset != null && imageAsset!.isNotEmpty;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const SizedBox(height: 16),
+        if (hasImage)
+          Image.asset(
+            imageAsset!,
+            width: imageSize,
+            height: imageSize,
+          ),
+        if (hasImage) const SizedBox(height: 16),
+        Text(
+          message,
+          style: textStyle,
+        ),
+      ],
+    );
+  }
+}
+
 class DiscussionGrid extends StatefulWidget {
   const DiscussionGrid({
     super.key,
@@ -93,38 +130,22 @@ class _DiscussionGridState extends State<DiscussionGrid>
               child: Obx(() {
                 final isSearching = Get.find<Controller>().isSearching.value;
                 if (isSearching) {
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 16),
-                      Image.asset(
-                        'assets/images/Bangboo.gif',
-                        width: 120,
-                        height: 120,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        '正在搜索...',
-                        style: TextStyle(
-                          color: Color(0xff808080),
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
+                  return const DiscussionEmptyState(
+                    message: '正在搜索...',
+                    imageAsset: 'assets/images/Bangboo.gif',
+                    imageSize: 120,
+                    textStyle: TextStyle(
+                      color: Color(0xff808080),
+                      fontSize: 16,
+                    ),
                   );
                 }
-                return const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(height: 16),
-                    Text(
-                      '暂无相关帖子',
-                      style: TextStyle(
-                        color: Color.fromARGB(255, 233, 233, 233),
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
+                return const DiscussionEmptyState(
+                  message: '暂无相关帖子',
+                  textStyle: TextStyle(
+                    color: Color.fromARGB(255, 233, 233, 233),
+                    fontSize: 16,
+                  ),
                 );
               }),
             ),
