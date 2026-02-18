@@ -660,8 +660,14 @@ class Api extends BaseConnect {
     final queryParams = _buildPaginationQuery(
       start: start,
       sort: 'createdAt:asc',
-      filters: {'filters[article][documentId][\$eq]': id},
-      populate: {'populate[author][populate]': 'avatar'},
+      filters: {
+        'filters[article][documentId][\$eq]': id,
+        'filters[parent][documentId][\$null]': 'true',
+      },
+      populate: {
+        'populate[author][populate]': 'avatar',
+        'populate[replies][populate][author][populate]': 'avatar',
+      },
     );
     // Add cache buster
     queryParams['ts'] = DateTime.now().millisecondsSinceEpoch.toString();
@@ -690,23 +696,25 @@ class Api extends BaseConnect {
     String discussionId,
     String body, {
     String? authorId,
+    String? parentId,
   }) {
     if (discussionId.isEmpty) {
       throw ApiException('Discussion ID cannot be empty');
     }
 
     debugPrint(
-        'Adding comment to discussion: $discussionId, author: $authorId');
+        'Adding comment to discussion: $discussionId, author: $authorId, parent: $parentId');
+
+    final data = <String, dynamic>{
+      'article': discussionId,
+      'content': body,
+      if (authorId != null && authorId.isNotEmpty) 'author': authorId,
+      if (parentId != null && parentId.isNotEmpty) 'parent': parentId,
+    };
 
     return post(
       '/api/comments',
-      {
-        'data': {
-          'article': discussionId,
-          'content': body,
-          if (authorId != null && authorId.isNotEmpty) 'author': authorId,
-        },
-      },
+      {'data': data},
     );
   }
 

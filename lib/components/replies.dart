@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-import 'package:get/get.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/my_chip.dart';
 import 'package:inter_knot/constants/globals.dart';
@@ -10,10 +9,16 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class Replies extends StatelessWidget {
-  const Replies({super.key, required this.comment, required this.discussion});
+  const Replies({
+    super.key,
+    required this.comment,
+    required this.discussion,
+    required this.onReply,
+  });
 
   final CommentModel comment;
   final DiscussionModel discussion;
+  final void Function(String id, String? userName, {bool addPrefix}) onReply;
 
   @override
   Widget build(BuildContext context) {
@@ -43,12 +48,10 @@ class Replies extends StatelessWidget {
                     splashColor: Colors.transparent,
                     highlightColor: Colors.transparent,
                     onTap: () => launchUrlString(reply.url),
-                    child: Obx(
-                      () => Text(
-                        reply.author.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    child: Text(
+                      reply.author.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
@@ -83,6 +86,22 @@ class Replies extends StatelessWidget {
                     textStyle: const TextStyle(
                       fontSize: 16,
                       color: Color(0xffE0E0E0), // Light grey for replies
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () =>
+                        onReply(comment.id, reply.author.name, addPrefix: true),
+                    icon: const Icon(Icons.reply, size: 16, color: Colors.grey),
+                    label:
+                        const Text('回复', style: TextStyle(color: Colors.grey)),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(50, 30),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ),

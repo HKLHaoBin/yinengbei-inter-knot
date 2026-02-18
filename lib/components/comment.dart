@@ -14,10 +14,17 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class Comment extends StatefulWidget {
-  const Comment({super.key, required this.discussion, this.loading = false});
+  const Comment({
+    super.key,
+    required this.discussion,
+    this.loading = false,
+    this.onReply,
+  });
 
   final DiscussionModel discussion;
   final bool loading;
+  final void Function(String parentId, String? userName, {bool addPrefix})?
+      onReply;
 
   @override
   State<Comment> createState() => _CommentState();
@@ -130,7 +137,26 @@ class _CommentState extends State<Comment> {
               },
             ),
           ),
-          Replies(comment: comment, discussion: widget.discussion),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => widget.onReply
+                  ?.call(comment.id, comment.author.name, addPrefix: false),
+              icon: const Icon(Icons.reply, size: 16, color: Colors.grey),
+              label: const Text('回复', style: TextStyle(color: Colors.grey)),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(50, 30),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ),
+          Replies(
+              comment: comment,
+              discussion: widget.discussion,
+              onReply: (id, userName, {addPrefix = false}) =>
+                  widget.onReply?.call(id, userName, addPrefix: addPrefix)),
         ],
       ),
     );

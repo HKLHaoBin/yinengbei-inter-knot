@@ -42,6 +42,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
   final leftScrollController =
       ScrollController(); // New controller for left side
   final c = Get.find<Controller>();
+  final actionButtonsKey = GlobalKey<DiscussionActionButtonsState>(); // Add key
   bool _isLoadingMore = false;
   bool _isInitialLoading = false;
   Timer? _newCommentCheckTimer;
@@ -419,6 +420,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                 child: Column(
                                                   children: [
                                                     DiscussionActionButtons(
+                                                      key: actionButtonsKey,
                                                       discussion:
                                                           widget.discussion,
                                                       hData: widget.hData,
@@ -433,7 +435,16 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                         discussion:
                                                             widget.discussion,
                                                         loading:
-                                                            _isInitialLoading),
+                                                            _isInitialLoading,
+                                                        onReply: (id, userName,
+                                                                {addPrefix =
+                                                                    false}) =>
+                                                            actionButtonsKey
+                                                                .currentState
+                                                                ?.replyTo(id,
+                                                                    userName,
+                                                                    addPrefix:
+                                                                        addPrefix)),
                                                   ],
                                                 ),
                                               ),
@@ -588,7 +599,12 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                                           widget
                                                                               .discussion,
                                                                       loading:
-                                                                          _isInitialLoading),
+                                                                          _isInitialLoading,
+                                                                      onReply: (id, userName, {addPrefix = false}) => actionButtonsKey.currentState?.replyTo(
+                                                                          id,
+                                                                          userName,
+                                                                          addPrefix:
+                                                                              addPrefix)),
                                                                 ],
                                                               ),
                                                             ),
@@ -613,6 +629,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                     ),
                                                     child:
                                                         DiscussionActionButtons(
+                                                      key: actionButtonsKey,
                                                       discussion:
                                                           widget.discussion,
                                                       hData: widget.hData,
@@ -686,9 +703,9 @@ class _DiscussionDetailBoxState extends State<DiscussionDetailBox> {
                 child: HtmlWidget(
                   discussion.bodyHTML,
                   textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 16,
-                    color: const Color(0xffE0E0E0),
-                  ),
+                        fontSize: 16,
+                        color: const Color(0xffE0E0E0),
+                      ),
                   onTapUrl: (url) {
                     launchUrlString(url);
                     return true;
@@ -725,16 +742,20 @@ class DiscussionActionButtons extends StatefulWidget {
 
   @override
   State<DiscussionActionButtons> createState() =>
-      _DiscussionActionButtonsState();
+      DiscussionActionButtonsState();
 }
 
-class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
+class DiscussionActionButtonsState extends State<DiscussionActionButtons>
     with SingleTickerProviderStateMixin {
   final c = Get.find<Controller>();
   late final api = Get.find<Api>();
 
   bool _isWriting = false;
   bool _isLoading = false;
+  String? _parentId;
+  String? _replyToUser;
+  bool _addReplyPrefix = false;
+
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   late final AnimationController _controller;
@@ -760,6 +781,23 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
     _controller.value = 1.0;
   }
 
+  // Public method to trigger reply
+  Future<void> replyTo(String parentId, String? userName,
+      {bool addPrefix = false}) async {
+    if (!await c.ensureLogin()) return;
+
+    setState(() {
+      _parentId = parentId;
+      _replyToUser = userName;
+      _isWriting = true;
+      _addReplyPrefix = addPrefix;
+    });
+    _controller.reverse();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
   @override
   void dispose() {
     _textController.dispose();
@@ -769,10 +807,14 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
   }
 
   Future<void> _submit() async {
-    final content = _textController.text.trim();
+    var content = _textController.text.trim();
     if (content.isEmpty) {
       Get.rawSnackbar(message: '评论内容不能为空');
       return;
+    }
+
+    if (_addReplyPrefix && _replyToUser != null) {
+      content = '回复 @$_replyToUser :$content';
     }
 
     if (!await c.ensureLogin()) return;
@@ -791,6 +833,7 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
         widget.discussion.id,
         content,
         authorId: authorId,
+        parentId: _parentId,
       );
 
       if (res.hasError) throw Exception(res.statusText ?? 'Unknown error');
@@ -834,7 +877,13 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
   }
 
   void _cancel() {
-    setState(() => _isWriting = false);
+    setState(() {
+      _isWriting = false;
+      _parentId = null;
+      _replyToUser = null;
+      _addReplyPrefix = false;
+    });
+    _textController.clear();
     _controller.forward();
     _focusNode.unfocus();
   }
@@ -995,11 +1044,12 @@ class _DiscussionActionButtonsState extends State<DiscussionActionButtons>
                                               fontSize: 16,
                                               color: Colors.white),
                                           cursorColor: Colors.white,
-                                          decoration:
-                                              const InputDecoration.collapsed(
-                                            hintText: '请输入文本...',
-                                            hintStyle:
-                                                TextStyle(color: Colors.grey),
+                                          decoration: InputDecoration.collapsed(
+                                            hintText: _replyToUser != null
+                                                ? '回复 @$_replyToUser：'
+                                                : '请输入文本...',
+                                            hintStyle: const TextStyle(
+                                                color: Colors.grey),
                                           ),
                                           onSubmitted: (_) => _submit(),
                                         ),
