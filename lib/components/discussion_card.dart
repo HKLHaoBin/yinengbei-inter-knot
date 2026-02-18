@@ -16,6 +16,8 @@ class NetworkImageBox extends StatelessWidget {
     this.alignment = Alignment.center,
     this.filterQuality = FilterQuality.low,
     this.gaplessPlayback = false,
+    this.cacheWidth,
+    this.cacheHeight,
   });
 
   final String? url;
@@ -23,6 +25,8 @@ class NetworkImageBox extends StatelessWidget {
   final Alignment alignment;
   final FilterQuality filterQuality;
   final bool gaplessPlayback;
+  final int? cacheWidth;
+  final int? cacheHeight;
   final Widget Function(BuildContext context, double? progress) loadingBuilder;
   final Widget Function(BuildContext context) errorBuilder;
 
@@ -40,6 +44,8 @@ class NetworkImageBox extends StatelessWidget {
         alignment: alignment,
         filterQuality: filterQuality,
         gaplessPlayback: gaplessPlayback,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
           final value = progress.expectedTotalBytes != null
@@ -55,6 +61,8 @@ class NetworkImageBox extends StatelessWidget {
       fit: fit,
       alignment: alignment,
       filterQuality: filterQuality,
+      memCacheWidth: cacheWidth,
+      memCacheHeight: cacheHeight,
       progressIndicatorBuilder: (context, url, progress) {
         final value = progress.totalSize == null
             ? null
@@ -133,9 +141,9 @@ class _DiscussionCardState extends State<DiscussionCard>
         color: const Color(0xff222222),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-            bottomLeft: Radius.circular(16),
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+            bottomLeft: Radius.circular(24),
           ),
         ),
         child: AnimatedBuilder(
@@ -144,9 +152,9 @@ class _DiscussionCardState extends State<DiscussionCard>
             return Container(
               foregroundDecoration: BoxDecoration(
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                  bottomLeft: Radius.circular(24),
                 ),
                 border: Border.all(
                   width: 4,
@@ -176,34 +184,35 @@ class _DiscussionCardState extends State<DiscussionCard>
                     discussion: widget.discussion,
                     isHovering: _isHovering,
                   ),
-                  if (widget.hData.isPin)
-                    const Positioned(
-                      top: 8,
-                      right: 12,
-                      child: Text(
-                        '置顶',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
                   if (widget.discussion.isPinned)
                     Positioned(
-                      top: 0,
-                      left: 0,
+                      top: 10,
+                      left: 12,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: const BoxDecoration(
-                          color: Colors.blue,
-                          borderRadius: BorderRadius.only(
-                            bottomRight: Radius.circular(8),
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xff5f92ff),
+                              Color(0xff2f6bff),
+                            ],
                           ),
+                          borderRadius: BorderRadius.circular(999),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x55000000),
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: const Text(
                           '置顶',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -220,9 +229,22 @@ class _DiscussionCardState extends State<DiscussionCard>
                     children: [
                       Positioned(
                         top: -26,
-                        child: Avatar(
-                          widget.discussion.author.avatar,
-                          size: 50,
+                        child: Container(
+                          width: 54,
+                          height: 54,
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xff1a1a1a),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xff8f8f8f),
+                              width: 2,
+                            ),
+                          ),
+                          child: Avatar(
+                            widget.discussion.author.avatar,
+                            size: 50,
+                          ),
                         ),
                       ),
                       Padding(
@@ -305,27 +327,6 @@ class Cover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget image;
-    if (discussion.cover == null) {
-      image = Assets.images.defaultCover.image(
-        width: double.infinity,
-        fit: BoxFit.cover,
-      );
-    } else {
-      image = NetworkImageBox(
-        url: discussion.cover!,
-        fit: BoxFit.cover,
-        alignment: Alignment.topCenter,
-        filterQuality: FilterQuality.medium,
-        gaplessPlayback: true,
-        loadingBuilder: (context, progress) =>
-            const ColoredBox(color: Colors.white10),
-        errorBuilder: (context) =>
-            Assets.images.defaultCover.image(fit: BoxFit.cover),
-      );
-    }
-
-    // Calculate aspect ratio logic...
     final coverImage =
         discussion.coverImages.isNotEmpty ? discussion.coverImages.first : null;
     final double imgW = coverImage?.width?.toDouble() ?? 643;
@@ -336,13 +337,49 @@ class Cover extends StatelessWidget {
 
     return AspectRatio(
       aspectRatio: displayAspectRatio,
-      child: ClipRect(
-        child: AnimatedScale(
-          scale: isHovering ? 1.1 : 1.0,
-          duration: const Duration(milliseconds: 1200),
-          curve: Curves.easeOutCubic,
-          child: image,
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final pixelRatio = MediaQuery.of(context).devicePixelRatio;
+          final maxWidth = constraints.maxWidth;
+          final cacheWidth = maxWidth.isFinite && maxWidth > 0
+              ? (maxWidth * pixelRatio).round()
+              : null;
+          final cacheHeight = cacheWidth != null
+              ? (cacheWidth / displayAspectRatio).round()
+              : null;
+
+          final Widget image;
+          if (discussion.cover == null) {
+            image = Assets.images.defaultCover.image(
+              width: double.infinity,
+              fit: BoxFit.cover,
+              cacheWidth: cacheWidth,
+              cacheHeight: cacheHeight,
+            );
+          } else {
+            image = NetworkImageBox(
+              url: discussion.cover!,
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+              filterQuality: FilterQuality.medium,
+              gaplessPlayback: true,
+              cacheWidth: cacheWidth,
+              cacheHeight: cacheHeight,
+              loadingBuilder: (context, progress) =>
+                  const ColoredBox(color: Colors.white10),
+              errorBuilder: (context) =>
+                  Assets.images.defaultCover.image(fit: BoxFit.cover),
+            );
+          }
+          return ClipRect(
+            child: AnimatedScale(
+              scale: isHovering ? 1.1 : 1.0,
+              duration: const Duration(milliseconds: 1200),
+              curve: Curves.easeOutCubic,
+              child: image,
+            ),
+          );
+        },
       ),
     );
   }
@@ -359,9 +396,9 @@ class DiscussionCardSkeleton extends StatelessWidget {
       color: const Color(0xff222222),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-          bottomLeft: Radius.circular(16),
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+          bottomLeft: Radius.circular(20),
         ),
         side: BorderSide(width: 4),
       ),

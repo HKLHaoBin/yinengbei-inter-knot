@@ -56,11 +56,12 @@ class HDataModel {
         (json['createdAt'] as String?).use((v) => DateTime.parse(v)) ??
             updatedAt;
 
+    final isPinned = json['isPinned'] == true;
     final hData = HDataModel(
       id: docId,
       updatedAt: updatedAt,
       createdAt: createdAt,
-      isPinned: false,
+      isPinned: isPinned,
     );
 
     // Optimization: If json contains title, it might be a full object.
