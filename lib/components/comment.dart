@@ -140,16 +140,31 @@ class _CommentState extends State<Comment> {
           const SizedBox(height: 4),
           Align(
             alignment: Alignment.centerLeft,
-            child: TextButton.icon(
+            child: TextButton(
               onPressed: () => widget.onReply
                   ?.call(comment.id, comment.author.name, addPrefix: false),
-              icon: const Icon(Icons.reply, size: 16, color: Colors.grey),
-              label: const Text('回复', style: TextStyle(color: Colors.grey)),
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(50, 30),
+              style: ButtonStyle(
+                padding: WidgetStateProperty.all(EdgeInsets.zero),
+                minimumSize: WidgetStateProperty.all(const Size(50, 30)),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                  (Set<WidgetState> states) {
+                    if (states.contains(WidgetState.hovered)) {
+                      return const Color(0xffD7FF00).withValues(alpha: 0.1);
+                    }
+                    return null;
+                  },
+                ),
+                foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                  (Set<WidgetState> states) {
+                    if (states.contains(WidgetState.hovered)) {
+                      return const Color(0xffD7FF00);
+                    }
+                    return Colors.grey;
+                  },
+                ),
               ),
+              child: const Text('回复'),
             ),
           ),
           Replies(

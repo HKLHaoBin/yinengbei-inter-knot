@@ -87,7 +87,7 @@ class _ImageViewerState extends State<ImageViewer> {
     final double opacity = (1 - (dragDistance / 300)).clamp(0.0, 1.0);
 
     return Scaffold(
-      backgroundColor: Colors.black.withOpacity(opacity),
+      backgroundColor: Colors.black.withValues(alpha: opacity),
       body: Stack(
         children: [
           GestureDetector(

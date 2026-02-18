@@ -8,7 +8,7 @@ import 'package:inter_knot/models/discussion.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
-class Replies extends StatelessWidget {
+class Replies extends StatefulWidget {
   const Replies({
     super.key,
     required this.comment,
@@ -21,10 +21,42 @@ class Replies extends StatelessWidget {
   final void Function(String id, String? userName, {bool addPrefix}) onReply;
 
   @override
+  State<Replies> createState() => _RepliesState();
+}
+
+class _RepliesState extends State<Replies> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    if (widget.comment.replies.isEmpty) return const SizedBox.shrink();
+
+    if (!_expanded) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton(
+          onPressed: () => setState(() => _expanded = true),
+          style: ButtonStyle(
+            overlayColor: WidgetStateProperty.resolveWith<Color?>(
+              (Set<WidgetState> states) {
+                if (states.contains(WidgetState.hovered)) {
+                  return const Color(0xffD7FF00).withValues(alpha: 0.1);
+                }
+                return null;
+              },
+            ),
+          ),
+          child: Text(
+            '展开 ${widget.comment.replies.length} 条回复',
+            style: const TextStyle(color: Color(0xffD7FF00)),
+          ),
+        ),
+      );
+    }
+
     return Column(
       children: [
-        for (final reply in comment.replies)
+        for (final reply in widget.comment.replies)
           ListTile(
             titleAlignment: ListTileTitleAlignment.top,
             contentPadding: EdgeInsets.zero,
@@ -60,9 +92,9 @@ class Replies extends StatelessWidget {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      if (reply.author.login == discussion.author.login)
+                      if (reply.author.login == widget.discussion.author.login)
                         const MyChip('楼主'),
-                      if (reply.author.login == comment.author.login)
+                      if (reply.author.login == widget.comment.author.login)
                         const MyChip('层主'),
                       if (reply.author.login == owner) const MyChip('绳网创始人'),
                       if (collaborators.contains(reply.author.login))
@@ -92,23 +124,59 @@ class Replies extends StatelessWidget {
                 const SizedBox(height: 4),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () =>
-                        onReply(comment.id, reply.author.name, addPrefix: true),
-                    icon: const Icon(Icons.reply, size: 16, color: Colors.grey),
-                    label:
-                        const Text('回复', style: TextStyle(color: Colors.grey)),
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(50, 30),
+                  child: TextButton(
+                    onPressed: () => widget.onReply(
+                        widget.comment.id, reply.author.name,
+                        addPrefix: true),
+                    style: ButtonStyle(
+                      padding: WidgetStateProperty.all(EdgeInsets.zero),
+                      minimumSize: WidgetStateProperty.all(const Size(50, 30)),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                        (Set<WidgetState> states) {
+                          if (states.contains(WidgetState.hovered)) {
+                            return const Color(0xffD7FF00)
+                                .withValues(alpha: 0.1);
+                          }
+                          return null;
+                        },
+                      ),
+                      foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                        (Set<WidgetState> states) {
+                          if (states.contains(WidgetState.hovered)) {
+                            return const Color(0xffD7FF00);
+                          }
+                          return Colors.grey;
+                        },
+                      ),
                     ),
+                    child: const Text('回复'),
                   ),
                 ),
                 const Divider(),
               ],
             ),
           ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: () => setState(() => _expanded = false),
+            style: ButtonStyle(
+              overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                (Set<WidgetState> states) {
+                  if (states.contains(WidgetState.hovered)) {
+                    return const Color(0xffD7FF00).withValues(alpha: 0.1);
+                  }
+                  return null;
+                },
+              ),
+            ),
+            child: const Text(
+              '收起回复',
+              style: TextStyle(color: Color(0xffD7FF00)),
+            ),
+          ),
+        ),
       ],
     );
   }
