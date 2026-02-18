@@ -690,28 +690,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                             ),
                           ),
                         ),
-                        // Cover Label for first item
-                        if (index == 0)
-                          Positioned(
-                            left: 4,
-                            top: 4,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                '封面',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
+
                       ],
                     );
                   },
