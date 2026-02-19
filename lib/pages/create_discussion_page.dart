@@ -719,8 +719,16 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       bottomNavigationBar: isDesktop
           ? null
           : Container(
-              color: const Color(0xff1A1A1A),
-              height: 80,
+              height: 58,
+              decoration: const BoxDecoration(
+                color: Color(0xff1A1A1A),
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.white12,
+                    width: 1,
+                  ),
+                ),
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -744,7 +752,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                 : Icons.article_outlined,
                             color: Colors.white,
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           const Text(
                             '正文',
                             style: TextStyle(
@@ -766,8 +774,8 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                         customBorder: const CircleBorder(),
                         onTap: isLoading ? null : _submit,
                         child: SizedBox(
-                          width: 48,
-                          height: 48,
+                          width: 36,
+                          height: 36,
                           child: isLoading
                               ? const CircularProgressIndicator(
                                   strokeWidth: 2,
@@ -798,7 +806,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                 : Icons.image_outlined,
                             color: Colors.white,
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           const Text(
                             '封面',
                             style: TextStyle(

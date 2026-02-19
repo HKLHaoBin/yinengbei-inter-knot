@@ -41,8 +41,17 @@ class _MyAppBarState extends State<MyAppBar> {
       child: SizedBox(
         width: isCompact ? width : max(width, 640),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          color: Colors.black,
+          padding:
+              EdgeInsets.symmetric(horizontal: 12, vertical: isCompact ? 4 : 8),
+          decoration: const BoxDecoration(
+            color: Colors.black,
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.white12,
+                width: 1,
+              ),
+            ),
+          ),
           child: Row(
             children: [
               Row(
@@ -51,8 +60,8 @@ class _MyAppBarState extends State<MyAppBar> {
                   const SizedBox(width: 8),
                   Image.asset(
                     'assets/images/zzzicon.png',
-                    width: 48,
-                    height: 48,
+                    width: isCompact ? 36 : 48,
+                    height: isCompact ? 36 : 48,
                     filterQuality: FilterQuality.medium,
                   ),
                   if (!isCompact) ...[
@@ -77,7 +86,10 @@ class _MyAppBarState extends State<MyAppBar> {
                   child: Align(
                     alignment: Alignment.center,
                     child: Container(
-                      constraints: const BoxConstraints(maxWidth: 700),
+                      constraints: BoxConstraints(
+                        maxWidth: 700,
+                        maxHeight: isCompact ? 36 : 48,
+                      ),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(28),
                       ),
@@ -85,18 +97,35 @@ class _MyAppBarState extends State<MyAppBar> {
                         controller: c.searchController,
                         onChanged: _onSearchChanged,
                         onSubmitted: c.searchQuery.call,
+                        constraints: BoxConstraints(
+                          minHeight: isCompact ? 36 : 48,
+                          maxHeight: isCompact ? 36 : 48,
+                        ),
+                        padding: WidgetStatePropertyAll(
+                          EdgeInsets.symmetric(horizontal: isCompact ? 8 : 16),
+                        ),
                         backgroundColor:
                             const WidgetStatePropertyAll(Color(0xff1E1E1E)),
-                        leading: const Padding(
-                          padding: EdgeInsets.only(left: 8),
-                          child: Icon(Icons.search, color: Color(0xffB0B0B0)),
+                        leading: Padding(
+                          padding: EdgeInsets.only(left: isCompact ? 4 : 8),
+                          child: Icon(
+                            Icons.search,
+                            color: const Color(0xffB0B0B0),
+                            size: isCompact ? 20 : 24,
+                          ),
                         ),
                         hintText: '搜索',
-                        hintStyle: const WidgetStatePropertyAll(
-                          TextStyle(color: Color(0xff808080)),
+                        hintStyle: WidgetStatePropertyAll(
+                          TextStyle(
+                            color: const Color(0xff808080),
+                            fontSize: isCompact ? 14 : null,
+                          ),
                         ),
-                        textStyle: const WidgetStatePropertyAll(
-                          TextStyle(color: Color(0xffE0E0E0)),
+                        textStyle: WidgetStatePropertyAll(
+                          TextStyle(
+                            color: const Color(0xffE0E0E0),
+                            fontSize: isCompact ? 14 : null,
+                          ),
                         ),
                         side: WidgetStatePropertyAll(
                           BorderSide(
@@ -147,7 +176,7 @@ class _MyAppBarState extends State<MyAppBar> {
                   }),
                 )
               else
-                const SizedBox(width: 72),
+                SizedBox(width: isCompact ? 60 : 72),
             ],
           ),
         ),

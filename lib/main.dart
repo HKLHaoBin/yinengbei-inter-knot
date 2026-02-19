@@ -99,6 +99,8 @@ class MyHomePage extends GetView<Controller> {
             const MyAppBar(),
             Expanded(
               child: PageView(
+                physics:
+                    const CustomPageViewScrollPhysics(), // Use custom physics
                 controller: controller.pageController,
                 onPageChanged: (index) =>
                     controller.selectedIndex.value = index,
@@ -112,8 +114,16 @@ class MyHomePage extends GetView<Controller> {
         ),
         bottomNavigationBar: Obx(
           () => Container(
-            color: const Color(0xff1A1A1A),
-            height: 80,
+            height: 58,
+            decoration: const BoxDecoration(
+              color: Color(0xff1A1A1A),
+              border: Border(
+                top: BorderSide(
+                  color: Colors.white12,
+                  width: 1,
+                ),
+              ),
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -131,7 +141,7 @@ class MyHomePage extends GetView<Controller> {
                               : Icons.explore_outlined,
                           color: Colors.white,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         const Text(
                           '推送',
                           style: TextStyle(
@@ -157,8 +167,8 @@ class MyHomePage extends GetView<Controller> {
                         }
                       },
                       child: const SizedBox(
-                        width: 48,
-                        height: 48,
+                        width: 36,
+                        height: 36,
                         child: Icon(Icons.add, color: Colors.black),
                       ),
                     ),
@@ -178,7 +188,7 @@ class MyHomePage extends GetView<Controller> {
                               : Icons.person_outline,
                           color: Colors.white,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         const Text(
                           '我的',
                           style: TextStyle(
