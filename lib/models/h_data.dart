@@ -5,9 +5,11 @@ import 'package:inter_knot/models/discussion.dart';
 
 class HDataModel {
   static final _zeroDate = DateTime.fromMillisecondsSinceEpoch(0);
-  static final api = Get.find<Api>();
+  static Api get api => Get.find<Api>();
   static final discussionsCache = <String, Future<DiscussionModel?>>{};
-  static const int _maxCacheSize = 50;
+  static final _valueCache = <String, DiscussionModel>{};
+  static const int _maxCacheSize =
+      200; // Increased cache size for better performance
 
   String id;
   DateTime updatedAt;
@@ -15,6 +17,8 @@ class HDataModel {
   bool isPinned;
   bool get isPin => isPinned;
   String get url => '';
+
+  DiscussionModel? get cachedDiscussion => _valueCache[id];
 
   // 临时存储原始 documentId，以便 API 调用
   // String? documentId; // 不需要了，id 就是 documentId
@@ -28,6 +32,17 @@ class HDataModel {
         createdAt = createdAt ?? _zeroDate;
 
   Future<DiscussionModel?> get discussion {
+    // Check synchronous cache first (optional, but good for immediate return if we change return type)
+    if (_valueCache.containsKey(id)) {
+      // Refresh LRU order in future cache
+      if (discussionsCache.containsKey(id)) {
+        final future = discussionsCache.remove(id)!;
+        discussionsCache[id] = future;
+        return future;
+      }
+      return Future.value(_valueCache[id]);
+    }
+
     if (discussionsCache.containsKey(id)) {
       // LRU: Move to end
       final future = discussionsCache.remove(id)!;
@@ -38,9 +53,15 @@ class HDataModel {
     if (discussionsCache.length >= _maxCacheSize) {
       final keyToRemove = discussionsCache.keys.first;
       discussionsCache.remove(keyToRemove);
+      _valueCache.remove(keyToRemove);
     }
 
-    return discussionsCache[id] = api.getDiscussion(id);
+    final future = api.getDiscussion(id).then((value) {
+      _valueCache[id] = value;
+      return value;
+    });
+
+    return discussionsCache[id] = future;
   }
 
   factory HDataModel.fromJson(Map<String, dynamic> json) {
@@ -69,6 +90,7 @@ class HDataModel {
       try {
         final discussion = DiscussionModel.fromJson(json);
         discussionsCache[docId] = Future.value(discussion);
+        _valueCache[docId] = discussion;
       } catch (e) {
         // parsing failed, ignore
       }

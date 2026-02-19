@@ -25,8 +25,14 @@ Future<T?> showZZZDialog<T>({
         children: [
           // Fixed Background Layer (Fade Transition)
           Positioned.fill(
-            child: FadeTransition(
-              opacity: animation,
+            child: AnimatedBuilder(
+              animation: animation,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: const Interval(0, 0.01).transform(animation.value),
+                  child: child!,
+                );
+              },
               child: IgnorePointer(
                 child: Stack(
                   fit: StackFit.expand,

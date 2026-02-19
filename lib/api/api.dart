@@ -319,6 +319,16 @@ DiscussionModel _parseDiscussionSync(Map<String, dynamic> data) {
   return parseDiscussionData(data);
 }
 
+List<HDataModel> _parseHDataListSync(List<dynamic> data) {
+  return data
+      .map((e) => HDataModel.fromJson(e as Map<String, dynamic>))
+      .toList();
+}
+
+List<CommentModel> _parseCommentListSync(List<dynamic> data) {
+  return data.cast<Map<String, dynamic>>().map(CommentModel.fromJson).toList();
+}
+
 class Api extends BaseConnect {
   String? _normalizeFileUrl(String? url) {
     if (url == null || url.isEmpty) return null;
@@ -521,10 +531,10 @@ class Api extends BaseConnect {
 
     final hasNext = data.length >= ApiConfig.defaultPageSize;
 
+    final nodes = await compute(_parseHDataListSync, data);
+
     return PaginationModel(
-      nodes: data
-          .map((e) => HDataModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      nodes: nodes,
       endCursor: (start + ApiConfig.defaultPageSize).toString(),
       hasNextPage: hasNext,
     );
@@ -558,10 +568,10 @@ class Api extends BaseConnect {
 
     final hasNext = data.length >= ApiConfig.defaultPageSize;
 
+    final nodes = await compute(_parseHDataListSync, data);
+
     return PaginationModel(
-      nodes: data
-          .map((e) => HDataModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      nodes: nodes,
       endCursor: (start + ApiConfig.defaultPageSize).toString(),
       hasNextPage: hasNext,
     );
@@ -642,8 +652,7 @@ class Api extends BaseConnect {
     );
 
     final data = unwrapData<List<dynamic>>(res);
-    final comments =
-        data.cast<Map<String, dynamic>>().map(CommentModel.fromJson).toList();
+    final comments = await compute(_parseCommentListSync, data);
 
     final hasNextPage = comments.length >= ApiConfig.defaultPageSize;
     final nextEndCur =

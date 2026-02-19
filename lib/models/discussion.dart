@@ -111,11 +111,23 @@ DiscussionModel parseDiscussionData(Map<String, dynamic> json) {
           name: 'Unknown',
         );
 
+  // Pre-calculate bodyText here to avoid regex overhead during rendering
+  var bodyText =
+      normalized.replaceAll(RegExp(r'!\[.*?\]\(.*?\)', dotAll: true), '');
+  bodyText = bodyText.replaceAll(
+      RegExp('<img[^>]*>', caseSensitive: false, dotAll: true), '');
+  bodyText = bodyText.replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+  // Limit body text length to avoid huge strings in memory if not needed full
+  if (bodyText.length > 500) {
+    bodyText = bodyText.substring(0, 500);
+  }
+
   return DiscussionModel(
     title: json['title'] is String
         ? json['title'] as String
         : (json['title']?.toString() ?? ''),
     bodyHTML: html,
+    bodyText: bodyText,
     coverImages: covers,
     rawBodyText: normalized,
     // number: ... Removed
@@ -154,6 +166,7 @@ class DiscussionModel {
   bool isPinned;
   String bodyHTML;
   String rawBodyText;
+  final String bodyText; // Cached body text
   List<CoverImage> coverImages;
   List<String> get covers => coverImages.map((e) => e.url).toList();
   String? get cover => covers.isNotEmpty ? covers.first : null;
@@ -164,17 +177,6 @@ class DiscussionModel {
   int commentsCount;
   AuthorModel author;
   List<PaginationModel<CommentModel>> comments;
-  String get bodyText {
-    // 移除 Markdown 图片 ![alt](url)
-    var text =
-        rawBodyText.replaceAll(RegExp(r'!\[.*?\]\(.*?\)', dotAll: true), '');
-    // 移除 HTML img 标签
-    text = text.replaceAll(
-        RegExp('<img[^>]*>', caseSensitive: false, dotAll: true), '');
-    // 移除多余的空行，但保留段落结构 (最多保留两个换行符)
-    text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-    return text.trim();
-  }
 
   String get url => ''; // Placeholder
 
@@ -223,6 +225,7 @@ class DiscussionModel {
   DiscussionModel({
     required this.title,
     required this.bodyHTML,
+    required this.bodyText,
     required this.rawBodyText,
     required this.coverImages,
     // required this.number, // Removed

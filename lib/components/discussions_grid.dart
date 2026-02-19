@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:inter_knot/components/discussion_card.dart';
 import 'package:get/get.dart';
+import 'package:inter_knot/components/discussion_card.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/smooth_scroll.dart';
+import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/pages/discussion_page.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -72,6 +73,35 @@ class _DiscussionGridState extends State<DiscussionGrid>
   @override
   bool get wantKeepAlive => true;
 
+  Widget _buildCard(
+      BuildContext context, HDataModel item, DiscussionModel discussion) {
+    return DiscussionCard(
+      discussion: discussion,
+      hData: item,
+      onTap: () async {
+        final result = await showZZZDialog(
+          context: context,
+          pageBuilder: (context) {
+            return DiscussionPage(
+              discussion: discussion,
+              hData: item,
+            );
+          },
+        );
+
+        if (result == true) {
+          if (widget.list is RxSet) {
+            widget.list.remove(item);
+          } else {
+            setState(() {
+              widget.list.remove(item);
+            });
+          }
+        }
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -119,6 +149,8 @@ class _DiscussionGridState extends State<DiscussionGrid>
     final items = list.toList(growable: false);
     final fetchData = widget.fetchData;
     final hasNextPage = widget.hasNextPage;
+
+    // Performance: Use layout builder only if list is empty to avoid unnecessary rebuilds
     if (list.isEmpty) {
       return LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(
@@ -155,7 +187,8 @@ class _DiscussionGridState extends State<DiscussionGrid>
     }
     return LayoutBuilder(
       builder: (context, con) {
-        final isCompact = MediaQuery.of(context).size.width < 640;
+        final width = MediaQuery.of(context).size.width;
+        final isCompact = width < 640;
         final child = Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1450),
@@ -199,36 +232,23 @@ class _DiscussionGridState extends State<DiscussionGrid>
                   );
                 }
                 final item = items[index];
+
+                // Performance Optimization: Check synchronous cache first
+                // This avoids creating FutureBuilder for already loaded items, reducing build overhead and flickering
+                final cachedDiscussion = item.cachedDiscussion;
+                if (cachedDiscussion != null) {
+                  return KeyedSubtree(
+                    key: ValueKey(item.id),
+                    child: _buildCard(context, item, cachedDiscussion),
+                  );
+                }
+
                 return FutureBuilder(
                   key: ValueKey(item.id),
                   future: item.discussion,
                   builder: (context, snaphost) {
                     if (snaphost.hasData) {
-                      return DiscussionCard(
-                        discussion: snaphost.data!,
-                        hData: item,
-                        onTap: () async {
-                          final result = await showZZZDialog(
-                            context: context,
-                            pageBuilder: (context) {
-                              return DiscussionPage(
-                                discussion: snaphost.data!,
-                                hData: item,
-                              );
-                            },
-                          );
-
-                          if (result == true) {
-                            if (widget.list is RxSet) {
-                              widget.list.remove(item);
-                            } else {
-                              setState(() {
-                                widget.list.remove(item);
-                              });
-                            }
-                          }
-                        },
-                      );
+                      return _buildCard(context, item, snaphost.data!);
                     }
                     if (snaphost.hasError) {
                       return Card(

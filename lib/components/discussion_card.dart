@@ -16,6 +16,8 @@ class NetworkImageBox extends StatelessWidget {
     this.alignment = Alignment.center,
     this.filterQuality = FilterQuality.low,
     this.gaplessPlayback = false,
+    this.memCacheWidth,
+    this.memCacheHeight,
   });
 
   final String? url;
@@ -23,6 +25,8 @@ class NetworkImageBox extends StatelessWidget {
   final Alignment alignment;
   final FilterQuality filterQuality;
   final bool gaplessPlayback;
+  final int? memCacheWidth;
+  final int? memCacheHeight;
   final Widget Function(BuildContext context, double? progress) loadingBuilder;
   final Widget Function(BuildContext context) errorBuilder;
 
@@ -40,6 +44,8 @@ class NetworkImageBox extends StatelessWidget {
         alignment: alignment,
         filterQuality: filterQuality,
         gaplessPlayback: gaplessPlayback,
+        cacheWidth: memCacheWidth,
+        cacheHeight: memCacheHeight,
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
           final value = progress.expectedTotalBytes != null
@@ -55,6 +61,8 @@ class NetworkImageBox extends StatelessWidget {
       fit: fit,
       alignment: alignment,
       filterQuality: filterQuality,
+      memCacheWidth: memCacheWidth,
+      memCacheHeight: memCacheHeight,
       progressIndicatorBuilder: (context, url, progress) {
         final value = progress.totalSize == null
             ? null
@@ -318,6 +326,7 @@ class Cover extends StatelessWidget {
         alignment: Alignment.topCenter,
         filterQuality: FilterQuality.medium,
         gaplessPlayback: true,
+        memCacheWidth: 400, // Optimize memory usage for grid items
         loadingBuilder: (context, progress) =>
             const ColoredBox(color: Colors.white10),
         errorBuilder: (context) =>
