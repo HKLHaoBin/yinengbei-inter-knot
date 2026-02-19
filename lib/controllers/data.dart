@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inter_knot/api/api.dart'; // Import Api
 import 'package:inter_knot/api/api_exception.dart';
+import 'package:inter_knot/constants/api_config.dart';
 import 'package:inter_knot/helpers/box.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/logger.dart';
@@ -28,6 +29,8 @@ class Controller extends GetxController {
 
   final searchQuery = ''.obs;
   final searchResult = <HDataModel>{}.obs; // HData -> HDataModel
+  // Persistent storage key for offline cache
+  static const String _searchCacheKey = 'offline_search_cache';
   String? searchEndCur;
   final searchHasNextPage = true.obs;
   final isSearching = false.obs;
@@ -289,8 +292,23 @@ class Controller extends GetxController {
       time: 500.ms,
     );
     isSearching(true);
+    // Load cached search result if available (offline support)
+    final cachedSearch = box.read<List<dynamic>>(_searchCacheKey);
+    if (cachedSearch != null && cachedSearch.isNotEmpty) {
+      try {
+        final list = cachedSearch
+            .map((e) => HDataModel.fromJson(e as Map<String, dynamic>))
+            .toSet();
+        searchResult.addAll(list);
+      } catch (e) {
+        logger.e('Failed to load offline cache', error: e);
+      }
+    }
+
     try {
       await searchData();
+    } catch (e) {
+      logger.e('Initial search failed', error: e);
     } finally {
       isSearching(false);
     }
@@ -495,6 +513,20 @@ class Controller extends GetxController {
     searchEndCur = pagination.endCursor;
     searchHasNextPage.value = pagination.hasNextPage;
     searchResult.addAll(pagination.nodes);
+
+    // Save to offline cache if this is the first page of default search
+    if ((searchEndCur == null ||
+            searchEndCur!.isEmpty ||
+            searchEndCur == ApiConfig.defaultPageSize.toString()) &&
+        searchQuery().isEmpty) {
+      try {
+        final cacheList = searchResult.map((e) => e.toJson()).toList();
+        box.write(_searchCacheKey, cacheList);
+      } catch (e) {
+        logger.e('Failed to save offline cache', error: e);
+      }
+    }
+
     await updateUserAvatarFromDiscussionsCache();
   }
 

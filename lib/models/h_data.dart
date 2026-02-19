@@ -131,6 +131,17 @@ class HDataModel {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'documentId': id,
+      'updatedAt': updatedAt.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'isPinned': isPinned,
+      // We might want to cache title/cover for offline display if available in valueCache
+      if (_valueCache.containsKey(id)) ..._valueCache[id]!.toJson(),
+    };
+  }
+
   @override
   bool operator ==(Object other) => other is HDataModel && id == other.id;
 

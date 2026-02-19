@@ -61,12 +61,27 @@ class _DraggableScrollbarState extends State<DraggableScrollbar> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, child) {
-        if (!widget.controller.hasClients ||
-            !widget.controller.position.hasContentDimensions) {
+        // Safe access to position: try-catch to handle multiple positions
+        ScrollPosition? position;
+        try {
+          if (widget.controller.hasClients) {
+            position = widget.controller.position;
+          }
+        } catch (_) {
+          // Fallback if multiple clients attached
+          // We can't easily determine which one to use for the scrollbar
+          // so we might just use the first one or hide it.
+          // But typically DraggableScrollbar wraps a single scroll view.
+          // If the controller is shared, it might have multiple positions.
+          // We can try to find the one that matches our context/viewport? Hard.
+          // For now, let's just return empty if ambiguous to avoid crash.
           return const SizedBox.shrink();
         }
 
-        final position = widget.controller.position;
+        if (position == null || !position.hasContentDimensions) {
+          return const SizedBox.shrink();
+        }
+
         final maxScroll = position.maxScrollExtent;
         final currentScroll = position.pixels;
         final viewportDimension = position.viewportDimension;

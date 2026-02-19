@@ -247,4 +247,23 @@ class DiscussionModel {
 
   @override
   int get hashCode => id.hashCode;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'isRead': isRead,
+      'isPinned': isPinned,
+      'bodyHTML': bodyHTML,
+      'rawBodyText': rawBodyText, // Store raw text for reconstruction
+      'text': rawBodyText, // Compatible with parseDiscussionData
+      'cover': coverImages
+          .map((e) => {'url': e.url, 'width': e.width, 'height': e.height})
+          .toList(),
+      'documentId': id,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': lastEditedAt?.toIso8601String(),
+      'commentsCount': commentsCount,
+      'author': author.toJson(),
+    };
+  }
 }

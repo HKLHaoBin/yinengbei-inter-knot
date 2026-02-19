@@ -139,6 +139,7 @@ class _DiscussionGridState extends State<DiscussionGrid>
     if (_isLocalController) {
       scrollController.dispose();
     }
+    // DO NOT dispose external controller here
     super.dispose();
   }
 

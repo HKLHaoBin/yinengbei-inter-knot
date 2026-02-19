@@ -104,6 +104,18 @@ class AuthorModel {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'username': login,
+      'email': email,
+      'id': userId,
+      'documentId': authorId,
+      'createdAt': createdAt?.toIso8601String(),
+      'avatar': {'url': avatar},
+    };
+  }
+
   @override
   bool operator ==(Object other) =>
       other is AuthorModel && other.login == login;
