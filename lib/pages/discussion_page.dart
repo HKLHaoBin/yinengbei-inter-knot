@@ -66,6 +66,8 @@ class _DiscussionPageState extends State<DiscussionPage> {
       widget.discussion.isRead = true;
       Get.find<Api>().markAsRead(widget.discussion.id);
     }
+    Get.find<Api>().viewArticle(widget.discussion.databaseId.toString());
+    widget.discussion.views++; // Optimistic update
 
     scrollController.addListener(() {
       if (_isLoadingMore) return;
@@ -402,14 +404,14 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                           ListView(
                                             controller: scrollController,
                                             children: [
-                                              Container(
-                                                constraints:
-                                                    const BoxConstraints(
-                                                        maxHeight: 500),
-                                                width: double.infinity,
-                                                child: Cover(
-                                                    discussion:
-                                                        widget.discussion),
+                                              AspectRatio(
+                                                aspectRatio: 16 / 9,
+                                                child: SizedBox(
+                                                  width: double.infinity,
+                                                  child: Cover(
+                                                      discussion:
+                                                          widget.discussion),
+                                                ),
                                               ),
                                               DiscussionDetailBox(
                                                 discussion: widget.discussion,

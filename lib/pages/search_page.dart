@@ -14,8 +14,31 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   final c = Get.find<Controller>();
+
+  late final AnimationController _colorController;
+  late final Animation<Color?> _colorAnimation;
+
+  final ValueNotifier<bool> _isHovering = ValueNotifier(false);
+  final ValueNotifier<bool> _isRefreshHovering = ValueNotifier(false);
+
+  @override
+  void initState() {
+    super.initState();
+    _colorController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true);
+
+    _colorAnimation = ColorTween(
+      begin: const Color(0xfffbfe00),
+      end: const Color(0xffdcfe00),
+    ).animate(CurvedAnimation(
+      parent: _colorController,
+      curve: Curves.linear,
+    ));
+  }
 
   final keyboardVisibilityController = KeyboardVisibilityController();
   late final keyboardSubscription =
@@ -25,6 +48,9 @@ class _SearchPageState extends State<SearchPage>
 
   @override
   void dispose() {
+    _colorController.dispose();
+    _isHovering.dispose();
+    _isRefreshHovering.dispose();
     keyboardSubscription.cancel();
     _scrollController.dispose();
     super.dispose();
@@ -176,28 +202,44 @@ class _SearchPageState extends State<SearchPage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Refresh Button
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      borderRadius: BorderRadius.circular(28),
-                      onTap: () {
-                        c.refreshSearchData();
-                      },
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.refresh_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                    ),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _isRefreshHovering,
+                    builder: (context, isHovering, child) {
+                      return AnimatedBuilder(
+                        animation: _colorAnimation,
+                        builder: (context, child) {
+                          return Material(
+                            color: isHovering
+                                ? _colorAnimation.value
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(28),
+                            child: InkWell(
+                              onHover: (value) =>
+                                  _isRefreshHovering.value = value,
+                              splashColor: Colors.transparent,
+                              highlightColor: Colors.transparent,
+                              borderRadius: BorderRadius.circular(28),
+                              onTap: () {
+                                c.refreshSearchData();
+                              },
+                              child: Container(
+                                width: 56,
+                                height: 56,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.refresh_rounded,
+                                  color:
+                                      isHovering ? Colors.black : Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                   const SizedBox(width: 4),
                   Container(
@@ -207,51 +249,68 @@ class _SearchPageState extends State<SearchPage>
                   ),
                   const SizedBox(width: 4),
                   // Create Discussion Button
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      borderRadius: BorderRadius.circular(28),
-                      onTap: () async {
-                        if (await c.ensureLogin()) {
-                          CreateDiscussionPage.show(context);
-                        }
-                      },
-                      child: Container(
-                        height: 56,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Color(0xffFBC02D), // Yellow accent
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.add,
-                                color: Colors.black,
-                                size: 16,
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _isHovering,
+                    builder: (context, isHovering, child) {
+                      return AnimatedBuilder(
+                        animation: _colorAnimation,
+                        builder: (context, child) {
+                          return Material(
+                            color: isHovering
+                                ? _colorAnimation.value
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(28),
+                            child: InkWell(
+                              onHover: (value) => _isHovering.value = value,
+                              splashColor: Colors.transparent,
+                              highlightColor: Colors.transparent,
+                              borderRadius: BorderRadius.circular(28),
+                              onTap: () async {
+                                if (await c.ensureLogin()) {
+                                  CreateDiscussionPage.show(context);
+                                }
+                              },
+                              child: Container(
+                                height: 56,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(28),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xffFBC02D),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.add,
+                                        color: Colors.black,
+                                        size: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      '发布委托',
+                                      style: TextStyle(
+                                        color: isHovering
+                                            ? Colors.black
+                                            : Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              '发布委托',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ],
               ),

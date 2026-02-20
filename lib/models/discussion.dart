@@ -157,6 +157,10 @@ DiscussionModel parseDiscussionData(Map<String, dynamic> json) {
             ),
           ]
         : [],
+    views: json['views'] is int ? json['views'] as int : 0,
+    databaseId: json['id'] is int
+        ? json['id'] as int
+        : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
   );
 }
 
@@ -164,6 +168,8 @@ class DiscussionModel {
   String title;
   bool isRead;
   bool isPinned;
+  int views;
+  int databaseId;
   String bodyHTML;
   String rawBodyText;
   final String bodyText; // Cached body text
@@ -237,6 +243,8 @@ class DiscussionModel {
     this.isRead = false,
     this.isPinned = false,
     required this.comments,
+    this.views = 0,
+    required this.databaseId,
   });
 
   factory DiscussionModel.fromJson(Map<String, dynamic> json) =>
@@ -253,6 +261,8 @@ class DiscussionModel {
       'title': title,
       'isRead': isRead,
       'isPinned': isPinned,
+      'views': views,
+      'id': databaseId,
       'bodyHTML': bodyHTML,
       'rawBodyText': rawBodyText, // Store raw text for reconstruction
       'text': rawBodyText, // Compatible with parseDiscussionData

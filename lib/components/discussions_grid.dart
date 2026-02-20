@@ -255,6 +255,13 @@ class _DiscussionGridState extends State<DiscussionGrid>
                       return Card(
                         clipBehavior: Clip.antiAlias,
                         color: const Color(0xff222222),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(24),
+                            topRight: Radius.circular(24),
+                            bottomLeft: Radius.circular(24),
+                          ),
+                        ),
                         child: AspectRatio(
                           aspectRatio: 5 / 6,
                           child: Padding(
@@ -269,6 +276,13 @@ class _DiscussionGridState extends State<DiscussionGrid>
                       return Card(
                         clipBehavior: Clip.antiAlias,
                         color: const Color(0xff222222),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(24),
+                            topRight: Radius.circular(24),
+                            bottomLeft: Radius.circular(24),
+                          ),
+                        ),
                         child: InkWell(
                           splashColor: Colors.transparent,
                           highlightColor: Colors.transparent,

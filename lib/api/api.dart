@@ -497,6 +497,10 @@ class Api extends BaseConnect {
     return compute(_parseDiscussionSync, data);
   }
 
+  Future<void> viewArticle(String id) async {
+    await post('/api/articles/$id/view', {});
+  }
+
   Future<PaginationModel<HDataModel>> search(
       String query, String endCur) async {
     final start = int.tryParse(endCur.isEmpty ? '0' : endCur) ?? 0;

@@ -141,9 +141,9 @@ class _DiscussionCardState extends State<DiscussionCard>
         color: const Color(0xff222222),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-            bottomLeft: Radius.circular(16),
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+            bottomLeft: Radius.circular(24),
           ),
         ),
         child: AnimatedBuilder(
@@ -152,9 +152,9 @@ class _DiscussionCardState extends State<DiscussionCard>
             return Container(
               foregroundDecoration: BoxDecoration(
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                  bottomLeft: Radius.circular(24),
                 ),
                 border: Border.all(
                   width: 4,
@@ -184,38 +184,33 @@ class _DiscussionCardState extends State<DiscussionCard>
                     discussion: widget.discussion,
                     isHovering: _isHovering,
                   ),
-                  if (widget.hData.isPin)
-                    const Positioned(
-                      top: 8,
-                      right: 12,
-                      child: Text(
-                        '置顶',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  if (widget.discussion.isPinned)
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: const BoxDecoration(
-                          color: Colors.blue,
-                          borderRadius: BorderRadius.only(
-                            bottomRight: Radius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          '置顶',
-                          style: TextStyle(
+                  Positioned(
+                    top: 11,
+                    left: 16,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.remove_red_eye_outlined,
+                            size: 24, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${widget.discussion.views}',
+                          style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(
+                                offset: Offset(1, 1),
+                                blurRadius: 2,
+                                color: Colors.black54,
+                              ),
+                            ],
                           ),
                         ),
-                      ),
+                      ],
                     ),
+                  ),
                 ],
               ),
               SizedBox(
@@ -227,10 +222,17 @@ class _DiscussionCardState extends State<DiscussionCard>
                     alignment: Alignment.centerLeft,
                     children: [
                       Positioned(
-                        top: -26,
-                        child: Avatar(
-                          widget.discussion.author.avatar,
-                          size: 50,
+                        top: -28,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Color(0xff222222),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Avatar(
+                            widget.discussion.author.avatar,
+                            size: 50,
+                          ),
                         ),
                       ),
                       Padding(
@@ -368,9 +370,9 @@ class DiscussionCardSkeleton extends StatelessWidget {
       color: const Color(0xff222222),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-          bottomLeft: Radius.circular(16),
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+          bottomLeft: Radius.circular(24),
         ),
         side: BorderSide(width: 4),
       ),
@@ -393,13 +395,17 @@ class DiscussionCardSkeleton extends StatelessWidget {
                 children: [
                   // Avatar placeholder
                   Positioned(
-                    top: -26,
+                    top: -28,
                     child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: const BoxDecoration(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
                         color: Colors.white10,
                         shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xff222222),
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),

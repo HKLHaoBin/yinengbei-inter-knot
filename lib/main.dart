@@ -154,25 +154,7 @@ class MyHomePage extends GetView<Controller> {
                   ),
                 ),
                 Center(
-                  child: Material(
-                    color: const Color(0xffFBC02D),
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      customBorder: const CircleBorder(),
-                      onTap: () async {
-                        if (await controller.ensureLogin()) {
-                          CreateDiscussionPage.show(context);
-                        }
-                      },
-                      child: const SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: Icon(Icons.add, color: Colors.black),
-                      ),
-                    ),
-                  ),
+                  child: _buildCreateButton(context),
                 ),
                 Expanded(
                   child: InkWell(
@@ -226,6 +208,79 @@ class MyHomePage extends GetView<Controller> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCreateButton(BuildContext context) {
+    return _AnimatedCreateButton(
+      onTap: () async {
+        if (await controller.ensureLogin()) {
+          CreateDiscussionPage.show(context);
+        }
+      },
+    );
+  }
+}
+
+class _AnimatedCreateButton extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _AnimatedCreateButton({required this.onTap});
+
+  @override
+  State<_AnimatedCreateButton> createState() => _AnimatedCreateButtonState();
+}
+
+class _AnimatedCreateButtonState extends State<_AnimatedCreateButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _colorController;
+  late final Animation<Color?> _colorAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _colorController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true);
+
+    _colorAnimation = ColorTween(
+      begin: const Color(0xfffbfe00),
+      end: const Color(0xffdcfe00),
+    ).animate(CurvedAnimation(
+      parent: _colorController,
+      curve: Curves.linear,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _colorController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _colorAnimation,
+      builder: (context, child) {
+        return Material(
+          color: _colorAnimation.value ?? const Color(0xffFBC02D),
+          shape: const CircleBorder(),
+          child: InkWell(
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            customBorder: const CircleBorder(),
+            onTap: widget.onTap,
+            child: const SizedBox(
+              width: 44,
+              height: 44,
+              child: Icon(Icons.add, color: Colors.black, size: 24),
+            ),
+          ),
+        );
+      },
     );
   }
 }
