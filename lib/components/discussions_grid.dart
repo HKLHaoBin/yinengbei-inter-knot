@@ -228,7 +228,7 @@ class _DiscussionGridState extends State<DiscussionGrid>
                   return const Center(
                     child: Padding(
                       padding: EdgeInsets.all(8),
-                      child: Text('已经到底啦…[ O_X ] /'),
+                      child: Text('已经到底啦…\ [ O_X ] /'),
                     ),
                   );
                 }
