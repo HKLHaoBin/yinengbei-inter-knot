@@ -19,6 +19,7 @@ import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/logger.dart';
 import 'package:inter_knot/helpers/smooth_scroll.dart';
+import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/pages/create_discussion_page.dart';
@@ -812,7 +813,7 @@ class DiscussionActionButtonsState extends State<DiscussionActionButtons>
   Future<void> _submit() async {
     var content = _textController.text.trim();
     if (content.isEmpty) {
-      Get.rawSnackbar(message: '评论内容不能为空');
+      showToast('评论内容不能为空', isError: true);
       return;
     }
 
@@ -828,7 +829,7 @@ class DiscussionActionButtonsState extends State<DiscussionActionButtons>
       final user = c.user.value;
       final authorId = c.authorId.value ?? await c.ensureAuthorForUser(user);
       if (authorId == null || authorId.isEmpty) {
-        Get.rawSnackbar(message: '无法关联作者，请重新登录后再试');
+        showToast('无法关联作者，请重新登录后再试', isError: true);
         return;
       }
 
@@ -857,9 +858,9 @@ class DiscussionActionButtonsState extends State<DiscussionActionButtons>
       widget.discussion.commentsCount++;
       await widget.discussion.fetchComments();
       widget.onCommentAdded?.call();
-      Get.rawSnackbar(message: '评论发布成功');
+      showToast('评论发布成功');
     } catch (e) {
-      Get.rawSnackbar(message: '评论发布失败: $e');
+      showToast('评论发布失败: $e', isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -956,19 +957,19 @@ class DiscussionActionButtonsState extends State<DiscussionActionButtons>
       try {
         final res = await api.deleteDiscussion(widget.discussion.id);
         if (res.hasError) {
-          Get.rawSnackbar(message: '删除失败: ${res.statusText}');
+          showToast('删除失败: ${res.statusText}', isError: true);
         } else {
           if (!mounted) return;
           // Close detail page first
           Navigator.of(context).pop(true);
-          Get.rawSnackbar(message: '帖子已删除');
+          showToast('帖子已删除');
           // Refresh lists
           c.searchResult.refresh();
           c.bookmarks.refresh();
           c.history.refresh();
         }
       } catch (e) {
-        Get.rawSnackbar(message: '删除出错: $e');
+        showToast('删除出错: $e', isError: true);
       }
     }
   }

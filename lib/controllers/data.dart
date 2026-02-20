@@ -11,6 +11,7 @@ import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/logger.dart';
 import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/throttle.dart';
+import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/models/author.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
@@ -220,7 +221,7 @@ class Controller extends GetxController {
         if (e is ApiException && e.statusCode == 401) {
           logger.e('Failed to get user info: Unauthorized', error: e);
           isLogin(false);
-          Get.rawSnackbar(message: '账号不存在或异常');
+          showToast('账号不存在或异常', isError: true);
         } else {
           logger.e('Failed to get user info', error: e);
         }
@@ -244,7 +245,7 @@ class Controller extends GetxController {
             // Clear pending credentials
             box.remove('pending_activation_email');
             box.remove('pending_activation_password');
-            Get.rawSnackbar(message: '登录成功：欢迎回来，绳匠！');
+            showToast('登录成功：欢迎回来，绳匠！');
           }
         } catch (e) {
           // Ignore failures, user will see waiting screen in LoginPage if they go there
@@ -404,13 +405,13 @@ class Controller extends GetxController {
 
   Future<void> toggleFavorite(HDataModel hData) async {
     if (isLogin.isFalse) {
-      Get.rawSnackbar(message: '请先登录');
+      showToast('请先登录', isError: true);
       return;
     }
     final userId = user.value?.userId;
     final username = user.value?.login ?? '';
     if (userId == null || userId.isEmpty || username.isEmpty) {
-      Get.rawSnackbar(message: '用户信息获取失败');
+      showToast('用户信息获取失败', isError: true);
       return;
     }
 
@@ -435,7 +436,7 @@ class Controller extends GetxController {
         favoriteIds.remove(articleId);
         bookmarks.removeWhere((e) => e.id == articleId);
       } else {
-        Get.rawSnackbar(message: '取消收藏失败');
+        showToast('取消收藏失败', isError: true);
       }
     } else {
       final newId = await api.createFavorite(
@@ -446,7 +447,7 @@ class Controller extends GetxController {
         favoriteIds[articleId] = newId;
         bookmarks({hData, ...bookmarks});
       } else {
-        Get.rawSnackbar(message: '收藏失败');
+        showToast('收藏失败', isError: true);
       }
     }
   }
@@ -607,9 +608,9 @@ class Controller extends GetxController {
         await _refreshAvatarCaches(refreshed);
       }
       await refreshSelfUserInfo();
-      Get.rawSnackbar(message: '头像已更新'.tr);
+      showToast('头像已更新'.tr);
     } catch (e) {
-      Get.rawSnackbar(message: '头像上传失败: $e');
+      showToast('头像上传失败: $e', isError: true);
     } finally {
       isUploadingAvatar(false);
     }
@@ -617,13 +618,13 @@ class Controller extends GetxController {
 
   Future<void> updateUsername(String newName) async {
     if (isLogin.isFalse) {
-      Get.rawSnackbar(message: '请先登录');
+      showToast('请先登录', isError: true);
       return;
     }
 
     final curUser = user.value;
     if (curUser == null || curUser.userId == null) {
-      Get.rawSnackbar(message: '用户信息异常');
+      showToast('用户信息异常', isError: true);
       return;
     }
 
@@ -654,10 +655,10 @@ class Controller extends GetxController {
       user(updatedUser);
       await ensureAuthorForUser(updatedUser);
 
-      Get.rawSnackbar(message: '用户名已更新');
+      showToast('用户名已更新');
     } catch (e) {
       logger.e('Update username failed', error: e);
-      Get.rawSnackbar(message: '用户名更新失败: $e');
+      showToast('用户名更新失败: $e', isError: true);
     }
   }
 }

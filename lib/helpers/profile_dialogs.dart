@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
+import 'package:inter_knot/helpers/toast.dart';
 
 void showEditProfileDialog(BuildContext context) {
   final user = c.user.value;
@@ -129,7 +130,7 @@ void showLogoutDialog(BuildContext context) {
             onPressed: () async {
               await c.setToken('');
               c.isLogin(false);
-              Get.rawSnackbar(message: '已退出登录');
+              showToast('已退出登录');
               Navigator.pop(context);
             },
             child: const Text('退出', style: TextStyle(color: Colors.red)),

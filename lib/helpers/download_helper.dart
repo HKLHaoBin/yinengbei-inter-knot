@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gal/gal.dart';
-import 'package:get/get.dart';
+import 'package:inter_knot/helpers/toast.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:universal_html/html.dart' as html;
 
@@ -139,14 +139,14 @@ class DownloadHelper {
       final path = '${tempDir.path}/$fileName';
 
       // Download
-      Get.rawSnackbar(message: '正在下载...', duration: const Duration(seconds: 1));
+      showToast('正在下载...', duration: const Duration(seconds: 1));
       await Dio().download(url, path);
 
       // Save to gallery
       await Gal.putImage(path);
-      Get.rawSnackbar(message: '图片已保存到相册');
+      showToast('图片已保存到相册');
     } catch (e) {
-      Get.rawSnackbar(message: '保存失败: $e');
+      showToast('保存失败: $e', isError: true);
     }
   }
 }

@@ -6,6 +6,7 @@ import 'package:inter_knot/api/api_exception.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/box.dart';
 import 'package:inter_knot/helpers/logger.dart';
+import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/models/author.dart';
 
 class LoginPage extends StatefulWidget {
@@ -71,7 +72,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (mounted) {
       Get.back();
-      Get.rawSnackbar(message: '登录成功：欢迎回来，绳匠！');
+      showToast('登录成功：欢迎回来，绳匠！');
     }
   }
 
@@ -140,7 +141,7 @@ class _LoginPageState extends State<LoginPage> {
           _startActivationCheck(email, password);
         } else {
           Get.back();
-          Get.rawSnackbar(message: '登录失败：未获取到Token');
+          showToast('登录失败：未获取到Token', isError: true);
         }
       }
     } catch (e, s) {

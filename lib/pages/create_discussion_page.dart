@@ -15,6 +15,7 @@ import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/normalize_markdown.dart';
 import 'package:inter_knot/helpers/num2dur.dart';
+import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/helpers/web_hooks.dart';
 import 'package:markdown_quill/markdown_quill.dart';
 
@@ -205,7 +206,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   Future<void> _pickImages() async {
     if (_isCoverUploading) return;
     if (_uploadedImages.length >= 9) {
-      Get.rawSnackbar(message: '最多上传 9 张图片');
+      showToast('最多上传 9 张图片', isError: true);
       return;
     }
 
@@ -227,7 +228,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         // Check size (15MB)
         final len = await file.length();
         if (len > 15 * 1024 * 1024) {
-          Get.rawSnackbar(message: '图片 ${file.name} 超过 15MB，已跳过');
+          showToast('图片 ${file.name} 超过 15MB，已跳过', isError: true);
           continue;
         }
 
@@ -254,7 +255,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       }
     } catch (e) {
       debugPrint('Upload images failed: $e');
-      Get.rawSnackbar(message: '上传出错: $e');
+      showToast('上传出错: $e', isError: true);
     } finally {
       setState(() {
         _isCoverUploading = false;
@@ -414,12 +415,12 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     }
 
     if (title.isEmpty) {
-      Get.rawSnackbar(message: '标题不能为空');
+      showToast('标题不能为空', isError: true);
       return;
     }
     // Content check: either text or images must exist
     if (markdownText.trim().isEmpty && _uploadedImages.isEmpty) {
-      Get.rawSnackbar(message: '内容不能为空');
+      showToast('内容不能为空', isError: true);
       return;
     }
 
@@ -520,11 +521,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       }
 
       Get.back(result: true);
-      Get.rawSnackbar(message: widget.discussion != null ? '修改成功' : '发帖成功');
+      showToast(widget.discussion != null ? '修改成功' : '发帖成功');
       // Refresh list
       c.refreshSearchData();
     } catch (e) {
-      Get.rawSnackbar(message: '发帖失败: $e');
+      showToast('发帖失败: $e', isError: true);
     } finally {
       if (mounted) {
         setState(() {

@@ -4,6 +4,7 @@ import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/discussions_grid.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/throttle.dart';
+import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/models/h_data.dart';
 
 class MyDiscussionsPage extends StatefulWidget {
@@ -36,7 +37,7 @@ class _MyDiscussionsPageState extends State<MyDiscussionsPage>
 
   Future<void> _loadMore() async {
     if (isLoading || !hasNextPage.value) return;
-    
+
     final authorId = c.authorId.value ?? c.user.value?.authorId;
     if (authorId == null || authorId.isEmpty) {
       // 尝试刷新用户信息以获取 authorId
@@ -62,7 +63,7 @@ class _MyDiscussionsPageState extends State<MyDiscussionsPage>
         hasNextPage.value = false;
       }
     } catch (e) {
-      Get.rawSnackbar(message: '加载失败: $e');
+      showToast('加载失败: $e', isError: true);
     } finally {
       isLoading = false;
     }
