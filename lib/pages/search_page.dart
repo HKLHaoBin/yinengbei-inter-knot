@@ -28,7 +28,7 @@ class _SearchPageState extends State<SearchPage>
     super.initState();
     _colorController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
 
     _colorAnimation = ColorTween(

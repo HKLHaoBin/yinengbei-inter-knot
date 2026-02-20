@@ -29,7 +29,7 @@ class _TabHighlightState extends State<TabHighlight>
     // Color Animation: 1s linear infinite alternate
     _colorController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
 
     _colorAnimation = ColorTween(
@@ -56,7 +56,7 @@ class _TabHighlightState extends State<TabHighlight>
     _scaleController = AnimationController(
       vsync: this,
       duration: const Duration(
-          milliseconds: 600), // Slightly longer to feel the rhythm
+          milliseconds: 700), // Slightly longer to feel the rhythm
     )..repeat(); // Loop continuously
 
     _scaleAnimation = TweenSequence<double>([

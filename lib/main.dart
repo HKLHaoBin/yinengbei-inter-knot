@@ -242,7 +242,7 @@ class _AnimatedCreateButtonState extends State<_AnimatedCreateButton>
 
     _colorController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
 
     _colorAnimation = ColorTween(
