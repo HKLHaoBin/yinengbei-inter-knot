@@ -609,11 +609,9 @@ class Api extends BaseConnect {
 
   Future<int> getCommentCount(String discussionId) async {
     final res = await get(
-      '/api/comments',
+      '/api/comments/count',
       query: {
-        'filters[article][documentId][\$eq]': discussionId,
-        'pagination[limit]': '1',
-        'fields[0]': 'documentId',
+        'article': discussionId,
       },
     );
 
@@ -621,13 +619,7 @@ class Api extends BaseConnect {
 
     final body = res.body;
     if (body is Map<String, dynamic>) {
-      final meta = body['meta'];
-      if (meta is Map<String, dynamic>) {
-        final pagination = meta['pagination'];
-        if (pagination is Map<String, dynamic>) {
-          return pagination['total'] as int? ?? 0;
-        }
-      }
+      return body['count'] as int? ?? 0;
     }
     return 0;
   }
@@ -636,23 +628,15 @@ class Api extends BaseConnect {
       String id, String endCur) async {
     final start = int.tryParse(endCur.isEmpty ? '0' : endCur) ?? 0;
 
-    final queryParams = _buildPaginationQuery(
-      start: start,
-      sort: 'createdAt:asc',
-      filters: {
-        'filters[article][documentId][\$eq]': id,
-        'filters[parent][documentId][\$null]': 'true',
-      },
-      populate: {
-        'populate[author][populate]': 'avatar',
-        'populate[replies][populate][author][populate]': 'avatar',
-      },
-    );
-    // Add cache buster
-    queryParams['ts'] = DateTime.now().millisecondsSinceEpoch.toString();
+    final queryParams = {
+      'article': id,
+      'start': start.toString(),
+      'limit': ApiConfig.defaultPageSize.toString(),
+      'ts': DateTime.now().millisecondsSinceEpoch.toString(),
+    };
 
     final res = await get(
-      '/api/comments',
+      '/api/comments/list',
       query: queryParams,
     );
 
