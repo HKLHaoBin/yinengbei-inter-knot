@@ -15,9 +15,7 @@ import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/models/author.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
-import 'package:inter_knot/models/release.dart';
 import 'package:inter_knot/pages/login_page.dart';
-import 'package:pub_semver/pub_semver.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Standard shared_preferences or specific wrapper?
 // The file used SharedPreferencesWithCache which is new in flutter/packages?
 // I'll stick to what was there or what works.
@@ -451,13 +449,6 @@ class Controller extends GetxController {
       }
     }
   }
-
-  void getVersionHandle(ReleaseModel? release) {
-    // Keep existing logic if compatible
-  }
-
-  bool mustUpdate(Version newVer, Version curVer) =>
-      newVer.major > curVer.major || newVer.minor > curVer.minor;
 
   final selectedIndex = 0.obs;
   final pageController = PageController();

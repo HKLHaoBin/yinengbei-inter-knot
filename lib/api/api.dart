@@ -10,7 +10,7 @@ import 'package:inter_knot/models/comment.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/models/pagination.dart';
-import 'package:inter_knot/models/release.dart';
+import 'package:inter_knot/controllers/data.dart';
 
 class AuthApi extends GetConnect {
   @override
@@ -92,12 +92,15 @@ class BaseConnect extends GetConnect {
     httpClient.defaultContentType = 'application/json';
     httpClient.addRequestModifier<dynamic>((request) {
       final token = box.read<String>('access_token') ?? '';
+      final path = request.url.path;
 
       // Define public endpoints that should not send auth token to maximize cache hits
       // Matches /api/articles, /api/comments, /api/authors and their sub-paths
-      final isPublicEndpoint = request.url.path.startsWith('/api/articles') ||
-          request.url.path.startsWith('/api/comments') ||
-          request.url.path.startsWith('/api/authors');
+      // EXCEPT specific user-related endpoints like /api/articles/my
+      final isPublicEndpoint =
+          (path.startsWith('/api/articles') && !path.contains('/my')) ||
+              path.startsWith('/api/comments') ||
+              path.startsWith('/api/authors');
 
       // Only attach token if it exists AND (it's not a GET request OR it's not a public endpoint)
       // This ensures POST/PUT/DELETE always get auth, but GET public data stays anonymous for caching
@@ -367,33 +370,6 @@ class Api extends BaseConnect {
     return asInt ?? value;
   }
 
-  Map<String, dynamic> _buildPaginationQuery({
-    required int start,
-    int limit = ApiConfig.defaultPageSize,
-    Map<String, String>? filters,
-    Map<String, String>? populate,
-    dynamic sort, // String or List<String>
-  }) {
-    final params = <String, dynamic>{
-      'pagination[start]': start.toString(),
-      'pagination[limit]': limit.toString(),
-      ...?filters,
-      ...?populate,
-    };
-
-    if (sort != null) {
-      if (sort is List) {
-        for (var i = 0; i < sort.length; i++) {
-          params['sort[$i]'] = sort[i];
-        }
-      } else {
-        params['sort'] = sort;
-      }
-    }
-
-    return params;
-  }
-
   Future<void> _mergeReadStatus(List<dynamic> data,
       {required String tag}) async {
     final userId = box.read<String>('userId');
@@ -549,18 +525,40 @@ class Api extends BaseConnect {
       String authorId, String endCur) async {
     final start = int.tryParse(endCur.isEmpty ? '0' : endCur) ?? 0;
 
-    final queryParams = _buildPaginationQuery(
-      start: start,
-      sort: 'updatedAt:desc',
-      filters: {'filters[author][documentId][\$eq]': authorId},
-      populate: {
-        'populate[author][populate]': 'avatar',
-        'populate[cover][fields][0]': 'url',
-        'populate[cover][fields][1]': 'width',
-        'populate[cover][fields][2]': 'height',
-        'populate[blocks][populate]': '*',
-      },
-    );
+    final currentAuthorId = Get.find<Controller>().authorId.value;
+
+    if (currentAuthorId == authorId) {
+      final res = await get(
+        '/api/articles/my',
+        query: {
+          'start': start.toString(),
+          'limit': ApiConfig.defaultPageSize.toString(),
+        },
+      );
+
+      final data = unwrapData<List<dynamic>>(res);
+      await _mergeReadStatus(data, tag: 'UserDiscussions');
+      final hasNext = data.length >= ApiConfig.defaultPageSize;
+      final nodes = await compute(_parseHDataListSync, data);
+
+      return PaginationModel(
+        nodes: nodes,
+        endCursor: (start + ApiConfig.defaultPageSize).toString(),
+        hasNextPage: hasNext,
+      );
+    }
+
+    final queryParams = <String, dynamic>{
+      'pagination[start]': start.toString(),
+      'pagination[limit]': ApiConfig.defaultPageSize.toString(),
+      'sort': 'updatedAt:desc',
+      'filters[author][documentId][\$eq]': authorId,
+      'populate[author][populate]': 'avatar',
+      'populate[cover][fields][0]': 'url',
+      'populate[cover][fields][1]': 'width',
+      'populate[cover][fields][2]': 'height',
+      'populate[blocks][populate]': '*',
+    };
 
     final res = await get(
       '/api/articles',
@@ -684,18 +682,12 @@ class Api extends BaseConnect {
       getFavorites(String username, String endCur) async {
     final start = int.tryParse(endCur.isEmpty ? '0' : endCur) ?? 0;
 
-    final queryParams = _buildPaginationQuery(
-      start: start,
-      filters: {'filters[user][username][\$eq]': username},
-      populate: {
-        'populate[article][fields][0]': 'documentId',
-        'populate[article][fields][1]': 'updatedAt',
-      },
-    );
-
     final res = await get(
-      '/api/favorites',
-      query: queryParams,
+      '/api/favorites/list',
+      query: {
+        'start': start.toString(),
+        'limit': ApiConfig.defaultPageSize.toString(),
+      },
     );
 
     List<dynamic> list;
@@ -960,18 +952,17 @@ class Api extends BaseConnect {
     // Reusing search/list endpoint with isPinned=true filter
     final start = int.tryParse(endCur?.isEmpty == true ? '0' : endCur!) ?? 0;
 
-    final queryParams = _buildPaginationQuery(
-      start: start,
-      sort: ['updatedAt:desc'],
-      filters: {'filters[isPinned][\$eq]': 'true'},
-      populate: {
-        'populate[author][populate]': 'avatar',
-        'populate[cover][fields][0]': 'url',
-        'populate[cover][fields][1]': 'width',
-        'populate[cover][fields][2]': 'height',
-        'populate[blocks][populate]': '*',
-      },
-    );
+    final queryParams = <String, dynamic>{
+      'pagination[start]': start.toString(),
+      'pagination[limit]': ApiConfig.defaultPageSize.toString(),
+      'sort[0]': 'updatedAt:desc',
+      'filters[isPinned][\$eq]': 'true',
+      'populate[author][populate]': 'avatar',
+      'populate[cover][fields][0]': 'url',
+      'populate[cover][fields][1]': 'width',
+      'populate[cover][fields][2]': 'height',
+      'populate[blocks][populate]': '*',
+    };
 
     return get(
       '/api/articles',
@@ -1058,11 +1049,6 @@ class Api extends BaseConnect {
       url = '${ApiConfig.baseUrl}$url';
     }
     return url;
-  }
-
-  Future<ReleaseModel?> getNewVersion(String login) async {
-    // Disabled/Mocked
-    return null;
   }
 
   Future<void> markAsRead(String articleId) async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart';
+import 'package:inter_knot/constants/api_config.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/discussions_grid.dart';
 import 'package:inter_knot/controllers/data.dart';
@@ -235,10 +236,7 @@ class _MyPageDesktopState extends State<MyPageDesktop>
               controller: _tabController,
               children: [
                 _MyDiscussionsTab(),
-                Obx(() => DiscussionGrid(
-                      list: c.bookmarks(),
-                      hasNextPage: false,
-                    )),
+                _MyFavoritesTab(),
                 Obx(() => DiscussionGrid(
                       list: c.history(),
                       hasNextPage: false,
@@ -392,17 +390,78 @@ class _MyDiscussionsTabState extends State<_MyDiscussionsTab> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (discussions.isEmpty && !hasNextPage.value) {
-        return const Center(
-          child: DiscussionEmptyState(
-            message: '暂无帖子',
-            textStyle: TextStyle(color: Colors.grey),
-          ),
-        );
-      }
       return DiscussionGrid(
-        list: discussions,
-        hasNextPage: hasNextPage.value,
+        list: discussions(),
+        hasNextPage: hasNextPage(),
+        fetchData: fetchData,
+      );
+    });
+  }
+}
+
+class _MyFavoritesTab extends StatefulWidget {
+  @override
+  State<_MyFavoritesTab> createState() => _MyFavoritesTabState();
+}
+
+class _MyFavoritesTabState extends State<_MyFavoritesTab> {
+  final api = Get.find<Api>();
+  final discussions = <HDataModel>{}.obs;
+  final hasNextPage = true.obs;
+  String? endCursor;
+  bool isLoading = false;
+
+  late final fetchData = retryThrottle(
+    _loadMore,
+    const Duration(milliseconds: 500),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMore();
+  }
+
+  Future<void> _loadMore() async {
+    if (isLoading || !hasNextPage.value) return;
+
+    final authorId = c.authorId.value ?? c.user.value?.authorId;
+    if (authorId == null || authorId.isEmpty) {
+      await c.refreshSelfUserInfo();
+      if (c.authorId.value == null && c.user.value?.authorId == null) {
+        hasNextPage.value = false;
+        return;
+      }
+    }
+
+    isLoading = true;
+    try {
+      final res = await api.getFavorites(
+        c.user.value!.login,
+        endCursor ?? '',
+      );
+
+      if (res.items.isNotEmpty) {
+        discussions.addAll(res.items);
+        endCursor = (int.parse(endCursor ?? '0') + ApiConfig.defaultPageSize)
+            .toString();
+        hasNextPage.value = res.items.length >= ApiConfig.defaultPageSize;
+      } else {
+        hasNextPage.value = false;
+      }
+    } catch (e) {
+      // Quiet fail or log
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      return DiscussionGrid(
+        list: discussions(),
+        hasNextPage: hasNextPage(),
         fetchData: fetchData,
       );
     });
