@@ -408,27 +408,21 @@ class Api extends BaseConnect {
     }
     if (ids.isEmpty) return;
 
-    final readQuery = <String, String>{
-      'filters[user][id][\$eq]': userId,
-      'populate[article][fields][0]': 'documentId',
-      'fields[0]': 'isRead',
-      'pagination[limit]': '${ids.length}',
-    };
-    for (var i = 0; i < ids.length; i++) {
-      readQuery['filters[article][documentId][\$in][$i]'] = ids[i];
-    }
-
     try {
-      final readRes = await get('/api/article-reads', query: readQuery);
+      final readRes = await post(
+        '/api/article-reads/batch',
+        {
+          'articleDocumentIds': ids,
+        },
+      );
       final readList = unwrapData<List<dynamic>>(readRes);
       final readMap = <String, bool>{};
       for (final r in readList) {
         if (r is Map) {
-          final article = r['article'];
+          final articleId = r['articleDocumentId'];
           final isRead = r['isRead'] == true;
-          if (isRead && article is Map) {
-            final aId = article['documentId'];
-            if (aId != null) readMap[aId.toString()] = true;
+          if (isRead && articleId != null) {
+            readMap[articleId.toString()] = true;
           }
         }
       }
@@ -464,12 +458,10 @@ class Api extends BaseConnect {
 
     Future<Response>? readStatusFuture;
     if (userId != null && userId.isNotEmpty) {
-      readStatusFuture = get(
-        '/api/article-reads',
-        query: {
-          'filters[user][id][\$eq]': userId,
-          'filters[article][documentId][\$eq]': id,
-          'fields[0]': 'isRead',
+      readStatusFuture = post(
+        '/api/article-reads/batch',
+        {
+          'articleDocumentIds': [id],
         },
       );
     }
