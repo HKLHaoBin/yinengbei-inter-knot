@@ -497,28 +497,37 @@ class Api extends BaseConnect {
       String query, String endCur) async {
     final start = int.tryParse(endCur.isEmpty ? '0' : endCur) ?? 0;
 
-    final filters = <String, String>{};
-    if (query.isNotEmpty) {
-      filters['filters[\$or][0][title][\$contains]'] = query;
-      filters['filters[\$or][1][text][\$contains]'] = query;
+    if (query.isEmpty) {
+      final res = await get(
+        '/api/articles/list',
+        query: {
+          'start': start.toString(),
+          'limit': ApiConfig.defaultPageSize.toString(),
+        },
+      );
+
+      final data = unwrapData<List<dynamic>>(res);
+
+      await _mergeReadStatus(data, tag: 'Search');
+
+      final hasNext = data.length >= ApiConfig.defaultPageSize;
+
+      final nodes = await compute(_parseHDataListSync, data);
+
+      return PaginationModel(
+        nodes: nodes,
+        endCursor: (start + ApiConfig.defaultPageSize).toString(),
+        hasNextPage: hasNext,
+      );
     }
 
-    final queryParams = _buildPaginationQuery(
-      start: start,
-      sort: ['isPinned:desc', 'updatedAt:desc'],
-      filters: filters,
-      populate: {
-        'populate[author][populate]': 'avatar',
-        'populate[cover][fields][0]': 'url',
-        'populate[cover][fields][1]': 'width',
-        'populate[cover][fields][2]': 'height',
-        'populate[blocks][populate]': '*',
-      },
-    );
-
     final res = await get(
-      '/api/articles',
-      query: queryParams.map((k, v) => MapEntry(k, v.toString())),
+      '/api/articles/search',
+      query: {
+        'q': query,
+        'start': start.toString(),
+        'limit': ApiConfig.defaultPageSize.toString(),
+      },
     );
 
     final data = unwrapData<List<dynamic>>(res);
