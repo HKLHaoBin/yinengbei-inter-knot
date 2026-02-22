@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:desktop_drop/desktop_drop.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
@@ -13,6 +15,7 @@ import 'package:inter_knot/components/image_viewer.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
+import 'package:inter_knot/helpers/drop_zone.dart';
 import 'package:inter_knot/helpers/normalize_markdown.dart';
 import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/toast.dart';
@@ -50,6 +53,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   final RxList<({String id, String url})> _uploadedImages =
       <({String id, String url})>[].obs;
   bool _isCoverUploading = false;
+  bool _isDragging = false;  // 拖拽状态
 
   bool isLoading = false;
   int _selectedIndex = 0;
@@ -69,6 +73,77 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         mimeType: mimeType,
       );
     });
+  }
+
+  /// 设置拖拽事件监听（Web 平台）
+  void _setupDropZone() {
+    setupDropZone(
+      onDropImage: (filename, bytes, mimeType) {
+        _handleDroppedImages([(
+          filename: filename,
+          bytes: bytes,
+          mimeType: mimeType,
+        )]);
+      },
+      onDragStatusChanged: (isDragging) {
+        setState(() {
+          _isDragging = isDragging;
+        });
+      },
+    );
+  }
+
+  /// 处理拖拽上传的图片（用于封面）
+  Future<void> _handleDroppedImages(
+      List<({String filename, Uint8List bytes, String mimeType})> files) async {
+    if (_isCoverUploading) return;
+    if (_uploadedImages.length >= 9) {
+      showToast('最多上传 9 张图片', isError: true);
+      return;
+    }
+
+    // 过滤数量
+    final remaining = 9 - _uploadedImages.length;
+    final toUpload = files.take(remaining).toList();
+
+    setState(() {
+      _isCoverUploading = true;
+    });
+
+    try {
+      for (final file in toUpload) {
+        // 检查大小（15MB）
+        if (file.bytes.length > 15 * 1024 * 1024) {
+          showToast('图片 ${file.filename} 超过 15MB，已跳过', isError: true);
+          continue;
+        }
+
+        final result = await api.uploadImage(
+          bytes: file.bytes,
+          filename: file.filename,
+          mimeType: file.mimeType,
+          onProgress: (_) {},
+        );
+
+        if (result != null) {
+          final id = result['id'];
+          final url = result['url'] as String?;
+
+          if (id != null && url != null) {
+            final fullUrl =
+                url.startsWith('http') ? url : '${api.httpClient.baseUrl}$url';
+            _uploadedImages.add((id: id.toString(), url: fullUrl));
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Upload dropped images failed: $e');
+      showToast('上传出错: $e', isError: true);
+    } finally {
+      setState(() {
+        _isCoverUploading = false;
+      });
+    }
   }
 
   /// 粘贴图片 -> 上传 -> 替换为 HTML 图片标签
@@ -288,6 +363,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     _quillController.dispose();
     if (kIsWeb) {
       removePasteListener();
+      removeDropZone();
     }
     super.dispose();
   }
@@ -298,6 +374,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     // 设置 Web 平台剪贴板粘贴监听
     if (kIsWeb) {
       _setupPasteListener();
+      _setupDropZone();
     }
 
     if (widget.discussion != null) {
@@ -611,104 +688,161 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         Column(
           children: [
             Expanded(
-              child: Obx(() {
-                final images = _uploadedImages;
-                return GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 160,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                  ),
-                  itemCount: images.length + (images.length < 9 ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == images.length) {
-                      // Add Button
-                      return MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: _pickImages,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: const Color(0xff313132),
-                                width: 2,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                              color: const Color(0xff1E1E1E),
-                            ),
-                            child: _isCoverUploading
-                                ? const Center(
-                                    child: CircularProgressIndicator())
-                                : const Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.add,
-                                          size: 32, color: Colors.grey),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        '添加图片',
-                                        style: TextStyle(
-                                            color: Colors.grey, fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                        ),
-                      );
-                    }
+              child: DropTarget(
+                onDragDone: (detail) async {
+                  final files = detail.files;
+                  if (files.isEmpty) return;
 
-                    final img = images[index];
-                    return Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: () {
-                              ImageViewer.show(
-                                context,
-                                imageUrls: images.map((e) => e.url).toList(),
-                                initialIndex: index,
-                              );
-                            },
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Image.network(
-                                img.url,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Center(
-                                  child: Icon(Icons.broken_image,
-                                      color: Colors.grey),
+                  final imageFiles = <({String filename, Uint8List bytes, String mimeType})>[];
+                  for (final file in files) {
+                    final mimeType = file.mimeType ?? 'image/jpeg';
+                    if (!mimeType.startsWith('image/')) continue;
+
+                    final bytes = await file.readAsBytes();
+                    imageFiles.add((
+                      filename: file.name,
+                      bytes: bytes,
+                      mimeType: mimeType,
+                    ));
+                  }
+
+                  if (imageFiles.isNotEmpty) {
+                    await _handleDroppedImages(imageFiles);
+                  }
+                },
+                onDragEntered: (_) {
+                  setState(() {
+                    _isDragging = true;
+                  });
+                },
+                onDragExited: (_) {
+                  setState(() {
+                    _isDragging = false;
+                  });
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: _isDragging
+                          ? const Color(0xffFBC02D)
+                          : Colors.transparent,
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Obx(() {
+                    final images = _uploadedImages;
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 160,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                      ),
+                      itemCount: images.length + (images.length < 9 ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == images.length) {
+                          // Add Button
+                          return MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              onTap: _pickImages,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: _isDragging
+                                        ? const Color(0xffFBC02D)
+                                        : const Color(0xff313132),
+                                    width: 2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  color: _isDragging
+                                      ? const Color(0xffFBC02D).withValues(alpha: 0.1)
+                                      : const Color(0xff1E1E1E),
+                                ),
+                                child: _isCoverUploading
+                                    ? const Center(
+                                        child: CircularProgressIndicator())
+                                    : Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            _isDragging ? Icons.cloud_upload : Icons.add,
+                                            size: 32,
+                                            color: _isDragging
+                                                ? const Color(0xffFBC02D)
+                                                : Colors.grey,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _isDragging ? '释放以上传' : '添加图片',
+                                            style: TextStyle(
+                                              color: _isDragging
+                                                  ? const Color(0xffFBC02D)
+                                                  : Colors.grey,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          );
+                        }
+
+                        final img = images[index];
+                        return Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () {
+                                  ImageViewer.show(
+                                    context,
+                                    imageUrls: images.map((e) => e.url).toList(),
+                                    initialIndex: index,
+                                  );
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.network(
+                                    img.url,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Center(
+                                      child: Icon(Icons.broken_image,
+                                          color: Colors.grey),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
-                        // Delete Button
-                        Positioned(
-                          right: 4,
-                          top: 4,
-                          child: InkWell(
-                            onTap: () {
-                              _uploadedImages.removeAt(index);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.black54,
-                                shape: BoxShape.circle,
+                            // Delete Button
+                            Positioned(
+                              right: 4,
+                              top: 4,
+                              child: InkWell(
+                                onTap: () {
+                                  _uploadedImages.removeAt(index);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close,
+                                      color: Colors.white, size: 16),
+                                ),
                               ),
-                              child: const Icon(Icons.close,
-                                  color: Colors.white, size: 16),
                             ),
-                          ),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     );
-                  },
-                );
-              }),
+                  }),
+                ),
+              ),
             ),
           ],
         ),
