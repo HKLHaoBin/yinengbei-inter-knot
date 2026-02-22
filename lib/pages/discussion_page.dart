@@ -403,54 +403,68 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                     if (con.maxWidth < 600) {
                                       return Stack(
                                         children: [
-                                          ListView(
+                                          CustomScrollView(
                                             controller: scrollController,
-                                            children: [
-                                              AspectRatio(
-                                                aspectRatio: 16 / 9,
-                                                child: SizedBox(
-                                                  width: double.infinity,
-                                                  child: Cover(
-                                                      discussion:
-                                                          widget.discussion),
+                                            slivers: [
+                                              SliverToBoxAdapter(
+                                                child: AspectRatio(
+                                                  aspectRatio: 16 / 9,
+                                                  child: SizedBox(
+                                                    width: double.infinity,
+                                                    child: Cover(
+                                                        discussion:
+                                                            widget.discussion),
+                                                  ),
                                                 ),
                                               ),
-                                              DiscussionDetailBox(
-                                                discussion: widget.discussion,
+                                              SliverToBoxAdapter(
+                                                child: DiscussionDetailBox(
+                                                  discussion: widget.discussion,
+                                                ),
                                               ),
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 16),
-                                                child: Column(
-                                                  children: [
-                                                    DiscussionActionButtons(
-                                                      key: actionButtonsKey,
-                                                      discussion:
-                                                          widget.discussion,
-                                                      hData: widget.hData,
-                                                      onCommentAdded:
-                                                          _scrollToBottom,
-                                                      onEditSuccess: () =>
-                                                          setState(() {}),
-                                                    ),
-                                                    const SizedBox(height: 16),
-                                                    const Divider(),
-                                                    Comment(
-                                                        discussion:
-                                                            widget.discussion,
-                                                        loading:
-                                                            _isInitialLoading,
-                                                        onReply: (id, userName,
-                                                                {addPrefix =
-                                                                    false}) =>
-                                                            actionButtonsKey
-                                                                .currentState
-                                                                ?.replyTo(id,
-                                                                    userName,
-                                                                    addPrefix:
-                                                                        addPrefix)),
-                                                  ],
+                                              SliverPersistentHeader(
+                                                pinned: true,
+                                                delegate: _StickyHeaderDelegate(
+                                                  child:
+                                                      DiscussionActionButtons(
+                                                    key: actionButtonsKey,
+                                                    discussion:
+                                                        widget.discussion,
+                                                    hData: widget.hData,
+                                                    onCommentAdded:
+                                                        _scrollToBottom,
+                                                    onEditSuccess: () =>
+                                                        setState(() {}),
+                                                  ),
+                                                ),
+                                              ),
+                                              SliverToBoxAdapter(
+                                                child: Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 16),
+                                                  child: Column(
+                                                    children: [
+                                                      const SizedBox(
+                                                          height: 16),
+                                                      const Divider(),
+                                                      Comment(
+                                                          discussion:
+                                                              widget.discussion,
+                                                          loading:
+                                                              _isInitialLoading,
+                                                          onReply: (id,
+                                                                  userName,
+                                                                  {addPrefix =
+                                                                      false}) =>
+                                                              actionButtonsKey
+                                                                  .currentState
+                                                                  ?.replyTo(id,
+                                                                      userName,
+                                                                      addPrefix:
+                                                                          addPrefix)),
+                                                    ],
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -1416,4 +1430,34 @@ class _CoverScrollBehavior extends MaterialScrollBehavior {
         PointerDeviceKind.invertedStylus,
         PointerDeviceKind.unknown,
       };
+}
+
+class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _StickyHeaderDelegate({
+    required this.child,
+  });
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: const Color(0xff121212),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      alignment: Alignment.center,
+      child: child,
+    );
+  }
+
+  @override
+  double get maxExtent => 64.0;
+
+  @override
+  double get minExtent => 64.0;
+
+  @override
+  bool shouldRebuild(_StickyHeaderDelegate oldDelegate) {
+    return oldDelegate.child != child;
+  }
 }

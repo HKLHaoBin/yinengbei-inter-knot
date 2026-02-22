@@ -145,8 +145,9 @@ class _CommentState extends State<Comment> {
                   ?.call(comment.id, comment.author.name, addPrefix: false),
               style: ButtonStyle(
                 padding: WidgetStateProperty.all(EdgeInsets.zero),
-                minimumSize: WidgetStateProperty.all(const Size(50, 30)),
+                minimumSize: WidgetStateProperty.all(Size.zero),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
                 overlayColor: WidgetStateProperty.resolveWith<Color?>(
                   (Set<WidgetState> states) {
                     if (states.contains(WidgetState.hovered)) {
@@ -164,7 +165,7 @@ class _CommentState extends State<Comment> {
                   },
                 ),
               ),
-              child: const Text('回复'),
+              child: const Text('回复', style: TextStyle(fontSize: 12)),
             ),
           ),
           Replies(

@@ -128,8 +128,9 @@ class _RepliesState extends State<Replies> {
                         addPrefix: true),
                     style: ButtonStyle(
                       padding: WidgetStateProperty.all(EdgeInsets.zero),
-                      minimumSize: WidgetStateProperty.all(const Size(50, 30)),
+                      minimumSize: WidgetStateProperty.all(Size.zero),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
                       overlayColor: WidgetStateProperty.resolveWith<Color?>(
                         (Set<WidgetState> states) {
                           if (states.contains(WidgetState.hovered)) {
@@ -148,7 +149,7 @@ class _RepliesState extends State<Replies> {
                         },
                       ),
                     ),
-                    child: const Text('回复'),
+                    child: const Text('回复', style: TextStyle(fontSize: 12)),
                   ),
                 ),
                 const Divider(),
