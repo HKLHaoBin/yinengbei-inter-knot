@@ -63,12 +63,9 @@ class NetworkImageBox extends StatelessWidget {
       filterQuality: filterQuality,
       memCacheWidth: memCacheWidth,
       memCacheHeight: memCacheHeight,
-      progressIndicatorBuilder: (context, url, progress) {
-        final value = progress.totalSize == null
-            ? null
-            : progress.downloaded / progress.totalSize!;
-        return loadingBuilder(context, value);
-      },
+      placeholder: (context, url) => loadingBuilder(context, null),
+      fadeInDuration: Duration.zero,
+      fadeOutDuration: Duration.zero,
       errorWidget: (context, url, error) => errorBuilder(context),
     );
   }

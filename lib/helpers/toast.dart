@@ -43,7 +43,7 @@ void showToast(
             right: rightMargin,
             left: leftMargin > 0 ? leftMargin : rightMargin,
           )
-        : const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        : const EdgeInsets.symmetric(horizontal: 16, vertical: 48),
     borderRadius: 12,
     backgroundColor: isError
         ? Colors.red.withValues(alpha: 0.9)

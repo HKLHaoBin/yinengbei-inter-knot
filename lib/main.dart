@@ -19,6 +19,9 @@ Future<void> main() async {
   Get.put(AuthApi());
   Get.put(Api());
   Get.put(Controller());
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(const MyApp());
 }
@@ -76,7 +79,13 @@ class MyApp extends StatelessWidget {
       home: const MyHomePage(),
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
-        return child ?? const SizedBox.shrink();
+        return Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) {
+            FocusManager.instance.primaryFocus?.unfocus();
+          },
+          child: child ?? const SizedBox.shrink(),
+        );
       },
     );
   }
@@ -93,6 +102,7 @@ class MyHomePage extends GetView<Controller> {
 
     if (isCompact) {
       return Scaffold(
+        resizeToAvoidBottomInset: false,
         backgroundColor: const Color(0xff121212),
         body: Column(
           children: [
@@ -127,60 +137,22 @@ class MyHomePage extends GetView<Controller> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Expanded(
-                  child: InkWell(
-                    splashColor: Colors.transparent,
-                    highlightColor: Colors.transparent,
-                    onTap: () => controller.animateToPage(0, animate: true),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          controller.selectedIndex.value == 0
-                              ? Icons.explore
-                              : Icons.explore_outlined,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          '推送',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                _BottomNavItem(
+                  isSelected: controller.selectedIndex.value == 0,
+                  icon: Icons.explore_outlined,
+                  activeIcon: Icons.explore,
+                  label: '推送',
+                  onTap: () => controller.animateToPage(0, animate: false),
                 ),
                 Center(
                   child: _buildCreateButton(context),
                 ),
-                Expanded(
-                  child: InkWell(
-                    splashColor: Colors.transparent,
-                    highlightColor: Colors.transparent,
-                    onTap: () => controller.animateToPage(1, animate: true),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          controller.selectedIndex.value == 1
-                              ? Icons.person
-                              : Icons.person_outline,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          '我的',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                _BottomNavItem(
+                  isSelected: controller.selectedIndex.value == 1,
+                  icon: Icons.person_outline,
+                  activeIcon: Icons.person,
+                  label: '我的',
+                  onTap: () => controller.animateToPage(1, animate: false),
                 ),
               ],
             ),
@@ -218,6 +190,55 @@ class MyHomePage extends GetView<Controller> {
           CreateDiscussionPage.show(context);
         }
       },
+    );
+  }
+}
+
+class _BottomNavItem extends StatelessWidget {
+  final bool isSelected;
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _BottomNavItem({
+    required this.isSelected,
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedScale(
+          scale: isSelected ? 1.20 : 1.0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutBack,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isSelected ? activeIcon : icon,
+                color: Colors.white,
+                size: 24,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

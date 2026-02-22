@@ -14,7 +14,6 @@ import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/normalize_markdown.dart';
-import 'package:inter_knot/helpers/num2dur.dart';
 import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/helpers/web_hooks.dart';
 import 'package:markdown_quill/markdown_quill.dart';
@@ -56,6 +55,13 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   final c = Get.find<Controller>();
   late final api = Get.find<Api>();
+
+  void _animateToPage(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    _pageController.jumpToPage(index);
+  }
 
   /// 设置粘贴事件监听
   void _setupPasteListener() {
@@ -560,7 +566,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
             TextField(
               controller: titleController,
               decoration: const InputDecoration(
-                labelText: '标题',
+                hintText: '标题',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -597,11 +603,14 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                   config: quill.QuillEditorConfig(
                     placeholder: '请输入文本',
                     padding: const EdgeInsets.all(16),
-                    embedBuilders: FlutterQuillEmbeds.editorBuilders(
-                      imageEmbedConfig: QuillEditorImageEmbedConfig(
-                        onImageClicked: (url) {},
+                    embedBuilders: [
+                      ...FlutterQuillEmbeds.editorBuilders(
+                        imageEmbedConfig: QuillEditorImageEmbedConfig(
+                          onImageClicked: (url) {},
+                        ),
                       ),
-                    ),
+                      const _DividerEmbedBuilder(),
+                    ],
                   ),
                 ),
               ),
@@ -737,31 +746,30 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                     child: InkWell(
                       splashColor: Colors.transparent,
                       highlightColor: Colors.transparent,
-                      onTap: () {
-                        _pageController.animateToPage(
-                          0,
-                          duration: 300.ms,
-                          curve: Curves.easeOutQuart,
-                        );
-                      },
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _selectedIndex == 0
-                                ? Icons.article
-                                : Icons.article_outlined,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            '正文',
-                            style: TextStyle(
+                      onTap: () => _animateToPage(0),
+                      child: AnimatedScale(
+                        scale: _selectedIndex == 0 ? 1.15 : 1.0,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutBack,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _selectedIndex == 0
+                                  ? Icons.article
+                                  : Icons.article_outlined,
                               color: Colors.white,
-                              fontSize: 12,
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 2),
+                            const Text(
+                              '正文',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -791,31 +799,30 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                     child: InkWell(
                       splashColor: Colors.transparent,
                       highlightColor: Colors.transparent,
-                      onTap: () {
-                        _pageController.animateToPage(
-                          1,
-                          duration: 300.ms,
-                          curve: Curves.easeOutQuart,
-                        );
-                      },
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _selectedIndex == 1
-                                ? Icons.image
-                                : Icons.image_outlined,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            '封面',
-                            style: TextStyle(
+                      onTap: () => _animateToPage(1),
+                      child: AnimatedScale(
+                        scale: _selectedIndex == 1 ? 1.15 : 1.0,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutBack,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _selectedIndex == 1
+                                  ? Icons.image
+                                  : Icons.image_outlined,
                               color: Colors.white,
-                              fontSize: 12,
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 2),
+                            const Text(
+                              '封面',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -1079,6 +1086,25 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _DividerEmbedBuilder extends quill.EmbedBuilder {
+  const _DividerEmbedBuilder();
+
+  @override
+  String get key => 'divider';
+
+  @override
+  Widget build(BuildContext context, quill.EmbedContext embedContext) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Divider(
+        height: 1,
+        thickness: 1,
+        color: Color(0xff313132),
       ),
     );
   }

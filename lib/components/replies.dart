@@ -62,17 +62,15 @@ class _RepliesState extends State<Replies> {
             contentPadding: EdgeInsets.zero,
             horizontalTitleGap: 8,
             minVerticalPadding: 0,
-            leading: MediaQuery.of(context).size.width > 400
-                ? ClipOval(
-                    child: InkWell(
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      borderRadius: BorderRadius.circular(50),
-                      onTap: () => launchUrlString(reply.url),
-                      child: Avatar(reply.author.avatar),
-                    ),
-                  )
-                : null,
+            leading: ClipOval(
+              child: InkWell(
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                borderRadius: BorderRadius.circular(50),
+                onTap: () => launchUrlString(reply.url),
+                child: Avatar(reply.author.avatar),
+              ),
+            ),
             title: Row(
               children: [
                 Flexible(

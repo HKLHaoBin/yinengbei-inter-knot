@@ -94,7 +94,7 @@ class HDataModel {
     return discussionsCache[id] = future;
   }
 
-  factory HDataModel.fromJson(Map<String, dynamic> json) {
+  factory HDataModel.fromMap(Map<String, dynamic> json) {
     // 优先取 documentId，其次是 id (转 String)，最后 fallback 到 number (转 String)
     final docId = json['documentId'] as String? ??
         json['id']?.toString() ??
@@ -107,12 +107,17 @@ class HDataModel {
         (json['createdAt'] as String?).use((v) => DateTime.parse(v)) ??
             updatedAt;
 
-    final hData = HDataModel(
+    return HDataModel(
       id: docId,
       updatedAt: updatedAt,
       createdAt: createdAt,
       isPinned: false,
     );
+  }
+
+  factory HDataModel.fromJson(Map<String, dynamic> json) {
+    final hData = HDataModel.fromMap(json);
+    final docId = hData.id;
 
     // Optimization: If json contains title, it might be a full object.
     // Try to parse it and seed the cache to avoid N+1 requests.

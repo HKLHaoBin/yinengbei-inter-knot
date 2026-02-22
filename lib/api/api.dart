@@ -322,10 +322,26 @@ DiscussionModel _parseDiscussionSync(Map<String, dynamic> data) {
   return parseDiscussionData(data);
 }
 
-List<HDataModel> _parseHDataListSync(List<dynamic> data) {
-  return data
-      .map((e) => HDataModel.fromJson(e as Map<String, dynamic>))
-      .toList();
+({List<HDataModel> nodes, List<DiscussionModel> discussions})
+    _parseHDataListAndDiscussionsSync(List<dynamic> data) {
+  final nodes = <HDataModel>[];
+  final discussions = <DiscussionModel>[];
+
+  for (final e in data) {
+    if (e is! Map<String, dynamic>) continue;
+    try {
+      final hData = HDataModel.fromMap(e);
+      nodes.add(hData);
+
+      if (e['title'] != null) {
+        final discussion = DiscussionModel.fromJson(e);
+        discussions.add(discussion);
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+  return (nodes: nodes, discussions: discussions);
 }
 
 List<CommentModel> _parseCommentListSync(List<dynamic> data) {
@@ -491,10 +507,16 @@ class Api extends BaseConnect {
 
       final hasNext = data.length >= ApiConfig.defaultPageSize;
 
-      final nodes = await compute(_parseHDataListSync, data);
+      final result = await compute(_parseHDataListAndDiscussionsSync, data);
+
+      final controller = Get.find<Controller>();
+      for (final discussion in result.discussions) {
+        controller.applyLocalOverrides(discussion);
+        HDataModel.upsertCachedDiscussion(discussion);
+      }
 
       return PaginationModel(
-        nodes: nodes,
+        nodes: result.nodes,
         endCursor: (start + ApiConfig.defaultPageSize).toString(),
         hasNextPage: hasNext,
       );
@@ -515,10 +537,16 @@ class Api extends BaseConnect {
 
     final hasNext = data.length >= ApiConfig.defaultPageSize;
 
-    final nodes = await compute(_parseHDataListSync, data);
+    final result = await compute(_parseHDataListAndDiscussionsSync, data);
+
+    final controller = Get.find<Controller>();
+    for (final discussion in result.discussions) {
+      controller.applyLocalOverrides(discussion);
+      HDataModel.upsertCachedDiscussion(discussion);
+    }
 
     return PaginationModel(
-      nodes: nodes,
+      nodes: result.nodes,
       endCursor: (start + ApiConfig.defaultPageSize).toString(),
       hasNextPage: hasNext,
     );
@@ -542,10 +570,16 @@ class Api extends BaseConnect {
       final data = unwrapData<List<dynamic>>(res);
       await _mergeReadStatus(data, tag: 'UserDiscussions');
       final hasNext = data.length >= ApiConfig.defaultPageSize;
-      final nodes = await compute(_parseHDataListSync, data);
+      final result = await compute(_parseHDataListAndDiscussionsSync, data);
+
+      final controller = Get.find<Controller>();
+      for (final discussion in result.discussions) {
+        controller.applyLocalOverrides(discussion);
+        HDataModel.upsertCachedDiscussion(discussion);
+      }
 
       return PaginationModel(
-        nodes: nodes,
+        nodes: result.nodes,
         endCursor: (start + ApiConfig.defaultPageSize).toString(),
         hasNextPage: hasNext,
       );
@@ -574,10 +608,16 @@ class Api extends BaseConnect {
 
     final hasNext = data.length >= ApiConfig.defaultPageSize;
 
-    final nodes = await compute(_parseHDataListSync, data);
+    final result = await compute(_parseHDataListAndDiscussionsSync, data);
+
+    final controller = Get.find<Controller>();
+    for (final discussion in result.discussions) {
+      controller.applyLocalOverrides(discussion);
+      HDataModel.upsertCachedDiscussion(discussion);
+    }
 
     return PaginationModel(
-      nodes: nodes,
+      nodes: result.nodes,
       endCursor: (start + ApiConfig.defaultPageSize).toString(),
       hasNextPage: hasNext,
     );
