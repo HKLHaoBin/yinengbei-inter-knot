@@ -18,6 +18,7 @@ class _MyDiscussionsPageState extends State<MyDiscussionsPage>
     with AutomaticKeepAliveClientMixin {
   final c = Get.find<Controller>();
   final api = Get.find<Api>();
+  late final Worker _loginWorker;
 
   final discussions = <HDataModel>{}.obs;
   final hasNextPage = true.obs;
@@ -33,6 +34,15 @@ class _MyDiscussionsPageState extends State<MyDiscussionsPage>
   void initState() {
     super.initState();
     _loadMore();
+    _loginWorker = ever(c.isLogin, (v) {
+      if (v == true) {
+        _refresh();
+      } else {
+        discussions.clear();
+        endCursor = null;
+        hasNextPage.value = true;
+      }
+    });
   }
 
   Future<void> _loadMore() async {
@@ -105,4 +115,10 @@ class _MyDiscussionsPageState extends State<MyDiscussionsPage>
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void dispose() {
+    _loginWorker.dispose();
+    super.dispose();
+  }
 }

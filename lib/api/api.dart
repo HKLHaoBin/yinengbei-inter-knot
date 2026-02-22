@@ -461,8 +461,11 @@ class Api extends BaseConnect {
       }
     }
 
-    // Use compute to parse heavy markdown/html in isolate
-    return compute(_parseDiscussionSync, data);
+    final discussion = await compute(_parseDiscussionSync, data);
+    final controller = Get.find<Controller>();
+    controller.applyLocalOverrides(discussion);
+    HDataModel.upsertCachedDiscussion(discussion);
+    return discussion;
   }
 
   Future<void> viewArticle(String id) async {

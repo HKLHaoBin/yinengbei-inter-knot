@@ -342,6 +342,7 @@ class _MyDiscussionsTabState extends State<_MyDiscussionsTab> {
   final hasNextPage = true.obs;
   String? endCursor;
   bool isLoading = false;
+  late final Worker _loginWorker;
 
   late final fetchData = retryThrottle(
     _loadMore,
@@ -352,6 +353,15 @@ class _MyDiscussionsTabState extends State<_MyDiscussionsTab> {
   void initState() {
     super.initState();
     _loadMore();
+    _loginWorker = ever(c.isLogin, (v) {
+      if (v == true) {
+        _refresh();
+      } else {
+        discussions.clear();
+        endCursor = null;
+        hasNextPage.value = true;
+      }
+    });
   }
 
   Future<void> _loadMore() async {
@@ -387,6 +397,13 @@ class _MyDiscussionsTabState extends State<_MyDiscussionsTab> {
     }
   }
 
+  Future<void> _refresh() async {
+    discussions.clear();
+    endCursor = null;
+    hasNextPage.value = true;
+    await _loadMore();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
@@ -396,6 +413,12 @@ class _MyDiscussionsTabState extends State<_MyDiscussionsTab> {
         fetchData: fetchData,
       );
     });
+  }
+
+  @override
+  void dispose() {
+    _loginWorker.dispose();
+    super.dispose();
   }
 }
 
@@ -410,6 +433,7 @@ class _MyFavoritesTabState extends State<_MyFavoritesTab> {
   final hasNextPage = true.obs;
   String? endCursor;
   bool isLoading = false;
+  late final Worker _loginWorker;
 
   late final fetchData = retryThrottle(
     _loadMore,
@@ -420,6 +444,15 @@ class _MyFavoritesTabState extends State<_MyFavoritesTab> {
   void initState() {
     super.initState();
     _loadMore();
+    _loginWorker = ever(c.isLogin, (v) {
+      if (v == true) {
+        _refresh();
+      } else {
+        discussions.clear();
+        endCursor = null;
+        hasNextPage.value = true;
+      }
+    });
   }
 
   Future<void> _loadMore() async {
@@ -456,6 +489,13 @@ class _MyFavoritesTabState extends State<_MyFavoritesTab> {
     }
   }
 
+  Future<void> _refresh() async {
+    discussions.clear();
+    endCursor = null;
+    hasNextPage.value = true;
+    await _loadMore();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
@@ -465,5 +505,11 @@ class _MyFavoritesTabState extends State<_MyFavoritesTab> {
         fetchData: fetchData,
       );
     });
+  }
+
+  @override
+  void dispose() {
+    _loginWorker.dispose();
+    super.dispose();
   }
 }

@@ -62,13 +62,14 @@ class _DiscussionPageState extends State<DiscussionPage> {
     _isInitialLoading = true;
     _startNewCommentCheck();
 
-    // Mark as read
-    if (!widget.discussion.isRead) {
-      widget.discussion.isRead = true;
-      Get.find<Api>().markAsRead(widget.discussion.id);
-    }
-    Get.find<Api>().viewArticle(widget.discussion.databaseId.toString());
-    widget.discussion.views++; // Optimistic update
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final wasRead = widget.discussion.isRead;
+      c.markDiscussionReadAndViewed(widget.discussion);
+      if (!wasRead) {
+        Get.find<Api>().markAsRead(widget.discussion.id);
+      }
+      Get.find<Api>().viewArticle(widget.discussion.databaseId.toString());
+    });
 
     scrollController.addListener(() {
       if (_isLoadingMore) return;

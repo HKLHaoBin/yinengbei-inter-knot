@@ -10,6 +10,36 @@ class HDataModel {
   static final _valueCache = <String, DiscussionModel>{};
   static const int _maxCacheSize =
       200; // Increased cache size for better performance
+  static DiscussionModel? getCachedDiscussionById(String id) => _valueCache[id];
+
+  static void upsertCachedDiscussion(DiscussionModel discussion) {
+    final id = discussion.id;
+    if (discussionsCache.containsKey(id)) {
+      discussionsCache.remove(id);
+    }
+    if (!discussionsCache.containsKey(id) &&
+        discussionsCache.length >= _maxCacheSize) {
+      final keyToRemove = discussionsCache.keys.first;
+      discussionsCache.remove(keyToRemove);
+      _valueCache.remove(keyToRemove);
+    }
+    _valueCache[id] = discussion;
+    discussionsCache[id] = Future.value(discussion);
+  }
+
+  static void updateCachedDiscussion(
+    String id, {
+    bool? isRead,
+    int? views,
+  }) {
+    final cached = _valueCache[id];
+    if (cached == null) return;
+    if (isRead != null) cached.isRead = isRead;
+    if (views != null) cached.views = views;
+    if (discussionsCache.containsKey(id)) {
+      discussionsCache[id] = Future.value(cached);
+    }
+  }
 
   String id;
   DateTime updatedAt;

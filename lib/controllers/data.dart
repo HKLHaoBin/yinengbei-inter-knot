@@ -53,6 +53,11 @@ class Controller extends GetxController {
   final bookmarks = <HDataModel>{}.obs;
   final favoriteIds = <String, String>{}.obs;
   final history = <HDataModel>{}.obs;
+  static const String _localReadCacheKey = 'local_read_cache';
+  static const String _localViewCacheKey = 'local_view_cache';
+  static const int _localCacheMax = 500;
+  final _localReadCache = <String, bool>{};
+  final _localViewCache = <String, int>{};
 
   // Api instance
   final api = Get.find<Api>();
@@ -172,6 +177,70 @@ class Controller extends GetxController {
     }
   }
 
+  void _loadLocalCaches() {
+    final read = box.read<Map>(_localReadCacheKey);
+    if (read != null) {
+      for (final entry in read.entries) {
+        final key = entry.key.toString();
+        final value = entry.value == true;
+        _localReadCache[key] = value;
+      }
+    }
+    final views = box.read<Map>(_localViewCacheKey);
+    if (views != null) {
+      for (final entry in views.entries) {
+        final key = entry.key.toString();
+        final value = int.tryParse(entry.value.toString());
+        if (value != null) _localViewCache[key] = value;
+      }
+    }
+  }
+
+  void _trimLocalCache<K, V>(Map<K, V> cache) {
+    while (cache.length > _localCacheMax) {
+      cache.remove(cache.keys.first);
+    }
+  }
+
+  void _persistLocalReadCache() {
+    _trimLocalCache(_localReadCache);
+    box.write(_localReadCacheKey, Map<String, bool>.from(_localReadCache));
+  }
+
+  void _persistLocalViewCache() {
+    _trimLocalCache(_localViewCache);
+    box.write(_localViewCacheKey, Map<String, int>.from(_localViewCache));
+  }
+
+  void applyLocalOverrides(DiscussionModel discussion) {
+    final id = discussion.id;
+    final read = _localReadCache[id];
+    if (read == true) discussion.isRead = true;
+    final views = _localViewCache[id];
+    if (views != null && views > discussion.views) {
+      discussion.views = views;
+    }
+  }
+
+  void markDiscussionReadAndViewed(DiscussionModel discussion) {
+    final id = discussion.id;
+    if (id.isEmpty) return;
+    discussion.isRead = true;
+    _localReadCache[id] = true;
+    final nextViews = discussion.views + 1;
+    discussion.views = nextViews;
+    final cachedViews = _localViewCache[id];
+    if (cachedViews == null || nextViews > cachedViews) {
+      _localViewCache[id] = nextViews;
+    }
+    _persistLocalReadCache();
+    _persistLocalViewCache();
+    HDataModel.upsertCachedDiscussion(discussion);
+    searchResult.refresh();
+    bookmarks.refresh();
+    history.refresh();
+  }
+
   bool canVisit(DiscussionModel discussion, bool isPin) => true;
 
   final curPage = 0.obs;
@@ -190,6 +259,7 @@ class Controller extends GetxController {
     pref = await SharedPreferencesWithCache.create(
       cacheOptions: const SharedPreferencesWithCacheOptions(),
     );
+    _loadLocalCaches();
     pageController
         .addListener(() => curPage(pageController.page?.round() ?? 0));
     pref.remove('root_token');
@@ -273,6 +343,10 @@ class Controller extends GetxController {
         box.remove('access_token');
         bookmarks.clear();
         favoriteIds.clear();
+        _localReadCache.clear();
+        _localViewCache.clear();
+        box.remove(_localReadCacheKey);
+        box.remove(_localViewCacheKey);
       }
     });
 
