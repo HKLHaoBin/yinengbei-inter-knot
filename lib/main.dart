@@ -19,7 +19,7 @@ Future<void> main() async {
   Get.put(AuthApi());
   Get.put(Api());
   Get.put(Controller());
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(const MyApp());
 }
 
