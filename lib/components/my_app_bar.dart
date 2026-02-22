@@ -52,8 +52,10 @@ class _MyAppBarState extends State<MyAppBar> {
               ),
             ),
           ),
-          child: Row(
-            children: [
+          child: SafeArea(
+            bottom: false,
+            child: Row(
+              children: [
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -181,6 +183,7 @@ class _MyAppBarState extends State<MyAppBar> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
