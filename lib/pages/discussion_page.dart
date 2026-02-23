@@ -486,10 +486,6 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                             ),
                                             height: double.infinity,
                                             decoration: BoxDecoration(
-                                              border: Border.all(
-                                                color: const Color(0xff313132),
-                                                width: 4,
-                                              ),
                                               borderRadius:
                                                   BorderRadius.circular(16),
                                               color: const Color(0xff070707),
@@ -535,13 +531,6 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                                       .infinity,
                                                                   foregroundDecoration:
                                                                       BoxDecoration(
-                                                                    border:
-                                                                        Border
-                                                                            .all(
-                                                                      color: const Color(
-                                                                          0xff313132),
-                                                                      width: 4,
-                                                                    ),
                                                                     borderRadius:
                                                                         BorderRadius.circular(
                                                                             12),
@@ -583,10 +572,6 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                               color: const Color(0xff070707),
                                               borderRadius:
                                                   BorderRadius.circular(16),
-                                              border: Border.all(
-                                                color: const Color(0xff313132),
-                                                width: 4,
-                                              ),
                                             ),
                                             child: ClipRRect(
                                               borderRadius:
