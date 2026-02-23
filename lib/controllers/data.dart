@@ -648,6 +648,13 @@ class Controller extends GetxController {
     );
     if (file == null) return;
 
+    final allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    final ext = file.name.split('.').last.toLowerCase();
+    if (!allowedExtensions.contains(ext)) {
+      showToast('不支持的文件格式，仅支持 JPEG, PNG, GIF, WEBP', isError: true);
+      return;
+    }
+
     isUploadingAvatar(true);
     try {
       final curUser = user.value;

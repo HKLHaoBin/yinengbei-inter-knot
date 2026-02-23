@@ -66,6 +66,13 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   /// 设置粘贴事件监听
   void _setupPasteListener() {
     setupPasteListener((filename, bytes, mimeType) {
+      final allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      final ext = filename.split('.').last.toLowerCase();
+      if (!allowedExtensions.contains(ext)) {
+        showToast('不支持的文件格式，仅支持 JPEG, PNG, GIF, WEBP', isError: true);
+        return;
+      }
+
       // 在光标位置插入占位符并开始上传
       final index = _quillController.selection.start;
       _uploadImageAndInsert(
@@ -221,9 +228,21 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     final files = await picker.pickMultiImage();
     if (files.isEmpty) return;
 
+    final allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    final validFiles = files.where((file) {
+      final ext = file.name.split('.').last.toLowerCase();
+      return allowedExtensions.contains(ext);
+    }).toList();
+
+    if (validFiles.length != files.length) {
+      showToast('部分文件格式不支持，仅支持 JPEG, PNG, GIF, WEBP', isError: true);
+    }
+
+    if (validFiles.isEmpty) return;
+
     // Filter by count
     final remaining = 9 - _uploadedImages.length;
-    final toUpload = files.take(remaining).toList();
+    final toUpload = validFiles.take(remaining).toList();
 
     setState(() {
       _isCoverUploading = true;
@@ -273,6 +292,13 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     final picker = ImagePicker();
     final file = await picker.pickImage(source: ImageSource.gallery);
     if (file == null) return;
+
+    final allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    final ext = file.name.split('.').last.toLowerCase();
+    if (!allowedExtensions.contains(ext)) {
+      showToast('不支持的文件格式，仅支持 JPEG, PNG, GIF, WEBP', isError: true);
+      return;
+    }
 
     final bytes = await file.readAsBytes();
     final filename = file.name;
