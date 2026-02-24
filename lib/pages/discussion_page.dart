@@ -531,6 +531,13 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                                       .infinity,
                                                                   foregroundDecoration:
                                                                       BoxDecoration(
+                                                                    border:
+                                                                        Border
+                                                                            .all(
+                                                                      color: const Color(
+                                                                          0xff313132),
+                                                                      width: 4,
+                                                                    ),
                                                                     borderRadius:
                                                                         BorderRadius.circular(
                                                                             12),
