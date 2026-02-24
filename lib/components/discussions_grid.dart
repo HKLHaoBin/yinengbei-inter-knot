@@ -204,6 +204,7 @@ class _DiscussionGridState extends State<DiscussionGrid>
               },
               child: WaterfallFlow.builder(
                 controller: scrollController,
+                cacheExtent: 0.0,
                 physics: !isCompact
                     ? const NeverScrollableScrollPhysics()
                     : const BouncingScrollPhysics(),
@@ -244,67 +245,71 @@ class _DiscussionGridState extends State<DiscussionGrid>
                   // This avoids creating FutureBuilder for already loaded items, reducing build overhead and flickering
                   final cachedDiscussion = item.cachedDiscussion;
                   if (cachedDiscussion != null) {
-                    return KeyedSubtree(
-                      key: ValueKey(item.id),
-                      child: _buildCard(context, item, cachedDiscussion),
+                    return RepaintBoundary(
+                      child: KeyedSubtree(
+                        key: ValueKey(item.id),
+                        child: _buildCard(context, item, cachedDiscussion),
+                      ),
                     );
                   }
 
-                  return FutureBuilder(
-                    key: ValueKey(item.id),
-                    future: item.discussion,
-                    builder: (context, snaphost) {
-                      if (snaphost.hasData) {
-                        return _buildCard(context, item, snaphost.data!);
-                      }
-                      if (snaphost.hasError) {
-                        return Card(
-                          clipBehavior: Clip.antiAlias,
-                          color: const Color(0xff222222),
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(24),
-                              topRight: Radius.circular(24),
-                              bottomLeft: Radius.circular(24),
-                            ),
-                          ),
-                          child: AspectRatio(
-                            aspectRatio: 5 / 6,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Center(
-                                  child: SelectableText('${snaphost.error}')),
-                            ),
-                          ),
-                        );
-                      }
-                      if (snaphost.connectionState == ConnectionState.done) {
-                        return Card(
-                          clipBehavior: Clip.antiAlias,
-                          color: const Color(0xff222222),
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(24),
-                              topRight: Radius.circular(24),
-                              bottomLeft: Radius.circular(24),
-                            ),
-                          ),
-                          child: InkWell(
-                            splashColor: Colors.transparent,
-                            highlightColor: Colors.transparent,
-                            onTap: () => launchUrlString(item.url),
-                            child: const AspectRatio(
-                              aspectRatio: 5 / 6,
-                              child: Padding(
-                                padding: EdgeInsets.all(16),
-                                child: Center(child: Text('讨论已删除')),
+                  return RepaintBoundary(
+                    child: FutureBuilder(
+                      key: ValueKey(item.id),
+                      future: item.discussion,
+                      builder: (context, snaphost) {
+                        if (snaphost.hasData) {
+                          return _buildCard(context, item, snaphost.data!);
+                        }
+                        if (snaphost.hasError) {
+                          return Card(
+                            clipBehavior: Clip.antiAlias,
+                            color: const Color(0xff222222),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(24),
+                                topRight: Radius.circular(24),
+                                bottomLeft: Radius.circular(24),
                               ),
                             ),
-                          ),
-                        );
-                      }
-                      return const DiscussionCardSkeleton();
-                    },
+                            child: AspectRatio(
+                              aspectRatio: 5 / 6,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Center(
+                                    child: SelectableText('${snaphost.error}')),
+                              ),
+                            ),
+                          );
+                        }
+                        if (snaphost.connectionState == ConnectionState.done) {
+                          return Card(
+                            clipBehavior: Clip.antiAlias,
+                            color: const Color(0xff222222),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(24),
+                                topRight: Radius.circular(24),
+                                bottomLeft: Radius.circular(24),
+                              ),
+                            ),
+                            child: InkWell(
+                              splashColor: Colors.transparent,
+                              highlightColor: Colors.transparent,
+                              onTap: () => launchUrlString(item.url),
+                              child: const AspectRatio(
+                                aspectRatio: 5 / 6,
+                                child: Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Center(child: Text('讨论已删除')),
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+                        return const DiscussionCardSkeleton();
+                      },
+                    ),
                   );
                 },
               ),
