@@ -193,114 +193,121 @@ class _DiscussionGridState extends State<DiscussionGrid>
         final child = Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1450),
-            child: WaterfallFlow.builder(
-              controller: scrollController,
-              physics: !isCompact
-                  ? const NeverScrollableScrollPhysics()
-                  : const BouncingScrollPhysics(),
-              padding: const EdgeInsets.all(4).copyWith(top: 16),
-              gridDelegate: SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 275,
-                mainAxisSpacing: 2,
-                crossAxisSpacing: 1,
-                lastChildLayoutTypeBuilder: (index) => index == items.length
-                    ? LastChildLayoutType.foot
-                    : LastChildLayoutType.none,
-                viewportBuilder: (firstIndex, lastIndex) {
-                  if (lastIndex == items.length) fetchData?.call();
-                },
-              ),
-              itemCount: items.length + 1,
-              itemBuilder: (context, index) {
-                if (index == items.length) {
-                  if (hasNextPage) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Image.asset(
-                          'assets/images/Bangboo.gif',
-                          width: 80,
-                          height: 80,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (ScrollNotification notification) {
+                if (notification.depth == 0 &&
+                    notification.metrics.extentAfter < 500 &&
+                    hasNextPage) {
+                  fetchData?.call();
+                }
+                return false;
+              },
+              child: WaterfallFlow.builder(
+                controller: scrollController,
+                physics: !isCompact
+                    ? const NeverScrollableScrollPhysics()
+                    : const BouncingScrollPhysics(),
+                padding: const EdgeInsets.all(4).copyWith(top: 16),
+                gridDelegate: SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 275,
+                  mainAxisSpacing: 2,
+                  crossAxisSpacing: 1,
+                  lastChildLayoutTypeBuilder: (index) => index == items.length
+                      ? LastChildLayoutType.foot
+                      : LastChildLayoutType.none,
+                ),
+                itemCount: items.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == items.length) {
+                    if (hasNextPage) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Image.asset(
+                            'assets/images/Bangboo.gif',
+                            width: 80,
+                            height: 80,
+                          ),
                         ),
+                      );
+                    }
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Text('已经到底啦…\ [ O_X ] /'),
                       ),
                     );
                   }
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Text('已经到底啦…\ [ O_X ] /'),
-                    ),
-                  );
-                }
-                final item = items[index];
+                  final item = items[index];
 
-                // Performance Optimization: Check synchronous cache first
-                // This avoids creating FutureBuilder for already loaded items, reducing build overhead and flickering
-                final cachedDiscussion = item.cachedDiscussion;
-                if (cachedDiscussion != null) {
-                  return KeyedSubtree(
+                  // Performance Optimization: Check synchronous cache first
+                  // This avoids creating FutureBuilder for already loaded items, reducing build overhead and flickering
+                  final cachedDiscussion = item.cachedDiscussion;
+                  if (cachedDiscussion != null) {
+                    return KeyedSubtree(
+                      key: ValueKey(item.id),
+                      child: _buildCard(context, item, cachedDiscussion),
+                    );
+                  }
+
+                  return FutureBuilder(
                     key: ValueKey(item.id),
-                    child: _buildCard(context, item, cachedDiscussion),
-                  );
-                }
-
-                return FutureBuilder(
-                  key: ValueKey(item.id),
-                  future: item.discussion,
-                  builder: (context, snaphost) {
-                    if (snaphost.hasData) {
-                      return _buildCard(context, item, snaphost.data!);
-                    }
-                    if (snaphost.hasError) {
-                      return Card(
-                        clipBehavior: Clip.antiAlias,
-                        color: const Color(0xff222222),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(24),
-                            topRight: Radius.circular(24),
-                            bottomLeft: Radius.circular(24),
-                          ),
-                        ),
-                        child: AspectRatio(
-                          aspectRatio: 5 / 6,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Center(
-                                child: SelectableText('${snaphost.error}')),
-                          ),
-                        ),
-                      );
-                    }
-                    if (snaphost.connectionState == ConnectionState.done) {
-                      return Card(
-                        clipBehavior: Clip.antiAlias,
-                        color: const Color(0xff222222),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(24),
-                            topRight: Radius.circular(24),
-                            bottomLeft: Radius.circular(24),
-                          ),
-                        ),
-                        child: InkWell(
-                          splashColor: Colors.transparent,
-                          highlightColor: Colors.transparent,
-                          onTap: () => launchUrlString(item.url),
-                          child: const AspectRatio(
-                            aspectRatio: 5 / 6,
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Center(child: Text('讨论已删除')),
+                    future: item.discussion,
+                    builder: (context, snaphost) {
+                      if (snaphost.hasData) {
+                        return _buildCard(context, item, snaphost.data!);
+                      }
+                      if (snaphost.hasError) {
+                        return Card(
+                          clipBehavior: Clip.antiAlias,
+                          color: const Color(0xff222222),
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(24),
+                              topRight: Radius.circular(24),
+                              bottomLeft: Radius.circular(24),
                             ),
                           ),
-                        ),
-                      );
-                    }
-                    return const DiscussionCardSkeleton();
-                  },
-                );
-              },
+                          child: AspectRatio(
+                            aspectRatio: 5 / 6,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Center(
+                                  child: SelectableText('${snaphost.error}')),
+                            ),
+                          ),
+                        );
+                      }
+                      if (snaphost.connectionState == ConnectionState.done) {
+                        return Card(
+                          clipBehavior: Clip.antiAlias,
+                          color: const Color(0xff222222),
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(24),
+                              topRight: Radius.circular(24),
+                              bottomLeft: Radius.circular(24),
+                            ),
+                          ),
+                          child: InkWell(
+                            splashColor: Colors.transparent,
+                            highlightColor: Colors.transparent,
+                            onTap: () => launchUrlString(item.url),
+                            child: const AspectRatio(
+                              aspectRatio: 5 / 6,
+                              child: Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Center(child: Text('讨论已删除')),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      return const DiscussionCardSkeleton();
+                    },
+                  );
+                },
+              ),
             ),
           ),
         );
