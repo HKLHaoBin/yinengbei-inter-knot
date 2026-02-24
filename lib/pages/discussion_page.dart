@@ -734,6 +734,24 @@ class _DiscussionDetailBoxState extends State<DiscussionDetailBox> {
                           color: Color(0xffE0E0E0),
                         ),
                       ),
+                      PreConfig.darkConfig.copy(
+                        wrapper: (child, code, language) => Stack(
+                          children: [
+                            child,
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: Text(
+                                language,
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
