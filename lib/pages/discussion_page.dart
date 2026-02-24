@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart';
+import 'package:markdown_widget/markdown_widget.dart' hide ImageViewer;
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/click_region.dart';
 import 'package:inter_knot/components/comment.dart';
@@ -711,22 +711,31 @@ class _DiscussionDetailBoxState extends State<DiscussionDetailBox> {
               ),
               const SizedBox(height: 16),
               SelectionArea(
-                child: HtmlWidget(
-                  discussion.bodyHTML,
-                  textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 16,
-                        color: const Color(0xffE0E0E0),
+                child: MarkdownWidget(
+                  data: discussion.rawBodyText,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  config: MarkdownConfig.darkConfig.copy(
+                    configs: [
+                      LinkConfig(
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
+                        ),
+                        onTap: (url) {
+                          if (url.isNotEmpty) {
+                            launchUrlString(url);
+                          }
+                        },
                       ),
-                  onTapUrl: (url) {
-                    launchUrlString(url);
-                    return true;
-                  },
-                  onTapImage: (data) {
-                    if (data.sources.isEmpty) return;
-                    final url = data.sources.first.url;
-                    ImageViewer.show(context,
-                        imageUrls: [url], heroTagPrefix: null);
-                  },
+                      const PConfig(
+                        textStyle: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xffE0E0E0),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
