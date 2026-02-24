@@ -573,12 +573,20 @@ class Controller extends GetxController {
   Future<void> searchData() async {
     if (searchHasNextPage.isFalse || searchCache.contains(searchEndCur)) return;
     searchCache.add(searchEndCur);
+
+    final isFirstPage = searchEndCur == null || searchEndCur!.isEmpty;
+
     final pagination = await api.search(searchQuery(), searchEndCur ?? '');
     // pagination returns PaginationModel<HDataModel>
     // destructure:
     searchEndCur = pagination.endCursor;
     searchHasNextPage.value = pagination.hasNextPage;
-    searchResult.addAll(pagination.nodes);
+
+    if (isFirstPage) {
+      searchResult.assignAll(pagination.nodes);
+    } else {
+      searchResult.addAll(pagination.nodes);
+    }
 
     // Save to offline cache if this is the first page of default search
     if ((searchEndCur == null ||
