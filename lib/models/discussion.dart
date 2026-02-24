@@ -172,7 +172,7 @@ class DiscussionModel {
   int databaseId;
   String bodyHTML;
   String rawBodyText;
-  final String bodyText; // Cached body text
+  String bodyText; // Cached body text
   List<CoverImage> coverImages;
   List<String> get covers => coverImages.map((e) => e.url).toList();
   String? get cover => covers.isNotEmpty ? covers.first : null;
@@ -196,6 +196,18 @@ class DiscussionModel {
   }
 
   bool _isLoadingComments = false;
+
+  void updateFrom(DiscussionModel other) {
+    title = other.title;
+    bodyHTML = other.bodyHTML;
+    rawBodyText = other.rawBodyText;
+    bodyText = other.bodyText;
+    coverImages = other.coverImages;
+    createdAt = other.createdAt;
+    lastEditedAt = other.lastEditedAt;
+    author = other.author;
+    // updated fields from detail api
+  }
 
   Future<void> fetchComments() async {
     if (_isLoadingComments) return;

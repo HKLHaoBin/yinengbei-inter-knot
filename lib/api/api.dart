@@ -484,6 +484,12 @@ class Api extends BaseConnect {
     return discussion;
   }
 
+  Future<DiscussionModel> getArticleDetail(String documentId) async {
+    final res = await get('/api/articles/detail/$documentId');
+    final data = unwrapData<Map<String, dynamic>>(res);
+    return _parseDiscussionSync(data);
+  }
+
   Future<void> viewArticle(String id) async {
     await post('/api/articles/$id/view', {});
   }

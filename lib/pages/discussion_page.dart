@@ -51,6 +51,20 @@ class _DiscussionPageState extends State<DiscussionPage> {
   int _newCommentCount = 0;
   int _serverCommentCount = 0;
 
+  Future<void> _fetchArticleDetails() async {
+    try {
+      final fullDiscussion =
+          await Get.find<Api>().getArticleDetail(widget.discussion.id);
+      if (mounted) {
+        setState(() {
+          widget.discussion.updateFrom(fullDiscussion);
+        });
+      }
+    } catch (e) {
+      logger.e('Failed to fetch article details', error: e);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +75,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
     widget.discussion.comments.clear();
     _isInitialLoading = true;
     _startNewCommentCheck();
+    _fetchArticleDetails();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final wasRead = widget.discussion.isRead;
