@@ -105,11 +105,6 @@ class _RepliesState extends State<Replies> {
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  DateFormat('yyyy-MM-dd HH:mm')
-                      .format(reply.createdAt.toLocal()),
-                ),
-                const SizedBox(height: 8),
                 SelectionArea(
                   child: HtmlWidget(
                     reply.bodyHTML,
@@ -120,37 +115,44 @@ class _RepliesState extends State<Replies> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: () => widget.onReply(
-                        widget.comment.id, reply.author.name,
-                        addPrefix: true),
-                    style: ButtonStyle(
-                      padding: WidgetStateProperty.all(EdgeInsets.zero),
-                      minimumSize: WidgetStateProperty.all(Size.zero),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: VisualDensity.compact,
-                      overlayColor: WidgetStateProperty.resolveWith<Color?>(
-                        (Set<WidgetState> states) {
-                          if (states.contains(WidgetState.hovered)) {
-                            return const Color(0xffD7FF00)
-                                .withValues(alpha: 0.1);
-                          }
-                          return null;
-                        },
-                      ),
-                      foregroundColor: WidgetStateProperty.resolveWith<Color>(
-                        (Set<WidgetState> states) {
-                          if (states.contains(WidgetState.hovered)) {
-                            return const Color(0xffD7FF00);
-                          }
-                          return Colors.grey;
-                        },
-                      ),
+                Row(
+                  children: [
+                    Text(
+                      DateFormat('yyyy-MM-dd HH:mm')
+                          .format(reply.createdAt.toLocal()),
+                      style: const TextStyle(fontSize: 13, color: Colors.grey),
                     ),
-                    child: const Text('回复', style: TextStyle(fontSize: 12)),
-                  ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => widget.onReply(
+                          widget.comment.id, reply.author.name,
+                          addPrefix: true),
+                      style: ButtonStyle(
+                        padding: WidgetStateProperty.all(EdgeInsets.zero),
+                        minimumSize: WidgetStateProperty.all(Size.zero),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                          (Set<WidgetState> states) {
+                            if (states.contains(WidgetState.hovered)) {
+                              return const Color(0xffD7FF00)
+                                  .withValues(alpha: 0.1);
+                            }
+                            return null;
+                          },
+                        ),
+                        foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                          (Set<WidgetState> states) {
+                            if (states.contains(WidgetState.hovered)) {
+                              return const Color(0xffD7FF00);
+                            }
+                            return Colors.grey;
+                          },
+                        ),
+                      ),
+                      child: const Text('回复', style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
                 ),
                 const Divider(),
               ],
