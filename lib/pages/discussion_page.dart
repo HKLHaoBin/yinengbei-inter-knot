@@ -50,6 +50,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
   Timer? _newCommentCheckTimer;
   int _newCommentCount = 0;
   int _serverCommentCount = 0;
+  bool _isDetailLoading = true;
 
   Future<void> _fetchArticleDetails() async {
     try {
@@ -58,10 +59,16 @@ class _DiscussionPageState extends State<DiscussionPage> {
       if (mounted) {
         setState(() {
           widget.discussion.updateFrom(fullDiscussion);
+          _isDetailLoading = false;
         });
       }
     } catch (e) {
       logger.e('Failed to fetch article details', error: e);
+      if (mounted) {
+        setState(() {
+          _isDetailLoading = false;
+        });
+      }
     }
   }
 
@@ -557,19 +564,30 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                                         BorderRadius.circular(
                                                                             12),
                                                                   ),
-                                                                  child: Cover(
-                                                                    discussion:
-                                                                        widget
-                                                                            .discussion,
-                                                                  ),
+                                                                  child: _isDetailLoading
+                                                                      ? const Center(child: CircularProgressIndicator())
+                                                                      : Cover(
+                                                                          discussion:
+                                                                              widget.discussion,
+                                                                        ),
                                                                 ),
                                                               ),
                                                             ),
                                                           ),
-                                                          DiscussionDetailBox(
-                                                            discussion: widget
-                                                                .discussion,
-                                                          ),
+                                                          _isDetailLoading
+                                                              ? const Padding(
+                                                                  padding:
+                                                                      EdgeInsets
+                                                                          .all(
+                                                                              32.0),
+                                                                  child: Center(
+                                                                      child:
+                                                                          CircularProgressIndicator()),
+                                                                )
+                                                              : DiscussionDetailBox(
+                                                                  discussion: widget
+                                                                      .discussion,
+                                                                ),
                                                         ],
                                                       ),
                                                     ),
