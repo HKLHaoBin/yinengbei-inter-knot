@@ -1148,6 +1148,29 @@ class Api extends BaseConnect {
     }
   }
 
+  Future<({String message, int? reward, int? consecutiveDays})>
+      checkIn() async {
+    final res = await post('/api/check-in', {});
+
+    if (res.hasError) {
+      String errorMessage = '签到失败';
+      if (res.body is Map) {
+        final error = res.body['error'];
+        if (error is Map && error['message'] == 'Already checked in today.') {
+          errorMessage = '今日已签到';
+        }
+      }
+      throw ApiException(errorMessage);
+    }
+
+    final body = res.body as Map<String, dynamic>;
+    return (
+      message: body['message'] as String? ?? '签到成功',
+      reward: body['reward'] as int?,
+      consecutiveDays: body['consecutiveDays'] as int?,
+    );
+  }
+
   Future<String?> uploadAvatar({
     required String authorId,
     required List<int> bytes,

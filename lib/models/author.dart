@@ -8,6 +8,9 @@ class AuthorModel {
   String? userId;
   String? authorId;
   DateTime? createdAt;
+  int? exp;
+  int? level;
+  String? lastCheckInDate;
 
   // Adjusted for custom backend
   String get url => ''; // No external profile URL yet
@@ -20,6 +23,9 @@ class AuthorModel {
     this.userId,
     this.authorId,
     this.createdAt,
+    this.exp,
+    this.level,
+    this.lastCheckInDate,
   }) : name = name ?? login;
 
   static String? extractAvatarUrl(dynamic avatarData) {
@@ -101,6 +107,9 @@ class AuthorModel {
       userId: userId,
       authorId: authorId,
       createdAt: createdAt,
+      exp: json['exp'] as int? ?? 0,
+      level: json['level'] as int? ?? 1,
+      lastCheckInDate: json['lastCheckInDate'] as String?,
     );
   }
 

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart';
+import 'package:inter_knot/api/api_exception.dart';
 import 'package:inter_knot/constants/api_config.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/discussions_grid.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/profile_dialogs.dart';
 import 'package:inter_knot/helpers/throttle.dart';
+import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:intl/intl.dart';
 
@@ -138,35 +140,41 @@ class _MyPageDesktopState extends State<MyPageDesktop>
                             color: Colors.white,
                           ),
                         ),
+                        const SizedBox(width: 16),
                       ],
                     ),
                     const SizedBox(height: 8),
                     if (isLogin)
-                      Row(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'UID: ${user?.userId ?? "未知"}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[400],
-                                fontFamily: 'monospace',
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'UID: ${user?.userId ?? "未知"}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[400],
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            '注册时间: $regTime',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[500],
-                            ),
+                              const SizedBox(width: 12),
+                              Text(
+                                '注册时间: $regTime',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       )
@@ -250,6 +258,7 @@ class _MyPageDesktopState extends State<MyPageDesktop>
   }
 
   Widget _buildRightPlaceholderBox(BuildContext context) {
+    final api = Get.find<Api>();
     return Card(
       color: const Color(0xff1E1E1E),
       shape: RoundedRectangleBorder(
@@ -259,11 +268,152 @@ class _MyPageDesktopState extends State<MyPageDesktop>
           width: 1,
         ),
       ),
-      child: const Center(
-        child: Text(
-          '更多功能开发中...',
-          style: TextStyle(color: Colors.grey),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Obx(() {
+          final user = c.user.value;
+          final isLogin = c.isLogin.value;
+
+          if (!isLogin || user == null) {
+            return const Center(
+              child: Text(
+                '登录后查看更多功能',
+                style: TextStyle(color: Colors.grey),
+              ),
+            );
+          }
+
+          const levelTable = [
+            (level: 6, exp: 1600, title: '不良布'),
+            (level: 5, exp: 800, title: '恶魔布'),
+            (level: 4, exp: 400, title: '电击布'),
+            (level: 3, exp: 200, title: '招财布'),
+            (level: 2, exp: 100, title: '纸壳布'),
+            (level: 1, exp: 0, title: '纸袋布'),
+          ];
+
+          final currentLevel = user.level ?? 1;
+          final currentExp = user.exp ?? 0;
+
+          final currentConfig = levelTable.firstWhere(
+              (e) => e.level == currentLevel,
+              orElse: () => levelTable.last);
+
+          final nextConfig = levelTable
+              .cast<({int level, int exp, String title})?>()
+              .firstWhere(
+                (e) => e != null && e.level == currentLevel + 1,
+                orElse: () => null,
+              );
+
+          double progress = 0.0;
+          int nextExpTarget = currentExp;
+
+          if (nextConfig != null) {
+            final levelExp = currentConfig.exp;
+            final nextExp = nextConfig.exp;
+            nextExpTarget = nextExp;
+            if (nextExp > levelExp) {
+              progress = (currentExp - levelExp) / (nextExp - levelExp);
+            }
+            progress = progress.clamp(0.0, 1.0);
+          } else {
+            progress = 1.0;
+            nextExpTarget = currentExp;
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text('绳网等级',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message:
+                        '每日签到 ：\n- 基础经验： 10 XP\n- 连签奖励：每天额外 +2 XP\n- 每日上限： 50 XP (基础 + 奖励)\n发布文章 ：\n- 每次发布： 12 XP\n发表评论 ：\n- 每次评论： 3 XP',
+                    child: Icon(
+                      Icons.help_outline,
+                      size: 16,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Lv.$currentLevel ${currentConfig.title}',
+                      style: const TextStyle(
+                          color: Color(0xffD7FF00),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
+                  Text('$currentExp / $nextExpTarget',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.grey[800],
+                color: const Color(0xffD7FF00),
+                minHeight: 8,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: user.lastCheckInDate !=
+                        DateTime.now().toIso8601String().split('T')[0]
+                    ? ElevatedButton(
+                        onPressed: () async {
+                          try {
+                            final result = await api.checkIn();
+                            await c.refreshSelfUserInfo();
+                            if (context.mounted) {
+                              showToast(
+                                '签到成功 +${result.reward}EXP，已连续签到${result.consecutiveDays}天',
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              String msg = e.toString();
+                              if (e is ApiException) {
+                                msg = e.message;
+                              }
+                              showToast(
+                                msg,
+                                isError: true,
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xffD7FF00),
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          textStyle:
+                              const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        child: const Text('每日签到'),
+                      )
+                    : OutlinedButton(
+                        onPressed: null,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: const Text('今日已签到',
+                            style: TextStyle(color: Colors.grey)),
+                      ),
+              )
+            ],
+          );
+        }),
       ),
     );
   }
