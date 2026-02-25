@@ -83,7 +83,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
       if (!wasRead) {
         Get.find<Api>().markAsRead(widget.discussion.id);
       }
-      Get.find<Api>().viewArticle(widget.discussion.databaseId.toString());
+      Get.find<Api>().viewArticle(widget.discussion.id);
     });
 
     scrollController.addListener(() {
