@@ -284,11 +284,11 @@ class _MyPageDesktopState extends State<MyPageDesktop>
           }
 
           const levelTable = [
-            (level: 6, exp: 1600, title: '不良布'),
-            (level: 5, exp: 800, title: '恶魔布'),
-            (level: 4, exp: 400, title: '电击布'),
-            (level: 3, exp: 200, title: '招财布'),
-            (level: 2, exp: 100, title: '纸壳布'),
+            (level: 6, exp: 3200, title: '不良布'),
+            (level: 5, exp: 1600, title: '恶魔布'),
+            (level: 4, exp: 800, title: '电击布'),
+            (level: 3, exp: 400, title: '招财布'),
+            (level: 2, exp: 200, title: '纸壳布'),
             (level: 1, exp: 0, title: '纸袋布'),
           ];
 
