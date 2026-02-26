@@ -100,6 +100,16 @@ class _CommentState extends State<Comment> {
             ),
           ),
           const SizedBox(width: 8),
+          Text(
+            'Lv.${comment.author.level ?? 1}',
+            style: const TextStyle(
+              color: Color(0xffD7FF00),
+              fontWeight: FontWeight.bold,
+              fontStyle: FontStyle.italic,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(width: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -114,7 +124,26 @@ class _CommentState extends State<Comment> {
           ),
         ],
       ),
-      trailing: MyChip('F${index + 1}'),
+      trailing: Card(
+        color: const Color.fromARGB(255, 96, 96, 95),
+        margin: const EdgeInsets.only(left: 4),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.zero,
+            topRight: Radius.circular(8),
+            bottomLeft: Radius.circular(8),
+            bottomRight: Radius.circular(8),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 10),
+          child: Text('F${index + 1}',
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 3, 3, 3))),
+        ),
+      ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

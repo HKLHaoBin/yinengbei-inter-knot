@@ -86,6 +86,16 @@ class _RepliesState extends State<Replies> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                Text(
+                  'Lv.${reply.author.level ?? 0}',
+                  style: const TextStyle(
+                    color: Color(0xffD7FF00),
+                    fontWeight: FontWeight.bold,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
