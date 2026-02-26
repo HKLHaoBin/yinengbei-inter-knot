@@ -3,6 +3,9 @@ import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/my_chip.dart';
 import 'package:inter_knot/constants/globals.dart';
+import 'package:get/get.dart';
+import 'package:inter_knot/controllers/data.dart';
+import 'package:inter_knot/components/image_viewer.dart';
 import 'package:inter_knot/models/comment.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:intl/intl.dart';
@@ -54,13 +57,16 @@ class _RepliesState extends State<Replies> {
       );
     }
 
+    final c = Get.find<Controller>();
+
     return Column(
       children: [
+        const SizedBox(height: 10),
         for (final reply in widget.comment.replies)
           ListTile(
             titleAlignment: ListTileTitleAlignment.top,
             contentPadding: EdgeInsets.zero,
-            horizontalTitleGap: 8,
+            horizontalTitleGap: 16,
             minVerticalPadding: 0,
             leading: ClipOval(
               child: InkWell(
@@ -78,16 +84,33 @@ class _RepliesState extends State<Replies> {
                     splashColor: Colors.transparent,
                     highlightColor: Colors.transparent,
                     onTap: () => launchUrlString(reply.url),
-                    child: Text(
-                      reply.author.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    child: Obx(() {
+                      final user = c.user.value;
+                      final currentAuthorId =
+                          c.authorId.value ?? user?.authorId;
+                      final isMe = currentAuthorId != null &&
+                          currentAuthorId == reply.author.authorId;
+                      final isOp =
+                          reply.author.login == widget.discussion.author.login;
+                      final isLayerOwner =
+                          reply.author.login == widget.comment.author.login;
+
+                      return Text(
+                        '${isOp ? '【楼主】 ' : (isLayerOwner ? '【层主】 ' : '')}${isMe ? (user?.name ?? reply.author.name) : reply.author.name}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isMe ? const Color(0xFFFFBC2E) : null,
+                          fontWeight: isMe ? FontWeight.bold : null,
+                          fontSize: 13,
+                        ),
+                      );
+                    }),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Lv.${reply.author.level ?? 0}',
+                  'Lv.${reply.author.level ?? 1}',
                   style: const TextStyle(
                     color: Color(0xffD7FF00),
                     fontWeight: FontWeight.bold,
@@ -100,10 +123,6 @@ class _RepliesState extends State<Replies> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      if (reply.author.login == widget.discussion.author.login)
-                        const MyChip('楼主'),
-                      if (reply.author.login == widget.comment.author.login)
-                        const MyChip('层主'),
                       if (reply.author.login == owner) const MyChip('绳网创始人'),
                       if (collaborators.contains(reply.author.login))
                         const MyChip('绳网协作者'),
@@ -115,6 +134,7 @@ class _RepliesState extends State<Replies> {
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 8),
                 SelectionArea(
                   child: HtmlWidget(
                     reply.bodyHTML,
@@ -122,9 +142,15 @@ class _RepliesState extends State<Replies> {
                       fontSize: 16,
                       color: Color(0xffE0E0E0), // Light grey for replies
                     ),
+                    onTapImage: (data) {
+                      if (data.sources.isEmpty) return;
+                      final url = data.sources.first.url;
+                      ImageViewer.show(context,
+                          imageUrls: [url], heroTagPrefix: null);
+                    },
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Text(

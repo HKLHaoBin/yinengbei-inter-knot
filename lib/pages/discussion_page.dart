@@ -601,7 +601,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                                             12),
                                                                   ),
                                                                   child: _isDetailLoading
-                                                                      ? const Center(child: CircularProgressIndicator())
+                                                                      ? const SizedBox.shrink()
                                                                       : Cover(
                                                                           discussion:
                                                                               widget.discussion,
@@ -611,15 +611,8 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                             ),
                                                           ),
                                                           _isDetailLoading
-                                                              ? const Padding(
-                                                                  padding:
-                                                                      EdgeInsets
-                                                                          .all(
-                                                                              32.0),
-                                                                  child: Center(
-                                                                      child:
-                                                                          CircularProgressIndicator()),
-                                                                )
+                                                              ? const SizedBox
+                                                                  .shrink()
                                                               : DiscussionDetailBox(
                                                                   discussion: widget
                                                                       .discussion,

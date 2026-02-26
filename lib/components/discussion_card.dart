@@ -22,6 +22,8 @@ class NetworkImageBox extends StatelessWidget {
     this.gaplessPlayback = false,
     this.memCacheWidth,
     this.memCacheHeight,
+    this.fadeInDuration,
+    this.fadeOutDuration,
   });
 
   final String? url;
@@ -31,6 +33,8 @@ class NetworkImageBox extends StatelessWidget {
   final bool gaplessPlayback;
   final int? memCacheWidth;
   final int? memCacheHeight;
+  final Duration? fadeInDuration;
+  final Duration? fadeOutDuration;
   final Widget Function(BuildContext context, double? progress) loadingBuilder;
   final Widget Function(BuildContext context) errorBuilder;
 
@@ -83,8 +87,8 @@ class NetworkImageBox extends StatelessWidget {
       memCacheWidth: memCacheWidth,
       memCacheHeight: memCacheHeight,
       placeholder: (context, url) => loadingBuilder(context, null),
-      fadeInDuration: Duration.zero,
-      fadeOutDuration: Duration.zero,
+      fadeInDuration: fadeInDuration ?? const Duration(milliseconds: 500),
+      fadeOutDuration: fadeOutDuration ?? const Duration(milliseconds: 1000),
       errorWidget: (context, url, error) => errorBuilder(context),
     );
   }
@@ -330,42 +334,51 @@ class _DiscussionCardState extends State<DiscussionCard>
   bool get wantKeepAlive => true;
 }
 
-class Cover extends StatelessWidget {
+class Cover extends StatefulWidget {
   const Cover({
     super.key,
     required this.discussion,
-    required this.isHovering,
+    this.isHovering = false,
   });
 
   final DiscussionModel discussion;
   final bool isHovering;
 
   @override
+  State<Cover> createState() => _CoverState();
+}
+
+class _CoverState extends State<Cover> {
+  @override
   Widget build(BuildContext context) {
+    // Prefer the high-res image from coverImages if available
+    final highResUrl = widget.discussion.coverImages.isNotEmpty
+        ? widget.discussion.coverImages.first.url
+        : widget.discussion.cover;
+
     Widget image;
-    if (discussion.cover == null) {
+    if (highResUrl == null) {
       image = Assets.images.defaultCover.image(
         width: double.infinity,
         fit: BoxFit.cover,
       );
     } else {
       image = NetworkImageBox(
-        url: discussion.cover!,
+        url: highResUrl,
         fit: BoxFit.cover,
         alignment: Alignment.topCenter,
-        filterQuality: FilterQuality.medium,
+        filterQuality: FilterQuality.high,
         gaplessPlayback: true,
-        memCacheWidth: 400, // Optimize memory usage for grid items
-        loadingBuilder: (context, progress) =>
-            const ColoredBox(color: Colors.white10),
+        loadingBuilder: (context, progress) => const SizedBox.shrink(),
         errorBuilder: (context) =>
             Assets.images.defaultCover.image(fit: BoxFit.cover),
+        fadeInDuration: const Duration(milliseconds: 500),
       );
     }
 
-    // Calculate aspect ratio logic...
-    final coverImage =
-        discussion.coverImages.isNotEmpty ? discussion.coverImages.first : null;
+    final coverImage = widget.discussion.coverImages.isNotEmpty
+        ? widget.discussion.coverImages.first
+        : null;
     final double imgW = coverImage?.width?.toDouble() ?? 643;
     final double imgH = coverImage?.height?.toDouble() ?? 408;
     final double rawAspectRatio = imgW / imgH;
@@ -376,7 +389,7 @@ class Cover extends StatelessWidget {
       aspectRatio: displayAspectRatio,
       child: ClipRect(
         child: AnimatedScale(
-          scale: isHovering ? 1.1 : 1.0,
+          scale: widget.isHovering ? 1.1 : 1.0,
           duration: const Duration(milliseconds: 1200),
           curve: Curves.easeOutCubic,
           child: image,
