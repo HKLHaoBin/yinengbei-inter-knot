@@ -57,143 +57,151 @@ class _RepliesState extends State<Replies> {
       );
     }
 
+    final isMobile = MediaQuery.of(context).size.width < 600;
     final c = Get.find<Controller>();
 
     return Column(
       children: [
         const SizedBox(height: 10),
         for (final reply in widget.comment.replies)
-          ListTile(
-            titleAlignment: ListTileTitleAlignment.top,
-            contentPadding: EdgeInsets.zero,
-            horizontalTitleGap: 16,
-            minVerticalPadding: 0,
-            leading: ClipOval(
-              child: InkWell(
-                splashColor: Colors.transparent,
-                highlightColor: Colors.transparent,
-                borderRadius: BorderRadius.circular(50),
-                onTap: () => launchUrlString(reply.url),
-                child: Avatar(reply.author.avatar),
-              ),
-            ),
-            title: Row(
-              children: [
-                Flexible(
-                  child: InkWell(
-                    splashColor: Colors.transparent,
-                    highlightColor: Colors.transparent,
-                    onTap: () => launchUrlString(reply.url),
-                    child: Obx(() {
-                      final user = c.user.value;
-                      final currentAuthorId =
-                          c.authorId.value ?? user?.authorId;
-                      final isMe = currentAuthorId != null &&
-                          currentAuthorId == reply.author.authorId;
-                      final isOp =
-                          reply.author.login == widget.discussion.author.login;
-                      final isLayerOwner =
-                          reply.author.login == widget.comment.author.login;
-
-                      return Text(
-                        '${isOp ? '【楼主】 ' : (isLayerOwner ? '【层主】 ' : '')}${isMe ? (user?.name ?? reply.author.name) : reply.author.name}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: isMe ? const Color(0xFFFFBC2E) : null,
-                          fontWeight: isMe ? FontWeight.bold : null,
-                          fontSize: 13,
-                        ),
-                      );
-                    }),
+          isMobile
+              ? _buildMobileReplyItem(reply, c)
+              : ListTile(
+                  titleAlignment: ListTileTitleAlignment.top,
+                  contentPadding: EdgeInsets.zero,
+                  horizontalTitleGap: 16,
+                  minVerticalPadding: 0,
+                  leading: ClipOval(
+                    child: InkWell(
+                      splashColor: Colors.transparent,
+                      highlightColor: Colors.transparent,
+                      borderRadius: BorderRadius.circular(50),
+                      onTap: () => launchUrlString(reply.url),
+                      child: Avatar(reply.author.avatar),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Lv.${reply.author.level ?? 1}',
-                  style: const TextStyle(
-                    color: Color(0xffD7FF00),
-                    fontWeight: FontWeight.bold,
-                    fontStyle: FontStyle.italic,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
+                  title: Row(
                     children: [
-                      if (reply.author.login == owner) const MyChip('绳网创始人'),
-                      if (collaborators.contains(reply.author.login))
-                        const MyChip('绳网协作者'),
+                      Flexible(
+                        child: InkWell(
+                          splashColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          onTap: () => launchUrlString(reply.url),
+                          child: Obx(() {
+                            final user = c.user.value;
+                            final currentAuthorId =
+                                c.authorId.value ?? user?.authorId;
+                            final isMe = currentAuthorId != null &&
+                                currentAuthorId == reply.author.authorId;
+                            final isOp = reply.author.login ==
+                                widget.discussion.author.login;
+                            final isLayerOwner = reply.author.login ==
+                                widget.comment.author.login;
+
+                            return Text(
+                              '${isOp ? '【楼主】 ' : (isLayerOwner ? '【层主】 ' : '')}${isMe ? (user?.name ?? reply.author.name) : reply.author.name}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: isMe ? const Color(0xFFFFBC2E) : null,
+                                fontWeight: isMe ? FontWeight.bold : null,
+                                fontSize: 13,
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Lv.${reply.author.level ?? 1}',
+                        style: const TextStyle(
+                          color: Color(0xffD7FF00),
+                          fontWeight: FontWeight.bold,
+                          fontStyle: FontStyle.italic,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            if (reply.author.login == owner)
+                              const MyChip('绳网创始人'),
+                            if (collaborators.contains(reply.author.login))
+                              const MyChip('绳网协作者'),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                ),
-              ],
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                SelectionArea(
-                  child: HtmlWidget(
-                    reply.bodyHTML,
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      color: Color(0xffE0E0E0), // Light grey for replies
-                    ),
-                    onTapImage: (data) {
-                      if (data.sources.isEmpty) return;
-                      final url = data.sources.first.url;
-                      ImageViewer.show(context,
-                          imageUrls: [url], heroTagPrefix: null);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text(
-                      DateFormat('yyyy-MM-dd HH:mm')
-                          .format(reply.createdAt.toLocal()),
-                      style: const TextStyle(fontSize: 13, color: Colors.grey),
-                    ),
-                    const SizedBox(width: 8),
-                    TextButton(
-                      onPressed: () => widget.onReply(
-                          widget.comment.id, reply.author.name,
-                          addPrefix: true),
-                      style: ButtonStyle(
-                        padding: WidgetStateProperty.all(EdgeInsets.zero),
-                        minimumSize: WidgetStateProperty.all(Size.zero),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                        overlayColor: WidgetStateProperty.resolveWith<Color?>(
-                          (Set<WidgetState> states) {
-                            if (states.contains(WidgetState.hovered)) {
-                              return const Color(0xffD7FF00)
-                                  .withValues(alpha: 0.1);
-                            }
-                            return null;
-                          },
-                        ),
-                        foregroundColor: WidgetStateProperty.resolveWith<Color>(
-                          (Set<WidgetState> states) {
-                            if (states.contains(WidgetState.hovered)) {
-                              return const Color(0xffD7FF00);
-                            }
-                            return Colors.grey;
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      SelectionArea(
+                        child: HtmlWidget(
+                          reply.bodyHTML,
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            color: Color(0xffE0E0E0), // Light grey for replies
+                          ),
+                          onTapImage: (data) {
+                            if (data.sources.isEmpty) return;
+                            final url = data.sources.first.url;
+                            ImageViewer.show(context,
+                                imageUrls: [url], heroTagPrefix: null);
                           },
                         ),
                       ),
-                      child: const Text('回复', style: TextStyle(fontSize: 12)),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Text(
+                            DateFormat('yyyy-MM-dd HH:mm')
+                                .format(reply.createdAt.toLocal()),
+                            style: const TextStyle(
+                                fontSize: 13, color: Colors.grey),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            onPressed: () => widget.onReply(
+                                widget.comment.id, reply.author.name,
+                                addPrefix: true),
+                            style: ButtonStyle(
+                              padding: WidgetStateProperty.all(EdgeInsets.zero),
+                              minimumSize: WidgetStateProperty.all(Size.zero),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                              overlayColor:
+                                  WidgetStateProperty.resolveWith<Color?>(
+                                (Set<WidgetState> states) {
+                                  if (states.contains(WidgetState.hovered)) {
+                                    return const Color(0xffD7FF00)
+                                        .withValues(alpha: 0.1);
+                                  }
+                                  return null;
+                                },
+                              ),
+                              foregroundColor:
+                                  WidgetStateProperty.resolveWith<Color>(
+                                (Set<WidgetState> states) {
+                                  if (states.contains(WidgetState.hovered)) {
+                                    return const Color(0xffD7FF00);
+                                  }
+                                  return Colors.grey;
+                                },
+                              ),
+                            ),
+                            child: const Text('回复',
+                                style: TextStyle(fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                    ],
+                  ),
                 ),
-                const Divider(),
-              ],
-            ),
-          ),
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton(
@@ -215,6 +223,127 @@ class _RepliesState extends State<Replies> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMobileReplyItem(dynamic reply, Controller c) {
+    final baseTitleStyle =
+        Theme.of(context).textTheme.titleMedium ?? const TextStyle();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ClipOval(
+                child: InkWell(
+                  splashColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                  borderRadius: BorderRadius.circular(50),
+                  onTap: () => launchUrlString(reply.url),
+                  child: Avatar(reply.author.avatar, size: 32),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: InkWell(
+                  splashColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                  onTap: () => launchUrlString(reply.url),
+                  child: Obx(() {
+                    final user = c.user.value;
+                    final currentAuthorId = c.authorId.value ?? user?.authorId;
+                    final isMe = currentAuthorId != null &&
+                        currentAuthorId == reply.author.authorId;
+                    final isOp =
+                        reply.author.login == widget.discussion.author.login;
+                    final isLayerOwner =
+                        reply.author.login == widget.comment.author.login;
+
+                    return Text(
+                      '${isOp ? '【楼主】 ' : (isLayerOwner ? '【层主】 ' : '')}${isMe ? (user?.name ?? reply.author.name) : reply.author.name}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: baseTitleStyle.copyWith(
+                        color: isMe
+                            ? const Color(0xFFFFBC2E)
+                            : baseTitleStyle.color,
+                        fontWeight: isMe
+                            ? FontWeight.bold
+                            : baseTitleStyle.fontWeight,
+                        fontSize: 13,
+                      ),
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Lv.${reply.author.level ?? 1}',
+                style: const TextStyle(
+                  color: Color(0xffD7FF00),
+                  fontWeight: FontWeight.bold,
+                  fontStyle: FontStyle.italic,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 0, top: 8),
+            child: SelectionArea(
+              child: HtmlWidget(
+                reply.bodyHTML,
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  color: Color(0xffE0E0E0),
+                ),
+                onTapImage: (data) {
+                  if (data.sources.isEmpty) return;
+                  final url = data.sources.first.url;
+                  ImageViewer.show(context,
+                      imageUrls: [url], heroTagPrefix: null);
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                DateFormat('yyyy-MM-dd HH:mm')
+                    .format(reply.createdAt.toLocal()),
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () => widget.onReply(
+                    widget.comment.id, reply.author.name,
+                    addPrefix: true),
+                style: ButtonStyle(
+                  padding: WidgetStateProperty.all(EdgeInsets.zero),
+                  minimumSize: WidgetStateProperty.all(Size.zero),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: WidgetStateProperty.all(Colors.grey),
+                  overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                    (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.hovered)) {
+                        return const Color(0xffD7FF00).withValues(alpha: 0.1);
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                child: const Text('回复', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+          const Divider(),
+        ],
+      ),
     );
   }
 }
