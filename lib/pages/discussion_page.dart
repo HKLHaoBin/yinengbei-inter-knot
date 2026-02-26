@@ -52,6 +52,32 @@ class _DiscussionPageState extends State<DiscussionPage> {
   int _serverCommentCount = 0;
   bool _isDetailLoading = true;
 
+  // 为移动端封面计算一个更友好的宽高比：
+  // - 横图：接近原始比例，但不会太扁
+  // - 竖图：明显更高一些，方便在手机上查看
+  double _getMobileCoverAspectRatio() {
+    final covers = widget.discussion.coverImages;
+    if (covers.isNotEmpty) {
+      final first = covers.first;
+      final w = first.width?.toDouble();
+      final h = first.height?.toDouble();
+      if (w != null && h != null && w > 0 && h > 0) {
+        final raw = w / h;
+        num clamped;
+        if (raw < 1.0) {
+          // 竖屏：将宽高比限制在 [0.5, 0.7] 区间，让高度更舒适一些
+          clamped = raw.clamp(0.5, 0.7);
+        } else {
+          // 横屏：限制在 [1.2, 2.0] 区间，避免过于扁长
+          clamped = raw.clamp(1.2, 2.0);
+        }
+        return clamped.toDouble();
+      }
+    }
+    // 没有尺寸信息时的兜底：使用原来的 16:9
+    return 16 / 9;
+  }
+
   Future<void> _fetchArticleDetails() async {
     try {
       final fullDiscussion =
@@ -466,19 +492,28 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                             slivers: [
                                               SliverToBoxAdapter(
                                                 child: AspectRatio(
-                                                  aspectRatio: 16 / 9,
+                                                  // 根据封面原始尺寸动态调整：横图适中、竖图更高
+                                                  aspectRatio:
+                                                      _getMobileCoverAspectRatio(),
                                                   child: SizedBox(
                                                     width: double.infinity,
-                                                    child: Cover(
-                                                        discussion:
-                                                            widget.discussion),
+                                                    // 移动端也与桌面端保持一致：只在详情加载完成后渲染封面，避免先用列表缩略图再替换为详情大图造成闪烁
+                                                    child: _isDetailLoading
+                                                        ? const SizedBox
+                                                            .shrink()
+                                                        : Cover(
+                                                            discussion: widget
+                                                                .discussion),
                                                   ),
                                                 ),
                                               ),
                                               SliverToBoxAdapter(
-                                                child: DiscussionDetailBox(
-                                                  discussion: widget.discussion,
-                                                ),
+                                                child: _isDetailLoading
+                                                    ? const SizedBox.shrink()
+                                                    : DiscussionDetailBox(
+                                                        discussion: widget
+                                                            .discussion,
+                                                      ),
                                               ),
                                               SliverPersistentHeader(
                                                 pinned: true,
@@ -1346,13 +1381,12 @@ class _CoverState extends State<Cover> {
             url: url,
             fit: BoxFit.contain,
             gaplessPlayback: true,
-            loadingBuilder: (context, progress) {
-              return Center(
-                child: CircularProgressIndicator(value: progress),
-              );
-            },
+            // 仅在加载完成后淡入显示，不使用缩略图或圆圈加载动画
+            loadingBuilder: (context, progress) => const SizedBox.shrink(),
             errorBuilder: (context) =>
                 Assets.images.defaultCover.image(fit: BoxFit.contain),
+            fadeInDuration: const Duration(milliseconds: 400),
+            fadeOutDuration: const Duration(milliseconds: 200),
           ),
         ),
       );
@@ -1393,16 +1427,18 @@ class _CoverState extends State<Cover> {
                         fit: BoxFit.contain,
                         filterQuality: FilterQuality.medium,
                         gaplessPlayback: true,
-                        loadingBuilder: (context, progress) {
-                          return Center(
-                            child: CircularProgressIndicator(value: progress),
-                          );
-                        },
+                        // 不显示圆圈加载，使用淡入动画呈现原图
+                        loadingBuilder: (context, progress) =>
+                            const SizedBox.shrink(),
                         errorBuilder: (context) => Container(
                           color: Colors.grey[800],
-                          child: const Icon(Icons.broken_image,
-                              color: Colors.white),
+                          child: const Icon(
+                            Icons.broken_image,
+                            color: Colors.white,
+                          ),
                         ),
+                        fadeInDuration: const Duration(milliseconds: 400),
+                        fadeOutDuration: const Duration(milliseconds: 200),
                       ),
                     ),
                   ),

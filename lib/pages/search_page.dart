@@ -85,7 +85,9 @@ class _SearchPageState extends State<SearchPage>
                 children: [
                   isCompact
                       ? RefreshIndicator(
-                          edgeOffset: 16,
+                          // 让指示器完全出现在 AppBar 下方，不被顶部透明区域遮挡
+                          edgeOffset: 0,
+                          displacement: 56,
                           onRefresh: () async {
                             await c.refreshSearchData();
                           },

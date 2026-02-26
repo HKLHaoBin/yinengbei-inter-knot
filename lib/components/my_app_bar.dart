@@ -147,6 +147,31 @@ class _MyAppBarState extends State<MyAppBar> {
                               width: 1,
                             ),
                           ),
+                          trailing: [
+                            AnimatedBuilder(
+                              animation: c.searchController,
+                              builder: (context, _) {
+                                final hasText =
+                                    c.searchController.text.trim().isNotEmpty;
+                                if (!hasText) return const SizedBox.shrink();
+
+                                return IconButton(
+                                  tooltip: '清除',
+                                  onPressed: () {
+                                    c.searchController.clear();
+                                    c.searchQuery('');
+                                    FocusManager.instance.primaryFocus
+                                        ?.unfocus();
+                                  },
+                                  icon: Icon(
+                                    Icons.close_rounded,
+                                    color: const Color(0xffB0B0B0),
+                                    size: isCompact ? 18 : 20,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     ),
