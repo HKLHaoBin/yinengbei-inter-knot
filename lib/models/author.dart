@@ -91,7 +91,8 @@ class AuthorModel {
         (authorData is String || authorData is num
             ? authorData.toString()
             : null) ??
-        json['authorId']?.toString();
+        json['authorId']?.toString() ??
+        json['documentId']?.toString();
 
     DateTime? createdAt;
     final createdStr = json['createdAt'] as String?;

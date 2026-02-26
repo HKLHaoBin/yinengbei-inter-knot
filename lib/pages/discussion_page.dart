@@ -358,15 +358,51 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            widget.discussion.author.name,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Obx(() {
+                                                  final user = c.user.value;
+                                                  final authorId =
+                                                      c.authorId.value ??
+                                                          user?.authorId;
+                                                  final isMe =
+                                                      authorId != null &&
+                                                          authorId ==
+                                                              widget
+                                                                  .discussion
+                                                                  .author
+                                                                  .authorId;
+
+                                                  return Text(
+                                                    widget
+                                                        .discussion.author.name,
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      color: isMe
+                                                          ? const Color(
+                                                              0xFFFFBC2E)
+                                                          : Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  );
+                                                }),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Lv.${widget.discussion.author.level ?? 1}',
+                                                style: const TextStyle(
+                                                  color: Color(0xffD7FF00),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontStyle: FontStyle.italic,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                           const SizedBox(height: 2),
                                           SingleChildScrollView(

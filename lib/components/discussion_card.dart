@@ -1,9 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:inter_knot/components/async_web_image.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/hover_3d.dart';
+import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
@@ -255,15 +257,26 @@ class _DiscussionCardState extends State<DiscussionCard>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 4),
-                            Text(
-                              widget.discussion.author.name,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            Obx(() {
+                              final user = Get.find<Controller>().user.value;
+                              final authorId =
+                                  Get.find<Controller>().authorId.value ??
+                                      user?.authorId;
+                              final isMe = authorId != null &&
+                                  authorId == widget.discussion.author.authorId;
+
+                              return Text(
+                                widget.discussion.author.name,
+                                style: TextStyle(
+                                  color: isMe
+                                      ? const Color(0xFFFFBC2E)
+                                      : Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              );
+                            }),
                             const SizedBox(height: 4),
                             const Divider(height: 1),
                           ],

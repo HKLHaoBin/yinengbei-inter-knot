@@ -65,7 +65,7 @@ class _CommentState extends State<Comment> {
     Widget content = ListTile(
       titleAlignment: ListTileTitleAlignment.top,
       contentPadding: EdgeInsets.zero,
-      horizontalTitleGap: 8,
+      horizontalTitleGap: 12,
       minVerticalPadding: 0,
       leading: ClipOval(
         child: InkWell(
@@ -88,13 +88,18 @@ class _CommentState extends State<Comment> {
                 final currentAuthorId = c.authorId.value ?? user?.authorId;
                 final isMe = currentAuthorId != null &&
                     currentAuthorId == comment.author.authorId;
+                final isOp =
+                    comment.author.login == widget.discussion.author.login;
 
                 return Text(
-                  isMe
-                      ? (user?.name ?? comment.author.name)
-                      : comment.author.name,
+                  '${isOp ? '【楼主】 ' : ''}${isMe ? (user?.name ?? comment.author.name) : comment.author.name}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isMe ? const Color(0xFFFFBC2E) : null,
+                    fontWeight: isMe ? FontWeight.bold : null,
+                    fontSize: 14,
+                  ),
                 );
               }),
             ),
@@ -114,8 +119,6 @@ class _CommentState extends State<Comment> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                if (comment.author.login == widget.discussion.author.login)
-                  const MyChip('楼主'),
                 if (comment.author.login == owner) const MyChip('绳网创始人'),
                 if (collaborators.contains(comment.author.login))
                   const MyChip('绳网协作者'),
@@ -124,29 +127,38 @@ class _CommentState extends State<Comment> {
           ),
         ],
       ),
-      trailing: Card(
-        color: const Color.fromARGB(255, 96, 96, 95),
-        margin: const EdgeInsets.only(left: 4),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.zero,
-            topRight: Radius.circular(8),
-            bottomLeft: Radius.circular(8),
-            bottomRight: Radius.circular(8),
+      trailing: Obx(() {
+        final user = c.user.value;
+        final currentAuthorId = c.authorId.value ?? user?.authorId;
+        final isMe = currentAuthorId != null &&
+            currentAuthorId == comment.author.authorId;
+        return Card(
+          color: isMe
+              ? const Color(0xFFFFBC2E)
+              : const Color.fromARGB(255, 96, 96, 95),
+          margin: const EdgeInsets.only(right: 9, left: 4),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.zero,
+              topRight: Radius.circular(8),
+              bottomLeft: Radius.circular(8),
+              bottomRight: Radius.circular(8),
+            ),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 10),
-          child: Text('F${index + 1}',
-              style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 3, 3, 3))),
-        ),
-      ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 10),
+            child: Text('F${index + 1}',
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color.fromARGB(255, 3, 3, 3))),
+          ),
+        );
+      }),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 8),
           SelectionArea(
             child: HtmlWidget(
               comment.bodyHTML,
@@ -162,7 +174,7 @@ class _CommentState extends State<Comment> {
               },
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Row(
             children: [
               Text(
