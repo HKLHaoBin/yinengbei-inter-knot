@@ -10,7 +10,6 @@ environment:
 dependencies:
   cached_network_image: ^3.4.1
   desktop_drop: ^0.5.0
-  dart_jsonwebtoken: ^3.3.1
   dio: ^5.9.1
   flutter:
     sdk: flutter
@@ -18,30 +17,23 @@ dependencies:
   flutter_keyboard_visibility: ^6.0.0
   flutter_localizations:
     sdk: flutter
-  flutter_markdown_plus: ^1.0.7
   flutter_quill: ^11.5.0
   flutter_quill_extensions: ^11.0.0
   flutter_widget_from_html: ^0.17.1
-  fwfh_svg: ^0.16.1
-  fwfh_url_launcher: ^0.16.1
   gal: ^2.3.2
   get: ^4.6.6
   get_storage: ^2.1.1
   html: ^0.15.4
-  image_cropper: ^11.0.0
   image_picker: ^1.1.2
   intl: ^0.20.2
   logger: ^2.4.0
   markdown: ^7.3.0
   markdown_quill: ^4.3.0
   markdown_widget: 2.3.2+8
-  material_design_icons_flutter: ^7.0.7296
   photo_view: ^0.15.0
-  pub_semver: ^2.1.4
   shared_preferences: ^2.3.2
   universal_html: ^2.3.0
   url_launcher: ^6.3.0
-  vsc_quill_delta_to_html: ^1.0.5
   waterfall_flow: ^3.0.3
   web: ^1.1.1
 
