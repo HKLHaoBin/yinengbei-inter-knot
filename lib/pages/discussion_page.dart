@@ -21,10 +21,12 @@ class DiscussionPage extends StatefulWidget {
     super.key,
     required this.discussion,
     required this.hData,
+    this.reorderHistoryOnOpen = true,
   });
 
   final DiscussionModel discussion;
   final HDataModel hData;
+  final bool reorderHistoryOnOpen;
 
   @override
   State<DiscussionPage> createState() => _DiscussionPageState();
@@ -93,7 +95,13 @@ class _DiscussionPageState extends State<DiscussionPage> {
   void initState() {
     super.initState();
     Future(() {
-      c.history({widget.hData, ...c.history});
+      if (widget.reorderHistoryOnOpen) {
+        c.history({widget.hData, ...c.history});
+      } else {
+        if (!c.history.contains(widget.hData)) {
+          c.history.add(widget.hData);
+        }
+      }
     });
 
     widget.discussion.comments.clear();

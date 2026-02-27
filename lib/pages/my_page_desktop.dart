@@ -248,6 +248,7 @@ class _MyPageDesktopState extends State<MyPageDesktop>
                 Obx(() => DiscussionGrid(
                       list: c.history(),
                       hasNextPage: false,
+                      reorderHistoryOnOpen: false,
                     )),
               ],
             ),

@@ -54,12 +54,14 @@ class DiscussionGrid extends StatefulWidget {
     required this.hasNextPage,
     this.fetchData,
     this.controller,
+    this.reorderHistoryOnOpen = true,
   });
 
   final Set<HDataModel> list;
   final bool hasNextPage;
   final void Function()? fetchData;
   final ScrollController? controller;
+  final bool reorderHistoryOnOpen;
 
   @override
   State<DiscussionGrid> createState() => _DiscussionGridState();
@@ -85,6 +87,7 @@ class _DiscussionGridState extends State<DiscussionGrid>
             return DiscussionPage(
               discussion: discussion,
               hData: item,
+              reorderHistoryOnOpen: widget.reorderHistoryOnOpen,
             );
           },
         );
