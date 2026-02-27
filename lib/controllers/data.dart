@@ -53,11 +53,35 @@ class Controller extends GetxController {
   final bookmarks = <HDataModel>{}.obs;
   final favoriteIds = <String, String>{}.obs;
   final history = <HDataModel>{}.obs;
+  static const String _historyKey = 'history';
   static const String _localReadCacheKey = 'local_read_cache';
   static const String _localViewCacheKey = 'local_view_cache';
   static const int _localCacheMax = 500;
   final _localReadCache = <String, bool>{};
   final _localViewCache = <String, int>{};
+
+  List<String> _encodeHistoryForStorage(Iterable<HDataModel> list) {
+    final result = <String>[];
+    var count = 0;
+    for (final item in list) {
+      if (count >= _localCacheMax) break;
+      try {
+        result.add(jsonEncode(item.toJson()));
+        count++;
+      } catch (_) {
+        // Ignore invalid entries.
+      }
+    }
+    return result;
+  }
+
+  void _saveHistoryToLocal() {
+    try {
+      pref.setStringList(_historyKey, _encodeHistoryForStorage(history));
+    } catch (_) {
+      // Ignore persistence failures.
+    }
+  }
 
   // Api instance
   final api = Get.find<Api>();
@@ -386,11 +410,16 @@ class Controller extends GetxController {
       isSearching(false);
     }
     history.addAll(pref
-            .getStringList('history')
+            .getStringList(_historyKey)
             ?.map((e) =>
                 HDataModel.fromJson(jsonDecode(e) as Map<String, dynamic>))
             .cast<HDataModel>() ??
         []);
+    debounce(
+      history,
+      (_) => _saveHistoryToLocal(),
+      time: 800.ms,
+    );
 
     // Reports and Version
     // api.getAllReports...
