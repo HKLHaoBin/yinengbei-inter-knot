@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -50,6 +51,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   final PageController _pageController = PageController();
   final titleController = TextEditingController();
+  final _mobileBodyController = TextEditingController();
   final _quillController = quill.QuillController.basic();
 
   // Images State
@@ -71,13 +73,6 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   String _toFullImageUrl(String url) {
     return url.startsWith('http') ? url : '${api.httpClient.baseUrl}$url';
-  }
-
-  void _animateToPage(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    _pageController.jumpToPage(index);
   }
 
   /// 设置粘贴事件监听
@@ -338,7 +333,13 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
           continue;
         }
 
-        final bytes = await file.readAsBytes();
+        // Read bytes; on native use background isolate to avoid blocking UI
+        final Uint8List bytes;
+        if (kIsWeb) {
+          bytes = await file.readAsBytes();
+        } else {
+          bytes = await compute(_readXFileBytes, file.path);
+        }
         final mimeType = file.mimeType ?? 'image/jpeg';
 
         final result = await api.uploadImage(
@@ -359,11 +360,13 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       }
     } catch (e) {
       debugPrint('Upload images failed: $e');
-      showToast('上传出错: $e', isError: true);
+      if (mounted) showToast('上传出错: $e', isError: true);
     } finally {
-      setState(() {
-        _isCoverUploading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isCoverUploading = false;
+        });
+      }
     }
   }
 
@@ -394,6 +397,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   void dispose() {
     _pageController.dispose();
     titleController.dispose();
+    _mobileBodyController.dispose();
     _quillController.dispose();
     if (kIsWeb) {
       removePasteListener();
@@ -413,6 +417,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
     if (widget.discussion != null) {
       titleController.text = widget.discussion!.title;
+      _mobileBodyController.text = widget.discussion!.rawBodyText;
       // Convert raw markdown to Delta for Quill
       try {
         final mdDocument = md.Document(
@@ -508,10 +513,15 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     return false;
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit({bool isMobile = false}) async {
     final title = titleController.text.trim();
-    final delta = _quillController.document.toDelta();
-    final markdownText = normalizeMarkdown(DeltaToMarkdown().convert(delta));
+    final String markdownText;
+    if (isMobile) {
+      markdownText = _mobileBodyController.text.trim();
+    } else {
+      final delta = _quillController.document.toDelta();
+      markdownText = normalizeMarkdown(DeltaToMarkdown().convert(delta));
+    }
 
     // Pass all uploaded images as cover
     // If backend supports multiple, we send list.
@@ -530,7 +540,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       return;
     }
     // Content check: either text or images must exist
-    if (markdownText.trim().isEmpty && _uploadedImages.isEmpty) {
+    if (markdownText.isEmpty && _uploadedImages.isEmpty) {
       showToast('内容不能为空', isError: true);
       return;
     }
@@ -656,6 +666,17 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     final double zoomScale = isWindowed ? 1.1 : 1.0;
     final double layoutFactor = baseFactor * zoomScale;
 
+    // Mobile uses a simple TextField editor; desktop uses the Quill PageView
+    final mobileEditor = CreateDiscussionEditorPage(
+      titleController: titleController,
+      quillController: _quillController,
+      onPickAndUploadImage: _pickAndUploadImage,
+      isMobile: true,
+      mobileBodyController: _mobileBodyController,
+      mobileImages: _uploadedImages,
+      onRemoveMobileImage: (index) => _uploadedImages.removeAt(index),
+    );
+
     final content = PageView(
       scrollDirection: isDesktop ? Axis.vertical : Axis.horizontal,
       physics: const NeverScrollableScrollPhysics(),
@@ -691,12 +712,12 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       backgroundColor: const Color(0xff121212),
       bottomNavigationBar: isDesktop
           ? null
-          : CreateDiscussionMobileNav(
-              selectedIndex: _selectedIndex,
-              isLoading: isLoading,
-              onSelectPage: _animateToPage,
-              onSubmit: _submit,
-            ),
+          : Obx(() => CreateDiscussionMobileNav(
+                isLoading: isLoading,
+                onPickImage: _pickImages,
+                onSubmit: () => _submit(isMobile: true),
+                imageCount: _uploadedImages.length,
+              )),
       body: SafeArea(
         child: Column(
           children: [
@@ -746,10 +767,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                         ),
                       ],
                     )
-                  : Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: content,
-                    ),
+                  : mobileEditor,
             ),
           ],
         ),
@@ -814,3 +832,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     );
   }
 }
+
+/// Top-level function required by compute() — reads file bytes in a background isolate.
+/// Only called on non-Web platforms where dart:io File is available.
+Future<Uint8List> _readXFileBytes(String path) => File(path).readAsBytes();
