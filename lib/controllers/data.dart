@@ -47,6 +47,7 @@ class Controller extends GetxController {
   final isLogin = false.obs;
   final user = Rx<AuthorModel?>(null); // Author -> AuthorModel
   final authorId = RxnString();
+  final nextEligibleAtUtc = Rxn<DateTime>();
   final myDiscussionsCount = 0.obs;
   final isUploadingAvatar = false.obs;
 
@@ -80,6 +81,33 @@ class Controller extends GetxController {
       pref.setStringList(_historyKey, _encodeHistoryForStorage(history));
     } catch (_) {
       // Ignore persistence failures.
+    }
+  }
+
+  Future<void> refreshMyExp() async {
+    final u = user.value;
+    if (u == null) return;
+
+    try {
+      final expInfo = await api.getMyExp();
+      u.exp = expInfo.exp;
+      u.level = expInfo.level;
+      final last = expInfo.lastCheckInDate;
+      if (last != null && last.isNotEmpty) {
+        u.lastCheckInDate = last;
+      }
+      final days = expInfo.consecutiveCheckInDays;
+      if (days != null) {
+        u.consecutiveCheckInDays = days;
+      }
+
+      final next = nextEligibleAtUtc.value;
+      if (next != null && !DateTime.now().toUtc().isBefore(next)) {
+        nextEligibleAtUtc.value = null;
+      }
+      user.refresh();
+    } catch (e) {
+      logger.w('Failed to refresh my exp', error: e);
     }
   }
 
@@ -164,6 +192,23 @@ class Controller extends GetxController {
   Future<void> refreshSelfUserInfo({bool forceAvatarFetch = true}) async {
     try {
       final u = await api.getSelfUserInfo('');
+
+      try {
+        final expInfo = await api.getMyExp();
+        u.exp = expInfo.exp;
+        u.level = expInfo.level;
+        final last = expInfo.lastCheckInDate;
+        if (last != null && last.isNotEmpty) {
+          u.lastCheckInDate = last;
+        }
+        final days = expInfo.consecutiveCheckInDays;
+        if (days != null) {
+          u.consecutiveCheckInDays = days;
+        }
+      } catch (_) {
+        // Ignore exp refresh failures; keep user info usable.
+      }
+
       user(u);
       await ensureAuthorForUser(u);
 
@@ -199,6 +244,38 @@ class Controller extends GetxController {
     } catch (e) {
       logger.e('Failed to refresh self user info', error: e);
     }
+  }
+
+  DateTime? _parseYmd(String? ymd) {
+    if (ymd == null || ymd.isEmpty) return null;
+    final parts = ymd.split('-');
+    if (parts.length != 3) return null;
+    final y = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    final d = int.tryParse(parts[2]);
+    if (y == null || m == null || d == null) return null;
+    return DateTime.utc(y, m, d);
+  }
+
+  DateTime? nextCheckInAt(AuthorModel? u) {
+    final last = _parseYmd(u?.lastCheckInDate);
+    if (last == null) return null;
+    // Business rule: next eligible at next check-in day 04:00 (Asia/Shanghai).
+    // To avoid relying on device timezone, compute in UTC:
+    // 04:00 (UTC+8) == 20:00Z of previous day.
+    final nextDay = last.add(const Duration(days: 1));
+    return DateTime.utc(nextDay.year, nextDay.month, nextDay.day, 20);
+  }
+
+  bool canCheckInNow(AuthorModel? u, {DateTime? now}) {
+    final t = (now ?? DateTime.now()).toUtc();
+    final overrideNext = nextEligibleAtUtc.value;
+    if (overrideNext != null) {
+      return !t.isBefore(overrideNext);
+    }
+    final next = nextCheckInAt(u);
+    if (next == null) return true;
+    return !t.isBefore(next);
   }
 
   void _loadLocalCaches() {

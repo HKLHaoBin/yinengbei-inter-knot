@@ -11,6 +11,7 @@ class AuthorModel {
   int? exp;
   int? level;
   String? lastCheckInDate;
+  int? consecutiveCheckInDays;
 
   // Adjusted for custom backend
   String get url => ''; // No external profile URL yet
@@ -26,6 +27,7 @@ class AuthorModel {
     this.exp,
     this.level,
     this.lastCheckInDate,
+    this.consecutiveCheckInDays,
   }) : name = name ?? login;
 
   static String? extractAvatarUrl(dynamic avatarData) {
@@ -111,6 +113,7 @@ class AuthorModel {
       exp: json['exp'] as int? ?? 0,
       level: json['level'] as int? ?? 1,
       lastCheckInDate: json['lastCheckInDate'] as String?,
+      consecutiveCheckInDays: json['consecutiveCheckInDays'] as int?,
     );
   }
 

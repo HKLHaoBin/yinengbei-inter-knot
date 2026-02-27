@@ -89,6 +89,7 @@ class _MyPageDesktopState extends State<MyPageDesktop>
         child: Obx(() {
           final user = c.user.value;
           final isLogin = c.isLogin.value;
+          c.nextEligibleAtUtc.value;
           final dateFormat = DateFormat('yyyy-MM-dd');
           final regTime = user?.createdAt != null
               ? dateFormat.format(user!.createdAt!)
@@ -369,13 +370,12 @@ class _MyPageDesktopState extends State<MyPageDesktop>
               const Spacer(),
               SizedBox(
                 width: double.infinity,
-                child: user.lastCheckInDate !=
-                        DateTime.now().toIso8601String().split('T')[0]
+                child: c.canCheckInNow(user)
                     ? ElevatedButton(
                         onPressed: () async {
                           try {
                             final result = await api.checkIn();
-                            await c.refreshSelfUserInfo();
+                            await c.refreshMyExp();
                             if (context.mounted) {
                               showToast(
                                 '签到成功 +${result.reward}EXP，已连续签到${result.consecutiveDays}天',
@@ -385,6 +385,60 @@ class _MyPageDesktopState extends State<MyPageDesktop>
                             if (context.mounted) {
                               String msg = e.toString();
                               if (e is ApiException) {
+                                if (e.statusCode == 409) {
+                                  final details = e.details;
+                                  String? checkInDay;
+                                  if (details is Map) {
+                                    checkInDay =
+                                        details['checkInDay']?.toString();
+                                    checkInDay = (checkInDay != null &&
+                                            checkInDay.isNotEmpty)
+                                        ? checkInDay
+                                        : null;
+
+                                    checkInDay ??=
+                                        details['checkInDay'.toString()]
+                                            ?.toString();
+
+                                    final nextEligibleAt =
+                                        details['nextEligibleAt']?.toString();
+                                    if (nextEligibleAt != null &&
+                                        nextEligibleAt.isNotEmpty) {
+                                      final dt =
+                                          DateTime.tryParse(nextEligibleAt);
+                                      if (dt != null) {
+                                        c.nextEligibleAtUtc.value = dt.toUtc();
+                                      }
+                                    }
+                                    if (checkInDay == null &&
+                                        nextEligibleAt != null &&
+                                        nextEligibleAt.isNotEmpty) {
+                                      final dt =
+                                          DateTime.tryParse(nextEligibleAt);
+                                      if (dt != null) {
+                                        final utc = dt
+                                            .toUtc()
+                                            .subtract(const Duration(days: 1));
+                                        final y = utc.year
+                                            .toString()
+                                            .padLeft(4, '0');
+                                        final m = utc.month
+                                            .toString()
+                                            .padLeft(2, '0');
+                                        final d = utc.day
+                                            .toString()
+                                            .padLeft(2, '0');
+                                        checkInDay = '$y-$m-$d';
+                                      }
+                                    }
+                                  }
+                                  if (checkInDay != null &&
+                                      checkInDay.isNotEmpty) {
+                                    c.user.value?.lastCheckInDate = checkInDay;
+                                    c.user.refresh();
+                                  }
+                                  await c.refreshMyExp();
+                                }
                                 msg = e.message;
                               }
                               showToast(
