@@ -19,12 +19,21 @@ class Comment extends StatefulWidget {
     required this.discussion,
     this.loading = false,
     this.onReply,
+    this.useListView = false,
+    this.controller,
+    this.physics,
+    this.padding,
   });
 
   final DiscussionModel discussion;
   final bool loading;
   final void Function(String parentId, String? userName, {bool addPrefix})?
       onReply;
+
+  final bool useListView;
+  final ScrollController? controller;
+  final ScrollPhysics? physics;
+  final EdgeInsetsGeometry? padding;
 
   @override
   State<Comment> createState() => _CommentState();
@@ -249,20 +258,30 @@ class _CommentState extends State<Comment> {
 
     final isMobile = MediaQuery.of(context).size.width < 600;
 
-    final list = Column(
+    final comments =
+        widget.discussion.comments.map((e) => e.nodes).flat.toList();
+
+    if (widget.useListView) {
+      return ListView.builder(
+        controller: widget.controller,
+        physics: widget.physics,
+        padding: widget.padding,
+        itemCount: comments.length + 1,
+        itemBuilder: (context, index) {
+          if (index == comments.length) return _buildFooter();
+          return _buildCommentItem(comments[index], index, isMobile);
+        },
+      );
+    }
+
+    return Column(
       children: [
-        ...widget.discussion.comments
-            .map((e) => e.nodes)
-            .flat
-            .toList()
+        ...comments
             .asMap()
             .entries
-            .map(
-                (entry) => _buildCommentItem(entry.value, entry.key, isMobile)),
+            .map((entry) => _buildCommentItem(entry.value, entry.key, isMobile)),
         _buildFooter(),
       ],
     );
-
-    return list;
   }
 }
