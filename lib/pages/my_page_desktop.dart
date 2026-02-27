@@ -367,10 +367,14 @@ class _MyPageDesktopState extends State<MyPageDesktop>
                 borderRadius: BorderRadius.circular(4),
               ),
               const Spacer(),
+              // 使用 UTC+8 北京时间判断签到日期
+              final nowUtc8 = DateTime.now().toUtc().add(const Duration(hours: 8));
+              final todayUtc8 =
+                  '\-\-';
+
               SizedBox(
                 width: double.infinity,
-                child: user.lastCheckInDate !=
-                        DateTime.now().toIso8601String().split('T')[0]
+                child: user.lastCheckInDate != todayUtc8
                     ? ElevatedButton(
                         onPressed: () async {
                           try {

@@ -337,8 +337,11 @@ class _HomePageState extends State<HomePage>
       nextExpTarget = currentExp;
     }
 
-    final hasCheckedInToday =
-        user.lastCheckInDate == DateTime.now().toIso8601String().split('T')[0];
+    // 使用 UTC+8 北京时间判断签到日期
+    final nowUtc8 = DateTime.now().toUtc().add(const Duration(hours: 8));
+    final todayUtc8 =
+        '\-\-';
+    final hasCheckedInToday = user.lastCheckInDate == todayUtc8;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
