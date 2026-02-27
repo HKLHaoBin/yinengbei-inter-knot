@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
@@ -302,6 +303,27 @@ class _ImageViewerState extends State<ImageViewer>
     controller.rotation = controller.rotation + radians;
   }
 
+  Widget _buildBlurredBackground() {
+    final url = widget.imageUrls[_currentIndex];
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image(
+          image: _buildImageProvider(url),
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+          filterQuality: FilterQuality.low,
+        ),
+        BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+          child: Container(
+            color: Colors.black.withValues(alpha: 0.55),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildToolButton({
     required IconData icon,
     required String label,
@@ -467,6 +489,12 @@ class _ImageViewerState extends State<ImageViewer>
                           Expanded(
                             child: Stack(
                               children: [
+                                // ── Blurred background (current image, cover-fit + blur) ──
+                                Positioned.fill(
+                                  child: ClipRect(
+                                    child: _buildBlurredBackground(),
+                                  ),
+                                ),
                                 Positioned.fill(
                                   child: Listener(
                                     onPointerSignal: (event) {

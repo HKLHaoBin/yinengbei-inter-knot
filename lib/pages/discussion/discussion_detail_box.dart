@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:inter_knot/components/image_viewer.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:markdown_widget/markdown_widget.dart' hide ImageViewer;
@@ -46,6 +47,24 @@ class _DiscussionDetailBoxState extends State<DiscussionDetailBox> {
                   physics: const NeverScrollableScrollPhysics(),
                   config: MarkdownConfig.darkConfig.copy(
                     configs: [
+                      ImgConfig(
+                        builder: (url, attributes) {
+                          return GestureDetector(
+                            onTap: () => ImageViewer.show(
+                              context,
+                              imageUrls: [url],
+                            ),
+                            child: Image.network(
+                              url,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.broken_image,
+                                color: Colors.redAccent,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                       LinkConfig(
                         style: const TextStyle(
                           color: Colors.blue,
