@@ -27,6 +27,7 @@ class DiscussionEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasImage = imageAsset != null && imageAsset!.isNotEmpty;
+    final hasMessage = message.trim().isNotEmpty;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -37,11 +38,12 @@ class DiscussionEmptyState extends StatelessWidget {
             width: imageSize,
             height: imageSize,
           ),
-        if (hasImage) const SizedBox(height: 16),
-        Text(
-          message,
-          style: textStyle,
-        ),
+        if (hasImage && hasMessage) const SizedBox(height: 16),
+        if (hasMessage)
+          Text(
+            message,
+            style: textStyle,
+          ),
       ],
     );
   }
@@ -165,14 +167,15 @@ class _DiscussionGridState extends State<DiscussionGrid>
             child: Center(
               child: Obx(() {
                 final isSearching = Get.find<Controller>().isSearching.value;
-                if (isSearching) {
+                final isLoading = isSearching || (hasNextPage && fetchData != null);
+                if (isLoading) {
                   return const DiscussionEmptyState(
-                    message: '正在搜索...',
+                    message: '正在和绳网系统建立联系...',
                     imageAsset: 'assets/images/Bangboo.gif',
                     imageSize: 120,
                     textStyle: TextStyle(
                       color: Color(0xff808080),
-                      fontSize: 16,
+                      fontSize: 14,
                     ),
                   );
                 }
