@@ -417,8 +417,11 @@ class _HomePageState extends State<HomePage>
                       final result = await api.checkIn();
                       await c.refreshMyExp();
                       if (context.mounted) {
+                        final rank = result.rank;
+                        final reward = result.reward;
+                        final days = result.consecutiveDays;
                         showToast(
-                          '签到成功 +${result.reward}EXP，已连续签到${result.consecutiveDays}天',
+                          '今日签到第${rank ?? "?"}名，经验+${reward ?? 0}，连续签到${days ?? "?"}天',
                         );
                       }
                     } catch (e) {

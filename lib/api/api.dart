@@ -1174,7 +1174,14 @@ class Api extends BaseConnect {
     }
   }
 
-  Future<({String message, int? reward, int? consecutiveDays})>
+  Future<({
+    String message,
+    int? reward,
+    int? consecutiveDays,
+    int? rank,
+    int? currentExp,
+    int? currentLevel,
+  })>
       checkIn() async {
     final res = await post('/api/check-in', {});
 
@@ -1207,6 +1214,9 @@ class Api extends BaseConnect {
       message: body['message'] as String? ?? '签到成功',
       reward: body['reward'] as int?,
       consecutiveDays: body['consecutiveDays'] as int?,
+      rank: (body['rank'] as num?)?.toInt(),
+      currentExp: (body['currentExp'] as num?)?.toInt(),
+      currentLevel: (body['currentLevel'] as num?)?.toInt(),
     );
   }
 
