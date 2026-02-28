@@ -230,6 +230,7 @@ class _MyAppBarState extends State<MyAppBar> {
                             children: [
                               Obx(() => MyTab(
                                 text: '消息',
+                                middle: true,
                                 isSelected: c.selectedIndex.value == 2,
                                 onTap: () async {
                                   if (await c.ensureLogin()) {
