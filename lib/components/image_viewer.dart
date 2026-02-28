@@ -76,7 +76,6 @@ class _ImageViewerState extends State<ImageViewer>
   final List<ImageStreamListener> _imageStreamListeners =
       <ImageStreamListener>[];
   late int _currentIndex;
-  Offset _dragOffset = Offset.zero;
   bool _showChrome = true;
 
   @override
@@ -207,22 +206,6 @@ class _ImageViewerState extends State<ImageViewer>
     setState(() {
       _currentIndex = index;
     });
-  }
-
-  void _handleVerticalDragUpdate(DragUpdateDetails details) {
-    setState(() {
-      _dragOffset += details.delta;
-    });
-  }
-
-  void _handleVerticalDragEnd(DragEndDetails details) {
-    if (_dragOffset.dy.abs() > 100) {
-      Navigator.of(context).pop();
-    } else {
-      setState(() {
-        _dragOffset = Offset.zero;
-      });
-    }
   }
 
   void _toggleChrome() {
@@ -393,9 +376,7 @@ class _ImageViewerState extends State<ImageViewer>
 
   @override
   Widget build(BuildContext context) {
-    final double dragDistance = _dragOffset.dy.abs();
-    final double opacity = (1 - (dragDistance / 300)).clamp(0.0, 1.0);
-    final double chromeOpacity = _showChrome ? opacity : 0.0;
+    final double chromeOpacity = _showChrome ? 1.0 : 0.0;
     final total = widget.imageUrls.length;
 
     void closeViewer() {
@@ -504,87 +485,81 @@ class _ImageViewerState extends State<ImageViewer>
                                     },
                                     child: GestureDetector(
                                       onTap: _toggleChrome,
-                                      onVerticalDragUpdate:
-                                          _handleVerticalDragUpdate,
-                                      onVerticalDragEnd: _handleVerticalDragEnd,
                                       child: Padding(
                                         padding: const EdgeInsets.only(
                                           top: 12,
                                           bottom: 68,
                                         ),
-                                        child: Transform.translate(
-                                          offset: _dragOffset,
-                                          child: ScrollConfiguration(
-                                            behavior:
-                                                const _ImageViewerScrollBehavior(),
-                                            child: PhotoViewGallery.builder(
-                                              scrollPhysics:
-                                                  const PageScrollPhysics(),
-                                              builder: (BuildContext context,
-                                                  int index) {
-                                                final url =
-                                                    widget.imageUrls[index];
-                                                final heroTag =
-                                                    widget.heroTagPrefix != null
-                                                        ? '${widget.heroTagPrefix}-$index'
-                                                        : url;
+                                        child: ScrollConfiguration(
+                                          behavior:
+                                              const _ImageViewerScrollBehavior(),
+                                          child: PhotoViewGallery.builder(
+                                            scrollPhysics:
+                                                const PageScrollPhysics(),
+                                            builder: (BuildContext context,
+                                                int index) {
+                                              final url =
+                                                  widget.imageUrls[index];
+                                              final heroTag =
+                                                  widget.heroTagPrefix != null
+                                                      ? '${widget.heroTagPrefix}-$index'
+                                                      : url;
 
-                                                return PhotoViewGalleryPageOptions(
-                                                  imageProvider:
-                                                      _buildImageProvider(url),
-                                                  initialScale:
-                                                      PhotoViewComputedScale
-                                                          .contained,
-                                                  minScale:
-                                                      PhotoViewComputedScale
-                                                          .contained,
-                                                  maxScale:
-                                                      PhotoViewComputedScale
-                                                              .covered *
-                                                          2,
-                                                  filterQuality:
-                                                      FilterQuality.medium,
-                                                  heroAttributes:
-                                                      PhotoViewHeroAttributes(
-                                                          tag: heroTag),
-                                                  controller:
-                                                      _photoControllers[index],
-                                                  errorBuilder: (context, error,
-                                                      stackTrace) {
-                                                    return const Center(
-                                                      child: Icon(
-                                                        Icons.broken_image,
-                                                        color: Colors.white,
-                                                      ),
-                                                    );
-                                                  },
-                                                );
-                                              },
-                                              itemCount:
-                                                  widget.imageUrls.length,
-                                              loadingBuilder:
-                                                  (context, event) => Center(
-                                                child: SizedBox(
-                                                  width: 20.0,
-                                                  height: 20.0,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    value: event == null
-                                                        ? 0
-                                                        : event
-                                                                .cumulativeBytesLoaded /
-                                                            (event.expectedTotalBytes ??
-                                                                1),
-                                                  ),
+                                              return PhotoViewGalleryPageOptions(
+                                                imageProvider:
+                                                    _buildImageProvider(url),
+                                                initialScale:
+                                                    PhotoViewComputedScale
+                                                        .contained,
+                                                minScale:
+                                                    PhotoViewComputedScale
+                                                        .contained,
+                                                maxScale:
+                                                    PhotoViewComputedScale
+                                                            .covered *
+                                                        2,
+                                                filterQuality:
+                                                    FilterQuality.medium,
+                                                heroAttributes:
+                                                    PhotoViewHeroAttributes(
+                                                        tag: heroTag),
+                                                controller:
+                                                    _photoControllers[index],
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
+                                                  return const Center(
+                                                    child: Icon(
+                                                      Icons.broken_image,
+                                                      color: Colors.white,
+                                                    ),
+                                                  );
+                                                },
+                                              );
+                                            },
+                                            itemCount:
+                                                widget.imageUrls.length,
+                                            loadingBuilder:
+                                                (context, event) => Center(
+                                              child: SizedBox(
+                                                width: 20.0,
+                                                height: 20.0,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  value: event == null
+                                                      ? 0
+                                                      : event
+                                                              .cumulativeBytesLoaded /
+                                                          (event.expectedTotalBytes ??
+                                                              1),
                                                 ),
                                               ),
-                                              backgroundDecoration:
-                                                  const BoxDecoration(
-                                                      color:
-                                                          Colors.transparent),
-                                              pageController: _pageController,
-                                              onPageChanged: _onPageChanged,
                                             ),
+                                            backgroundDecoration:
+                                                const BoxDecoration(
+                                                    color:
+                                                        Colors.transparent),
+                                            pageController: _pageController,
+                                            onPageChanged: _onPageChanged,
                                           ),
                                         ),
                                       ),
