@@ -133,10 +133,19 @@ class DiscussionActionButtonsState extends State<DiscussionActionButtons>
       _textController.clear();
       _cancel();
 
+      // 清空评论列表并重置分页状态
       widget.discussion.comments.clear();
       widget.discussion.commentsCount++;
+      
+      // 强制刷新评论列表
       await widget.discussion.fetchComments();
+      
+      // 强制刷新UI
+      if (mounted) setState(() {});
+      
+      // 通知父组件刷新UI
       widget.onCommentAdded?.call();
+      
       showToast('评论发布成功');
     } catch (e) {
       showToast('评论发布失败: $e', isError: true);
