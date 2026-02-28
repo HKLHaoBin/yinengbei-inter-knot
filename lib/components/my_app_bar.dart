@@ -3,11 +3,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/my_tab.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
+import 'package:inter_knot/pages/notification_page.dart';
 
 class MyAppBar extends StatefulWidget {
   const MyAppBar({super.key});
@@ -18,6 +20,8 @@ class MyAppBar extends StatefulWidget {
 
 class _MyAppBarState extends State<MyAppBar> {
   Timer? _debounce;
+  final api = Get.find<Api>();
+  final unreadNotificationCount = 0.obs;
 
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
@@ -27,9 +31,25 @@ class _MyAppBarState extends State<MyAppBar> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadUnreadCount();
+  }
+
+  @override
   void dispose() {
     _debounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    if (!c.isLogin.value) return;
+    try {
+      final count = await api.getUnreadNotificationCount();
+      unreadNotificationCount.value = count;
+    } catch (e) {
+      debugPrint('Load unread count error: $e');
+    }
   }
 
   @override
@@ -204,6 +224,53 @@ class _MyAppBarState extends State<MyAppBar> {
                               c.animateToPage(0, animate: false);
                             },
                           ),
+                          // 消息中心按钮
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Obx(() => MyTab(
+                                text: '消息',
+                                isSelected: c.selectedIndex.value == 2,
+                                onTap: () async {
+                                  if (await c.ensureLogin()) {
+                                    // 桌面端：切换到消息中心页面
+                                    c.animateToPage(2, animate: false);
+                                  }
+                                },
+                              )),
+                              if (unreadNotificationCount.value > 0)
+                                Positioned(
+                                  right: 8,
+                                  top: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.black,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    child: Text(
+                                      unreadNotificationCount.value > 99
+                                          ? '99+'
+                                          : unreadNotificationCount.value.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                           MyTab(
                             text: '我的',
                             last: true,
@@ -213,9 +280,65 @@ class _MyAppBarState extends State<MyAppBar> {
                         ],
                       );
                     }),
-                  )
-                else
-                  SizedBox(width: isCompact ? 60 : 72),
+                  ),
+                // 移动端：右侧显示消息中心图标按钮
+                if (isCompact) ...[
+                  const SizedBox(width: 16),
+                  Obx(() => IconButton(
+                        icon: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            const Icon(
+                              Icons.notifications_outlined,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            if (unreadNotificationCount.value > 0)
+                              Positioned(
+                                right: -2,
+                                top: -2,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.black,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 16,
+                                    minHeight: 16,
+                                  ),
+                                  child: Text(
+                                    unreadNotificationCount.value > 99
+                                        ? '99+'
+                                        : unreadNotificationCount.value.toString(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        onPressed: () async {
+                          if (await c.ensureLogin()) {
+                            // 移动端：使用Get.to跳转到页面
+                            await Get.to(() => const NotificationPage(),
+                                routeName: '/notifications');
+                            _loadUnreadCount();
+                          }
+                        },
+                        tooltip: '消息中心',
+                      )),
+                  const SizedBox(width: 8),
+                ] else
+                  const SizedBox(width: 8),
               ],
             ),
           ),

@@ -11,6 +11,7 @@ import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/app_scroll_behavior.dart';
 import 'package:inter_knot/pages/create_discussion_page.dart';
 import 'package:inter_knot/pages/home_page.dart';
+import 'package:inter_knot/pages/notification_page.dart';
 import 'package:inter_knot/pages/search_page.dart';
 
 Future<void> main() async {
@@ -172,9 +173,10 @@ class MyHomePage extends GetView<Controller> {
               () => FadeIndexedStack(
                 index: controller.selectedIndex.value,
                 duration: Duration.zero,
-                children: const [
-                  SearchPage(),
-                  HomePage(),
+                children: [
+                  const SearchPage(),
+                  const HomePage(),
+                  NotificationPage(),
                 ],
               ),
             ),

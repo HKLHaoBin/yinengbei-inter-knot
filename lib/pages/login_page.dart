@@ -380,6 +380,7 @@ class _LoginPageState extends State<LoginPage> {
                                                   prefixIcon:
                                                       const Icon(Icons.person),
                                                 ),
+                                                textInputAction: TextInputAction.next,
                                               ),
                                               const SizedBox(height: 16),
                                             ],
@@ -395,6 +396,7 @@ class _LoginPageState extends State<LoginPage> {
                                       prefixIcon: const Icon(Icons.email),
                                     ),
                                     keyboardType: TextInputType.emailAddress,
+                                    textInputAction: TextInputAction.next,
                                   ),
                                   const SizedBox(height: 16),
                                   TextField(
@@ -406,6 +408,8 @@ class _LoginPageState extends State<LoginPage> {
                                       prefixIcon: const Icon(Icons.lock),
                                     ),
                                     obscureText: true,
+                                    textInputAction: isRegister ? TextInputAction.next : TextInputAction.done,
+                                    onSubmitted: isRegister ? null : (_) => _submit(),
                                   ),
                                   AnimatedSwitcher(
                                     duration: const Duration(milliseconds: 400),
@@ -443,6 +447,8 @@ class _LoginPageState extends State<LoginPage> {
                                                       Icons.lock_outline),
                                                 ),
                                                 obscureText: true,
+                                                textInputAction: TextInputAction.done,
+                                                onSubmitted: (_) => _submit(),
                                               ),
                                             ],
                                           )
