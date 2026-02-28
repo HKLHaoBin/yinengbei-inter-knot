@@ -114,7 +114,7 @@ class NotificationModel {
   String getTitle() {
     switch (type) {
       case NotificationType.comment:
-        return '${sender?.name ?? '有人'}评论了你的文章';
+        return '${sender?.name ?? '有人'}评论了你的帖子';
       case NotificationType.reply:
         return '${sender?.name ?? '有人'}回复了你的评论';
       case NotificationType.like:
