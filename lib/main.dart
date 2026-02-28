@@ -12,6 +12,12 @@ import 'package:inter_knot/helpers/app_scroll_behavior.dart';
 import 'package:inter_knot/pages/create_discussion_page.dart';
 import 'package:inter_knot/pages/home_page.dart';
 import 'package:inter_knot/pages/search_page.dart';
+import 'package:flutter/foundation.dart';
+import 'package:inter_knot/helpers/dialog_helper.dart';
+import 'package:inter_knot/helpers/logger.dart';
+import 'package:inter_knot/models/discussion.dart';
+import 'package:inter_knot/models/h_data.dart';
+import 'package:inter_knot/pages/discussion_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,7 +83,7 @@ class MyApp extends StatelessWidget {
         Locale('zh', 'TC'),
         Locale('en'),
       ],
-      home: const MyHomePage(),
+      home: MyHomePage(),
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
         return Listener(
@@ -93,10 +99,97 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends GetView<Controller> {
-  const MyHomePage({super.key});
+  MyHomePage({super.key});
+
+  bool _hasCheckedUrl = false;
+
+  void _checkAndOpenDiscussionFromUrl(BuildContext context) {
+    if (_hasCheckedUrl) return;
+    _hasCheckedUrl = true;
+
+    if (!kIsWeb) return;
+
+    // 使用 Future.delayed 确保 Widget 已经构建完成
+    Future.delayed(Duration.zero, () async {
+      try {
+        final uri = Uri.base;
+        final pathSegments = uri.pathSegments;
+
+        // 检查路径是否为 /discussion/{id}
+        if (pathSegments.length >= 2 && pathSegments[0] == 'discussion') {
+          final discussionId = pathSegments[1];
+          if (discussionId.isNotEmpty) {
+            await _openDiscussionById(context, discussionId);
+          }
+        }
+      } catch (e, s) {
+        logger.e('Failed to parse URL or open discussion', error: e, stackTrace: s);
+      }
+    });
+  }
+
+  Future<void> _openDiscussionById(BuildContext context, String id) async {
+    try {
+      // 显示加载提示
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // 获取讨论详情
+      final discussion = await Get.find<Api>().getDiscussion(id);
+
+      // 关闭加载提示
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // 创建 HDataModel
+      final hData = HDataModel(
+        id: discussion.id,
+        updatedAt: discussion.lastEditedAt ?? discussion.createdAt,
+        createdAt: discussion.createdAt,
+        isPinned: discussion.isPinned,
+      );
+
+      // 打开讨论页面（使用 showZZZDialog 保持与正常点击一致的体验）
+      if (context.mounted) {
+        await showZZZDialog(
+          context: context,
+          pageBuilder: (context) => DiscussionPage(
+            discussion: discussion,
+            hData: hData,
+          ),
+        );
+      }
+    } catch (e) {
+      // 关闭加载提示
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      logger.e('Failed to load discussion', error: e);
+
+      // 显示错误提示
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('无法加载讨论: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // 检查是否需要从 URL 打开讨论（只在 Web 平台且首次构建时）
+    _checkAndOpenDiscussionFromUrl(context);
+
     // Determine layout based on screen width
     // Use 640 logical pixels as the breakpoint for mobile layout
     final isCompact = MediaQuery.of(context).size.width < 640;

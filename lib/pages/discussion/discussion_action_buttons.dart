@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/click_region.dart';
+import 'package:inter_knot/constants/api_config.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/controllers/data.dart';
+import 'package:inter_knot/helpers/copy_text.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/models/discussion.dart';
@@ -261,6 +264,23 @@ class DiscussionActionButtonsState extends State<DiscussionActionButtons>
     }
   }
 
+  void _handleShare() {
+    String baseUrl;
+    if (kIsWeb) {
+      // Web 平台：动态获取当前网址
+      final uri = Uri.base;
+      baseUrl = '${uri.scheme}://${uri.host}';
+      if (uri.hasPort && uri.port != 80 && uri.port != 443) {
+        baseUrl += ':${uri.port}';
+      }
+    } else {
+      // 非 Web 平台：使用配置的网址
+      baseUrl = ApiConfig.webBaseUrl;
+    }
+    final shareUrl = '$baseUrl/discussion/${widget.discussion.id}';
+    copyText(shareUrl, msg: '分享链接已复制');
+  }
+
   @override
   Widget build(BuildContext context) {
     return TapRegion(
@@ -431,6 +451,23 @@ class DiscussionActionButtonsState extends State<DiscussionActionButtons>
                       ),
                     );
                   }),
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message: '分享',
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xff222222),
+                        borderRadius: BorderRadius.circular(maxRadius),
+                        border: Border.all(
+                            color: const Color(0xff2D2D2D), width: 4),
+                      ),
+                      child: ClickRegion(
+                        onTap: _handleShare,
+                        child: const Icon(Icons.share, color: Colors.white),
+                      ),
+                    ),
+                  ),
                   if (c.user.value?.login ==
                       widget.discussion.author.login) ...[
                     const SizedBox(width: 8),
