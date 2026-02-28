@@ -3,13 +3,14 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:inter_knot/api/api.dart';
-import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/my_tab.dart';
-import 'package:inter_knot/constants/globals.dart';
-import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/pages/notification_page.dart';
+import 'package:inter_knot/api/api.dart';
+import 'package:inter_knot/helpers/page_transition_helper.dart';
+import 'package:inter_knot/constants/globals.dart';
+import 'package:inter_knot/controllers/data.dart';
+import 'package:inter_knot/components/avatar.dart';
 
 class MyAppBar extends StatefulWidget {
   const MyAppBar({super.key});
@@ -329,9 +330,12 @@ class _MyAppBarState extends State<MyAppBar> {
                         ),
                         onPressed: () async {
                           if (await c.ensureLogin()) {
-                            // 移动端：使用Get.to跳转到页面
-                            await Get.to(() => const NotificationPage(),
-                                routeName: '/notifications');
+                            // 移动端：使用平滑的页面过渡动画
+                            await navigateWithSlideTransition(
+                              context,
+                              const NotificationPage(),
+                              routeName: '/notifications',
+                            );
                             _loadUnreadCount();
                           }
                         },

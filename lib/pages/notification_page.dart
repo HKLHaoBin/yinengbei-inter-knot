@@ -65,9 +65,12 @@ class _NotificationPageState extends State<NotificationPage>
   }
 
   void _onTabChanged() {
-    if (_tabController.indexIsChanging) {
+    // 索引变化时立即刷新，不等待动画结束
+    if (_tabController.index != currentTabIndex.value) {
       currentTabIndex.value = _tabController.index;
       selectedTypes.value = _tabs[_tabController.index].types;
+      // 立即清空列表，避免显示旧数据
+      notifications.clear();
       _refresh();
     }
   }
@@ -322,6 +325,7 @@ class _NotificationPageState extends State<NotificationPage>
           Expanded(
             child: TabBarView(
               controller: _tabController,
+              physics: const NeverScrollableScrollPhysics(), // 禁用左右滑动
               children: List.generate(_tabs.length, (index) => _buildNotificationList()),
             ),
           ),
@@ -462,13 +466,7 @@ class _NotificationPageState extends State<NotificationPage>
   // 通知列表
   Widget _buildNotificationList() {
     return Obx(() {
-      if (isLoading.value && notifications.isEmpty) {
-        return const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xffD7FF00)),
-          ),
-        );
-      }
+      // 移除加载动画，直接显示列表
 
       if (notifications.isEmpty) {
         return Center(
@@ -504,17 +502,8 @@ class _NotificationPageState extends State<NotificationPage>
           itemCount: notifications.length + (hasMore.value ? 1 : 0),
           itemBuilder: (context, index) {
             if (index == notifications.length) {
-              return Padding(
-                padding: const EdgeInsets.all(16),
-                child: Center(
-                  child: isLoading.value
-                      ? const CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Color(0xffD7FF00)),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              );
+              // 移除加载更多时的圆圈动画
+              return const SizedBox.shrink();
             }
 
             final notification = notifications[index];

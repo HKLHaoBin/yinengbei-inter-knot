@@ -405,7 +405,12 @@ class _ImageViewerState extends State<ImageViewer>
             child: Stack(
               children: [
                 Container(
-                  margin: const EdgeInsets.all(8),
+                  margin: EdgeInsets.only(
+                    left: 8,
+                    right: 8,
+                    top: MediaQuery.of(context).padding.top + 8,
+                    bottom: 8,
+                  ),
                   padding: const EdgeInsets.all(4),
                   decoration: const BoxDecoration(
                     color: Color.fromARGB(59, 255, 255, 255),

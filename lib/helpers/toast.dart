@@ -186,7 +186,7 @@ class _ToastOverlayState extends State<_ToastOverlay>
                                     : const Color(0xffD8FFE8),
                               ),
                               SizedBox(width: isCompact ? 6 : 8),
-                              Expanded(
+                              Flexible(
                                 child: Text(
                                   widget.message,
                                   style: TextStyle(

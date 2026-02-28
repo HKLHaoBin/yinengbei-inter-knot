@@ -9,6 +9,7 @@ import 'package:inter_knot/helpers/profile_dialogs.dart';
 import 'package:inter_knot/pages/history_page.dart';
 import 'package:inter_knot/pages/liked_page.dart';
 import 'package:inter_knot/pages/my_discussions_page.dart';
+import 'package:inter_knot/helpers/page_transition_helper.dart';
 
 import 'package:inter_knot/pages/my_page_desktop.dart';
 
@@ -318,8 +319,16 @@ class _HomePageState extends State<HomePage>
                     )),
                 onTap: () async {
                   if (await c.ensureLogin()) {
-                    Get.to(() => const MyDiscussionsPage(),
-                        routeName: '/my-discussions');
+                    await navigateWithSlideTransition(
+                      context,
+                      const MyDiscussionsPage(),
+                      routeName: '/my-discussions',
+                    );
+                    // 返回后刷新帖子数量
+                    final aid = c.authorId.value ?? c.user.value?.authorId;
+                    if (aid != null && aid.isNotEmpty) {
+                      c.myDiscussionsCount.value = await api.getUserDiscussionCount(aid);
+                    }
                   }
                 },
               ),
@@ -337,8 +346,11 @@ class _HomePageState extends State<HomePage>
                       style: const TextStyle(
                           fontSize: 12, color: Color(0xff606060)),
                     ),
-                    onTap: () =>
-                        Get.to(() => const LikedPage(), routeName: '/liked'),
+                    onTap: () => navigateWithSlideTransition(
+                      context,
+                      const LikedPage(),
+                      routeName: '/liked',
+                    ),
                   )),
               const Padding(
                 padding: EdgeInsets.only(left: 56),
@@ -354,8 +366,11 @@ class _HomePageState extends State<HomePage>
                       style: const TextStyle(
                           fontSize: 12, color: Color(0xff606060)),
                     ),
-                    onTap: () => Get.to(() => const HistoryPage(),
-                        routeName: '/history'),
+                    onTap: () => navigateWithSlideTransition(
+                      context,
+                      const HistoryPage(),
+                      routeName: '/history',
+                    ),
                     isLast: true,
                   )),
             ],

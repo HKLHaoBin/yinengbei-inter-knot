@@ -9,6 +9,7 @@ import 'package:inter_knot/components/fade_indexed_stack.dart';
 import 'package:inter_knot/components/my_app_bar.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/app_scroll_behavior.dart';
+import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/pages/create_discussion_page.dart';
 import 'package:inter_knot/pages/home_page.dart';
 import 'package:inter_knot/pages/notification_page.dart';
@@ -96,6 +97,8 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends GetView<Controller> {
   const MyHomePage({super.key});
 
+  static DateTime? _lastPressedAt;
+
   @override
   Widget build(BuildContext context) {
     // Determine layout based on screen width
@@ -103,7 +106,31 @@ class MyHomePage extends GetView<Controller> {
     final isCompact = MediaQuery.of(context).size.width < 640;
 
     if (isCompact) {
-      return Scaffold(
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          
+          // 如果在我的页面，跳转到首页
+          if (controller.selectedIndex.value == 1) {
+            controller.animateToPage(0, animate: false);
+            return;
+          }
+          
+          // 如果在首页，显示"再按一次退出"提示
+          if (controller.selectedIndex.value == 0) {
+            final now = DateTime.now();
+            if (_lastPressedAt == null || 
+                now.difference(_lastPressedAt!) > const Duration(seconds: 2)) {
+              _lastPressedAt = now;
+              showToast('再按一次退出绳网', duration: const Duration(seconds: 2));
+            } else {
+              // 2秒内再次按下，退出应用
+              Navigator.of(context).pop();
+            }
+          }
+        },
+        child: Scaffold(
         resizeToAvoidBottomInset: false,
         backgroundColor: const Color(0xff121212),
         body: Column(
@@ -159,6 +186,7 @@ class MyHomePage extends GetView<Controller> {
               ],
             ),
           ),
+        ),
         ),
       );
     }
