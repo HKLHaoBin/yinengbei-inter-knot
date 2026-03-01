@@ -36,6 +36,7 @@ class Controller extends GetxController {
   final newPostCount = 0.obs;
   final hasContentChange = false.obs;
   Timer? _newPostCheckTimer;
+  Timer? _checkInEligibilityTimer;
 
   String rootToken = '';
 
@@ -85,6 +86,30 @@ class Controller extends GetxController {
     }
   }
 
+  void _cancelCheckInEligibilityTimer() {
+    _checkInEligibilityTimer?.cancel();
+    _checkInEligibilityTimer = null;
+  }
+
+  void _scheduleCheckInEligibilityRefresh(DateTime? nextEligibleAt) {
+    _cancelCheckInEligibilityTimer();
+
+    if (!isLogin.value || nextEligibleAt == null) return;
+
+    final now = DateTime.now().toUtc();
+    if (!now.isBefore(nextEligibleAt)) {
+      nextEligibleAtUtc.value = null;
+      unawaited(refreshMyExp());
+      return;
+    }
+
+    final delay = nextEligibleAt.difference(now) + const Duration(seconds: 1);
+    _checkInEligibilityTimer = Timer(delay, () async {
+      if (!isLogin.value) return;
+      await refreshMyExp();
+    });
+  }
+
   Future<void> refreshMyExp() async {
     final u = user.value;
     if (u == null) return;
@@ -103,10 +128,21 @@ class Controller extends GetxController {
         u.consecutiveCheckInDays = days;
       }
 
+      final nextEligibleAt = expInfo.nextEligibleAtUtc;
+      if (nextEligibleAt != null) {
+        nextEligibleAtUtc.value = nextEligibleAt;
+      }
+
+      if (u.canCheckIn) {
+        nextEligibleAtUtc.value = null;
+      }
+
       final next = nextEligibleAtUtc.value;
       if (next != null && !DateTime.now().toUtc().isBefore(next)) {
         nextEligibleAtUtc.value = null;
       }
+
+      _scheduleCheckInEligibilityRefresh(nextEligibleAtUtc.value);
       user.refresh();
     } catch (e) {
       logger.w('Failed to refresh my exp', error: e);
@@ -207,6 +243,12 @@ class Controller extends GetxController {
         final days = expInfo.consecutiveCheckInDays;
         if (days != null) {
           u.consecutiveCheckInDays = days;
+        }
+        final nextEligibleAt = expInfo.nextEligibleAtUtc;
+        if (nextEligibleAt != null) {
+          nextEligibleAtUtc.value = nextEligibleAt;
+        } else if (u.canCheckIn) {
+          nextEligibleAtUtc.value = null;
         }
       } catch (_) {
         // Ignore exp refresh failures; keep user info usable.
@@ -325,6 +367,7 @@ class Controller extends GetxController {
   @override
   void onClose() {
     _newPostCheckTimer?.cancel();
+    _cancelCheckInEligibilityTimer();
     super.onClose();
   }
 
@@ -347,6 +390,7 @@ class Controller extends GetxController {
         box.remove('userId');
       }
     });
+    ever<DateTime?>(nextEligibleAtUtc, _scheduleCheckInEligibilityRefresh);
     logger.i(isLogin());
     accelerator(pref.getString('accelerator') ?? '');
     ever(accelerator, (v) => pref.setString('accelerator', v));
@@ -401,6 +445,7 @@ class Controller extends GetxController {
 
     ever(isLogin, (v) async {
       if (v) {
+        _scheduleCheckInEligibilityRefresh(nextEligibleAtUtc.value);
         // Only fetch if user info is missing (e.g., after manual login action)
         // Initial login in onInit already handles data fetching
         if (user.value == null) {
@@ -418,6 +463,8 @@ class Controller extends GetxController {
         final u = user.value;
         user.value = null;
         authorId.value = null;
+        nextEligibleAtUtc.value = null;
+        _cancelCheckInEligibilityTimer();
         clearUnreadNotificationCount();
         myDiscussionsCount.value = 0;
         _clearCachedAvatarForUser(u);
