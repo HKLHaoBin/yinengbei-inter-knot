@@ -499,6 +499,7 @@ class Api extends BaseConnect {
     int level,
     String? lastCheckInDate,
     int? consecutiveCheckInDays,
+    bool canCheckIn,
   })> getMyExp() async {
     final res = await get('/api/me/exp');
 
@@ -517,6 +518,7 @@ class Api extends BaseConnect {
       level: (body['level'] as num?)?.toInt() ?? 1,
       lastCheckInDate: body['lastCheckInDate']?.toString(),
       consecutiveCheckInDays: (body['consecutiveCheckInDays'] as num?)?.toInt(),
+      canCheckIn: body['canCheckIn'] as bool? ?? true,
     );
   }
 

@@ -574,7 +574,7 @@ class _HomePageState extends State<HomePage>
       nextExpTarget = currentExp;
     }
 
-    final cannotCheckInNow = !c.canCheckInNow(user);
+    final cannotCheckInNow = !user.canCheckIn;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),

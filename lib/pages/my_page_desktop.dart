@@ -371,7 +371,7 @@ class _MyPageDesktopState extends State<MyPageDesktop>
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
-                child: c.canCheckInNow(user)
+                child: user.canCheckIn
                     ? ElevatedButton(
                         onPressed: () async {
                           try {
