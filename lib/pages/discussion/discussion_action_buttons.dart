@@ -133,24 +133,56 @@ class DiscussionActionButtonsState extends State<DiscussionActionButtons>
       _textController.clear();
       _cancel();
 
-      // 清空评论列表并重置分页状态
-      widget.discussion.comments.clear();
+      // 先更新计数，再按需补齐评论分页，避免新主评论因分页顺序看不到
       widget.discussion.commentsCount++;
-      
-      // 强制刷新评论列表
-      await widget.discussion.fetchComments();
-      
-      // 强制刷新UI
-      if (mounted) setState(() {});
-      
+
+      if (_parentId == null) {
+        await _syncTopLevelCommentsAfterPost();
+      } else {
+        // 回复场景：强制允许继续拉取一次，拿到父评论下最新回复
+        if (widget.discussion.comments.isNotEmpty) {
+          widget.discussion.comments.last.hasNextPage = true;
+        }
+        await widget.discussion.fetchComments();
+      }
+
       // 通知父组件刷新UI
       widget.onCommentAdded?.call();
-      
+
       showToast('评论发布成功');
     } catch (e) {
       showToast('评论发布失败: $e', isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  int _loadedTopLevelCommentCount() {
+    var count = 0;
+    for (final page in widget.discussion.comments) {
+      count += page.nodes.length;
+    }
+    return count;
+  }
+
+  Future<void> _syncTopLevelCommentsAfterPost() async {
+    // 已有分页时，先解锁下一页，确保 hasNextPage=false 时也能继续拉取新数据
+    if (widget.discussion.comments.isNotEmpty) {
+      widget.discussion.comments.last.hasNextPage = true;
+    }
+
+    // 逐页拉取直到本地主评论数量追上最新计数（或到达保护上限）
+    var guard = 0;
+    while (widget.discussion.hasNextPage() &&
+        _loadedTopLevelCommentCount() < widget.discussion.commentsCount &&
+        guard < 20) {
+      await widget.discussion.fetchComments();
+      guard++;
+    }
+
+    // 首次进入帖子且本地还没评论分页时兜底拉一次
+    if (widget.discussion.comments.isEmpty) {
+      await widget.discussion.fetchComments();
     }
   }
 
