@@ -381,106 +381,70 @@ class _MyPageDesktopState extends State<MyPageDesktop>
                 borderRadius: BorderRadius.circular(4),
               ),
               const SizedBox(height: 12),
+              if (!c.canCheckInNow(user) || c.checkInHintText(user) != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      c.checkInHintText(user) ?? '今日可能已签到，点击按钮会向后端再次确认',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ),
+                ),
               SizedBox(
                 width: double.infinity,
-                child: c.canCheckInNow(user)
-                    ? ElevatedButton(
-                        onPressed: () async {
-                          try {
-                            final result = await api.checkIn();
-                            await c.refreshMyExp();
-                            if (context.mounted) {
-                              final rank = result.rank;
-                              final reward = result.reward;
-                              final days = result.consecutiveDays;
-                              showToast(
-                                '今日签到第${rank ?? "?"}名，经验+${reward ?? 0}，连续签到${days ?? "?"}天',
-                              );
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              String msg = e.toString();
-                              if (e is ApiException) {
-                                if (e.statusCode == 409) {
-                                  final details = e.details;
-                                  String? checkInDay;
-                                  if (details is Map) {
-                                    checkInDay =
-                                        details['checkInDay']?.toString();
-                                    checkInDay = (checkInDay != null &&
-                                            checkInDay.isNotEmpty)
-                                        ? checkInDay
-                                        : null;
-
-                                    checkInDay ??=
-                                        details['checkInDay'.toString()]
-                                            ?.toString();
-
-                                    final nextEligibleAt =
-                                        details['nextEligibleAt']?.toString();
-                                    if (nextEligibleAt != null &&
-                                        nextEligibleAt.isNotEmpty) {
-                                      final dt =
-                                          DateTime.tryParse(nextEligibleAt);
-                                      if (dt != null) {
-                                        c.nextEligibleAtUtc.value = dt.toUtc();
-                                      }
-                                    }
-                                    if (checkInDay == null &&
-                                        nextEligibleAt != null &&
-                                        nextEligibleAt.isNotEmpty) {
-                                      final dt =
-                                          DateTime.tryParse(nextEligibleAt);
-                                      if (dt != null) {
-                                        final utc = dt
-                                            .toUtc()
-                                            .subtract(const Duration(days: 1));
-                                        final y = utc.year
-                                            .toString()
-                                            .padLeft(4, '0');
-                                        final m = utc.month
-                                            .toString()
-                                            .padLeft(2, '0');
-                                        final d = utc.day
-                                            .toString()
-                                            .padLeft(2, '0');
-                                        checkInDay = '$y-$m-$d';
-                                      }
-                                    }
-                                  }
-                                  if (checkInDay != null &&
-                                      checkInDay.isNotEmpty) {
-                                    c.user.value?.lastCheckInDate = checkInDay;
-                                    c.user.refresh();
-                                  }
-                                  await c.refreshMyExp();
+                child: ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      final result = await api.checkIn();
+                      await c.refreshMyExp();
+                      if (context.mounted) {
+                        final rank = result.rank;
+                        final reward = result.reward;
+                        final days = result.consecutiveDays;
+                        showToast(
+                          '今日签到第${rank ?? "?"}名，经验+${reward ?? 0}，连续签到${days ?? "?"}天',
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        String msg = e.toString();
+                        if (e is ApiException) {
+                          if (e.statusCode == 409) {
+                            final details = e.details;
+                            if (details is Map) {
+                              final nextEligibleAt =
+                                  details['nextEligibleAt']?.toString();
+                              if (nextEligibleAt != null &&
+                                  nextEligibleAt.isNotEmpty) {
+                                final dt = DateTime.tryParse(nextEligibleAt);
+                                if (dt != null) {
+                                  c.nextEligibleAtUtc.value = dt.toUtc();
                                 }
-                                msg = e.message;
                               }
-                              showToast(
-                                msg,
-                                isError: true,
-                              );
                             }
+                            await c.refreshMyExp();
+                            msg = '今日已签到';
+                          } else {
+                            msg = e.message;
                           }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xffD7FF00),
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          textStyle:
-                              const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        child: const Text('每日签到'),
-                      )
-                    : OutlinedButton(
-                        onPressed: null,
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text('今日已签到',
-                            style: TextStyle(color: Colors.grey)),
-                      ),
+                        }
+                        showToast(
+                          msg,
+                          isError: true,
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xffD7FF00),
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  child: const Text('每日签到'),
+                ),
               )
             ],
           );

@@ -260,11 +260,11 @@ class Controller extends GetxController {
   DateTime? nextCheckInAt(AuthorModel? u) {
     final last = _parseYmd(u?.lastCheckInDate);
     if (last == null) return null;
-    // Business rule: next eligible at next check-in day 04:00 (Asia/Shanghai).
+    // Business rule: next eligible at next check-in day 00:00 (Asia/Shanghai).
     // To avoid relying on device timezone, compute in UTC:
-    // 04:00 (UTC+8) == 20:00Z of previous day.
+    // 00:00 (UTC+8) == 16:00Z of previous day.
     final nextDay = last.add(const Duration(days: 1));
-    return DateTime.utc(nextDay.year, nextDay.month, nextDay.day, 20);
+    return DateTime.utc(nextDay.year, nextDay.month, nextDay.day, 16);
   }
 
   bool canCheckInNow(AuthorModel? u, {DateTime? now}) {
@@ -276,6 +276,17 @@ class Controller extends GetxController {
     final next = nextCheckInAt(u);
     if (next == null) return true;
     return !t.isBefore(next);
+  }
+
+  String? checkInHintText(AuthorModel? u, {DateTime? now}) {
+    final t = (now ?? DateTime.now()).toUtc();
+    final next = nextEligibleAtUtc.value ?? nextCheckInAt(u);
+    if (next == null || !t.isBefore(next)) return null;
+
+    final diff = next.difference(t);
+    final hours = diff.inHours.toString().padLeft(2, '0');
+    final minutes = diff.inMinutes.remainder(60).toString().padLeft(2, '0');
+    return '预计可签到倒计时 $hours:$minutes';
   }
 
   void _loadLocalCaches() {

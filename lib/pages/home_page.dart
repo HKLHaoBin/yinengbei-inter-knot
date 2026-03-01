@@ -575,6 +575,7 @@ class _HomePageState extends State<HomePage>
     }
 
     final cannotCheckInNow = !c.canCheckInNow(user);
+    final checkInHint = c.checkInHintText(user);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -689,127 +690,77 @@ class _HomePageState extends State<HomePage>
             // Check-in button
             SizedBox(
               width: double.infinity,
-              child: cannotCheckInNow
-                  ? Container(
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: const Color(0xff2A2A2A),
-                        border: Border.all(
-                            color: const Color(0xff383838), width: 1),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.check_circle_outline_rounded,
-                              size: 16, color: Color(0xff606060)),
-                          SizedBox(width: 6),
-                          Text(
-                            '今日已签到',
-                            style: TextStyle(
-                                color: Color(0xff606060),
-                                fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ElevatedButton(
-                      onPressed: () async {
-                        try {
-                          final result = await api.checkIn();
-                          await c.refreshMyExp();
-                          if (context.mounted) {
-                            final rank = result.rank;
-                            final reward = result.reward;
-                            final days = result.consecutiveDays;
-                            showToast(
-                              '今日签到第${rank ?? "?"}名，经验+${reward ?? 0}，连续签到${days ?? "?"}天',
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            String msg = e.toString();
-                            if (e is ApiException) {
-                              if (e.statusCode == 409) {
-                                final details = e.details;
-                                String? checkInDay;
-                                if (details is Map) {
-                                  checkInDay =
-                                      details['checkInDay']?.toString();
-                                  checkInDay = (checkInDay != null &&
-                                          checkInDay.isNotEmpty)
-                                      ? checkInDay
-                                      : null;
-
-                                  checkInDay ??= details['checkInDay'
-                                          .toString()]
-                                      ?.toString();
-
-                                  final nextEligibleAt =
-                                      details['nextEligibleAt']?.toString();
-                                  if (nextEligibleAt != null &&
-                                      nextEligibleAt.isNotEmpty) {
-                                    final dt =
-                                        DateTime.tryParse(nextEligibleAt);
-                                    if (dt != null) {
-                                      c.nextEligibleAtUtc.value = dt.toUtc();
-                                    }
-                                  }
-                                  if (checkInDay == null &&
-                                      nextEligibleAt != null &&
-                                      nextEligibleAt.isNotEmpty) {
-                                    final dt =
-                                        DateTime.tryParse(nextEligibleAt);
-                                    if (dt != null) {
-                                      final utc = dt
-                                          .toUtc()
-                                          .subtract(const Duration(days: 1));
-                                      final y =
-                                          utc.year.toString().padLeft(4, '0');
-                                      final m = utc.month
-                                          .toString()
-                                          .padLeft(2, '0');
-                                      final d =
-                                          utc.day.toString().padLeft(2, '0');
-                                      checkInDay = '$y-$m-$d';
-                                    }
-                                  }
-                                }
-                                if (checkInDay != null &&
-                                    checkInDay.isNotEmpty) {
-                                  c.user.value?.lastCheckInDate = checkInDay;
-                                  c.user.refresh();
-                                }
-                                await c.refreshMyExp();
+              child: ElevatedButton(
+                onPressed: () async {
+                  try {
+                    final result = await api.checkIn();
+                    await c.refreshMyExp();
+                    if (context.mounted) {
+                      final rank = result.rank;
+                      final reward = result.reward;
+                      final days = result.consecutiveDays;
+                      showToast(
+                        '今日签到第${rank ?? "?"}名，经验+${reward ?? 0}，连续签到${days ?? "?"}天',
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      String msg = e.toString();
+                      if (e is ApiException) {
+                        if (e.statusCode == 409) {
+                          final details = e.details;
+                          if (details is Map) {
+                            final nextEligibleAt =
+                                details['nextEligibleAt']?.toString();
+                            if (nextEligibleAt != null &&
+                                nextEligibleAt.isNotEmpty) {
+                              final dt = DateTime.tryParse(nextEligibleAt);
+                              if (dt != null) {
+                                c.nextEligibleAtUtc.value = dt.toUtc();
                               }
-                              msg = e.message;
                             }
-                            showToast(msg, isError: true);
                           }
+                          await c.refreshMyExp();
+                          msg = '今日已签到';
+                        } else {
+                          msg = e.message;
                         }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xffD7FF00),
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        textStyle: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.calendar_today_rounded, size: 16),
-                          SizedBox(width: 8),
-                          Text('每日签到'),
-                        ],
-                      ),
-                    ),
+                      }
+                      showToast(msg, isError: true);
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xffD7FF00),
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle:
+                      const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 16),
+                    SizedBox(width: 8),
+                    Text('每日签到'),
+                  ],
+                ),
+              ),
             ),
+            if (cannotCheckInNow || checkInHint != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                checkInHint ?? '今日可能已签到，点击按钮会向后端再次确认',
+                style: const TextStyle(
+                  color: Color(0xff606060),
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ],
         ),
       ),
