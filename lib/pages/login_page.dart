@@ -69,6 +69,10 @@ class _LoginPageState extends State<LoginPage> {
     c.user(currentUser);
     await c.ensureAuthorForUser(currentUser);
     c.isLogin(true);
+    
+    // Refresh user data after login
+    await c.refreshFavorites();
+    await c.refreshUnreadNotificationCount();
 
     if (mounted) {
       Get.back();
