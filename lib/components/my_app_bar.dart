@@ -31,7 +31,6 @@ class _MyAppBarState extends State<MyAppBar> {
   @override
   void initState() {
     super.initState();
-    c.refreshUnreadNotificationCount();
   }
 
   @override

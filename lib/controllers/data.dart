@@ -215,13 +215,15 @@ class Controller extends GetxController {
       user(u);
       await ensureAuthorForUser(u);
 
-      if (forceAvatarFetch) {
+      // Only fetch avatar if it's still empty after getSelfUserInfo
+      // (getSelfUserInfo already calls _fetchAndSetAvatar)
+      if (forceAvatarFetch && u.avatar.isEmpty) {
         final id = authorId.value ?? u.authorId;
         if (id != null && id.isNotEmpty) {
           try {
             final url = await api.getAuthorAvatarUrl(id);
             if (url != null && url.isNotEmpty) {
-              u.avatar = _withCacheBuster(url);
+              u.avatar = url;
             }
           } catch (_) {
             // Ignore forbidden or missing permission.
@@ -399,7 +401,8 @@ class Controller extends GetxController {
 
     ever(isLogin, (v) async {
       if (v) {
-        // fetch user info if not present
+        // Only fetch if user info is missing (e.g., after manual login action)
+        // Initial login in onInit already handles data fetching
         if (user.value == null) {
           try {
             await refreshSelfUserInfo();
@@ -408,10 +411,9 @@ class Controller extends GetxController {
           } catch (e) {
             logger.e('Failed to fetch user after login', error: e);
           }
-        } else {
-          await refreshFavorites();
-          await refreshUnreadNotificationCount();
         }
+        // Note: Removed redundant refreshFavorites/refreshUnreadNotificationCount
+        // when user.value exists, as they're already called during login
       } else {
         final u = user.value;
         user.value = null;
@@ -786,6 +788,7 @@ class Controller extends GetxController {
       );
       final current = user.value;
       if (current != null && avatarUrl != null && avatarUrl.isNotEmpty) {
+        // Keep cache buster for uploaded avatar to force refresh
         final refreshed = _withCacheBuster(avatarUrl);
         current.avatar = refreshed;
         _cacheAvatarForUser(current, refreshed);

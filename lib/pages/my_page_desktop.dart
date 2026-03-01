@@ -27,7 +27,6 @@ class _MyPageDesktopState extends State<MyPageDesktop>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    c.refreshUnreadNotificationCount();
   }
 
   @override
