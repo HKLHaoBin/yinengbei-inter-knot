@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -7,6 +9,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/fade_indexed_stack.dart';
 import 'package:inter_knot/components/my_app_bar.dart';
+import 'package:inter_knot/components/update_dialog.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/app_scroll_behavior.dart';
 import 'package:inter_knot/helpers/toast.dart';
@@ -14,6 +17,7 @@ import 'package:inter_knot/pages/create_discussion_page.dart';
 import 'package:inter_knot/pages/home_page.dart';
 import 'package:inter_knot/pages/notification_page.dart';
 import 'package:inter_knot/pages/search_page.dart';
+import 'package:inter_knot/services/update_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -94,10 +98,42 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MyHomePage extends GetView<Controller> {
+class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
   static DateTime? _lastPressedAt;
+  final controller = Get.find<Controller>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto check for updates on app startup (Android only)
+    _checkForUpdatesOnStartup();
+  }
+
+  Future<void> _checkForUpdatesOnStartup() async {
+    // Only check on Android platform
+    if (!kIsWeb && Platform.isAndroid) {
+      // Delay to avoid blocking app startup
+      await Future.delayed(const Duration(seconds: 2));
+      
+      try {
+        final updateInfo = await UpdateService.checkForUpdate();
+        if (updateInfo != null && mounted) {
+          // Show update dialog
+          showUpdateDialog(context, updateInfo);
+        }
+      } catch (e) {
+        // Silently fail, don't disturb user
+        debugPrint('Auto update check failed: $e');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

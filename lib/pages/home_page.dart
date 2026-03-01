@@ -10,6 +10,8 @@ import 'package:inter_knot/pages/history_page.dart';
 import 'package:inter_knot/pages/liked_page.dart';
 import 'package:inter_knot/pages/my_discussions_page.dart';
 import 'package:inter_knot/helpers/page_transition_helper.dart';
+import 'package:inter_knot/components/update_dialog.dart';
+import 'package:inter_knot/services/update_service.dart';
 
 import 'package:inter_knot/pages/my_page_desktop.dart';
 
@@ -378,8 +380,71 @@ class _HomePageState extends State<HomePage>
                       const HistoryPage(),
                       routeName: '/history',
                     ),
-                    isLast: true,
+                    isLast: false,
                   )),
+              InkWell(
+                onTap: () async {
+                  showToast('正在检查更新...', duration: const Duration(seconds: 1));
+                  final updateInfo = await UpdateService.checkForUpdate();
+                  if (updateInfo != null) {
+                    if (context.mounted) {
+                      showUpdateDialog(context, updateInfo);
+                    }
+                  } else {
+                    showToast('已是最新版本', duration: const Duration(seconds: 2));
+                  }
+                },
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0x1A60A5FA),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.system_update_rounded, color: Color(0xff60A5FA), size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            const Text(
+                              '检查更新',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (UpdateService.hasUpdate) ...[
+                              const SizedBox(width: 4),
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xffFF4444),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: Color(0xff404040),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
