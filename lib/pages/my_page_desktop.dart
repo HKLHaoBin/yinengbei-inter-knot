@@ -134,7 +134,7 @@ class _MyPageDesktopState extends State<MyPageDesktop>
                     Row(
                       children: [
                         Text(
-                          user?.name ?? '未登录',
+                          user?.name ?? '绳网用户',
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -525,7 +525,7 @@ class _MyPageDesktopState extends State<MyPageDesktop>
                   child: Text(
                     text,
                     style: TextStyle(
-                      color: isSelected ? Colors.black : Colors.grey,
+                      color: isSelected ? Colors.black : Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

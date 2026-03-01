@@ -148,7 +148,7 @@ class _HomePageState extends State<HomePage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          user?.name ?? '未登录',
+                          user?.name ?? '绳网用户',
                           style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
@@ -243,7 +243,7 @@ class _HomePageState extends State<HomePage>
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      '登录后可查看你的绳网等级与每日签到奖励。',
+                      '登录后可查看绳网等级',
                       style: TextStyle(
                         fontSize: 13,
                         color: Color(0xff606060),
