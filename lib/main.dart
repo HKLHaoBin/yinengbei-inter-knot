@@ -171,6 +171,13 @@ class MyHomePage extends GetView<Controller> {
                   activeIcon: Icons.explore,
                   label: '推送',
                   onTap: () => controller.animateToPage(0, animate: false),
+                  onDoubleTap: () {
+                    // Double tap to refresh posts
+                    if (controller.selectedIndex.value == 0) {
+                      controller.refreshSearchData();
+                      showToast('正在刷新帖子...', duration: const Duration(seconds: 1));
+                    }
+                  },
                 ),
                 Center(
                   child: _buildCreateButton(context),
@@ -224,12 +231,13 @@ class MyHomePage extends GetView<Controller> {
   }
 }
 
-class _BottomNavItem extends StatelessWidget {
+class _BottomNavItem extends StatefulWidget {
   final bool isSelected;
   final IconData icon;
   final IconData activeIcon;
   final String label;
   final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
 
   const _BottomNavItem({
     required this.isSelected,
@@ -237,29 +245,54 @@ class _BottomNavItem extends StatelessWidget {
     required this.activeIcon,
     required this.label,
     required this.onTap,
+    this.onDoubleTap,
   });
+
+  @override
+  State<_BottomNavItem> createState() => _BottomNavItemState();
+}
+
+class _BottomNavItemState extends State<_BottomNavItem> {
+  DateTime? _lastTapTime;
+
+  void _handleTap() {
+    final now = DateTime.now();
+    
+    if (_lastTapTime != null && 
+        now.difference(_lastTapTime!) < const Duration(milliseconds: 300)) {
+      // Double tap detected
+      if (widget.onDoubleTap != null) {
+        widget.onDoubleTap!();
+      }
+      _lastTapTime = null; // Reset to prevent triple tap
+    } else {
+      // Single tap
+      _lastTapTime = now;
+      widget.onTap();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: onTap,
+        onTap: _handleTap,
         child: AnimatedScale(
-          scale: isSelected ? 1.20 : 1.0,
+          scale: widget.isSelected ? 1.20 : 1.0,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOutBack,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                isSelected ? activeIcon : icon,
+                widget.isSelected ? widget.activeIcon : widget.icon,
                 color: Colors.white,
                 size: 24,
               ),
               const SizedBox(height: 2),
               Text(
-                label,
+                widget.label,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
