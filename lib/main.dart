@@ -126,7 +126,7 @@ class MyHomePage extends GetView<Controller> {
               showToast('再按一次退出绳网', duration: const Duration(seconds: 2));
             } else {
               // 2秒内再次按下，退出应用
-              Navigator.of(context).pop();
+              SystemNavigator.pop();
             }
           }
         },
