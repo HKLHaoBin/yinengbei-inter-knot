@@ -22,30 +22,18 @@ class MyPageDesktop extends StatefulWidget {
 class _MyPageDesktopState extends State<MyPageDesktop>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final unreadNotificationCount = 0.obs;
-  final api = Get.find<Api>();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadUnreadCount();
+    c.refreshUnreadNotificationCount();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadUnreadCount() async {
-    if (!c.isLogin.value) return;
-    try {
-      final count = await api.getUnreadNotificationCount();
-      unreadNotificationCount.value = count;
-    } catch (e) {
-      debugPrint('Load unread count error: $e');
-    }
   }
 
   @override
