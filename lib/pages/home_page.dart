@@ -64,9 +64,9 @@ class _HomePageState extends State<HomePage>
           final user = c.user.value;
           final isLogin = c.isLogin.value;
           return Container(
-            margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -82,7 +82,7 @@ class _HomePageState extends State<HomePage>
               ],
             ),
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
                   GestureDetector(
@@ -99,7 +99,7 @@ class _HomePageState extends State<HomePage>
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(2),
-                            child: Avatar(user?.avatar, size: 64),
+                            child: Avatar(user?.avatar, size: 52),
                           ),
                         ),
                         if (isLogin)
@@ -142,7 +142,7 @@ class _HomePageState extends State<HomePage>
                       ],
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,7 +150,7 @@ class _HomePageState extends State<HomePage>
                         Text(
                           user?.name ?? '未登录',
                           style: const TextStyle(
-                            fontSize: 20,
+                            fontSize: 17,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             letterSpacing: 0.3,
@@ -205,14 +205,14 @@ class _HomePageState extends State<HomePage>
 
           if (!isLogin || user == null) {
             return Container(
-              margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 color: const Color(0xff1E1E1E),
                 border: Border.all(color: const Color(0xff2A2A2A), width: 1),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -278,7 +278,12 @@ class _HomePageState extends State<HomePage>
           }
           return _buildMobileLevelAndCheckInSection(context, user);
         }),
+      ],
+    );
 
+    // Scrollable content section
+    final scrollableContent = Column(
+      children: [
         // ── Menu group label ──
         const SizedBox(height: 20),
         Padding(
@@ -432,9 +437,16 @@ class _HomePageState extends State<HomePage>
             fit: BoxFit.cover,
           ),
         ),
-        SingleChildScrollView(
-          controller: scrollController,
-          child: child,
+        Column(
+          children: [
+            fixedHeader,
+            Expanded(
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: scrollableContent,
+              ),
+            ),
+          ],
         ),
       ],
     );
