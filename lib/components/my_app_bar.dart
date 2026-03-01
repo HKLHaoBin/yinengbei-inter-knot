@@ -98,11 +98,11 @@ class _MyAppBarState extends State<MyAppBar> {
                     ],
                   ],
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 // 新增：搜索栏
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.symmetric(horizontal: isCompact ? 8 : 16),
                     child: Align(
                       alignment: Alignment.center,
                       child: Container(
@@ -274,7 +274,7 @@ class _MyAppBarState extends State<MyAppBar> {
                   ),
                 // 移动端：右侧显示消息中心图标按钮
                 if (isCompact) ...[
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 8),
                   Obx(() => IconButton(
                         icon: Stack(
                           clipBehavior: Clip.none,
@@ -330,7 +330,7 @@ class _MyAppBarState extends State<MyAppBar> {
                         },
                         tooltip: '消息中心',
                       )),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                 ] else
                   const SizedBox(width: 8),
               ],
