@@ -50,6 +50,7 @@ class Controller extends GetxController {
   final nextEligibleAtUtc = Rxn<DateTime>();
   final myDiscussionsCount = 0.obs;
   final isUploadingAvatar = false.obs;
+  final unreadNotificationCount = 0.obs;
 
   final bookmarks = <HDataModel>{}.obs;
   final favoriteIds = <String, String>{}.obs;
@@ -384,6 +385,7 @@ class Controller extends GetxController {
       try {
         await refreshSelfUserInfo();
         await refreshFavorites();
+        await refreshUnreadNotificationCount();
       } catch (e) {
         // Handle 401 explicitly if it bubbles up, though BaseConnect usually handles it globally.
         // But here we want to show a specific message "Account not found or abnormal".
@@ -411,6 +413,7 @@ class Controller extends GetxController {
             isLogin(true);
             await refreshSelfUserInfo();
             await refreshFavorites();
+            await refreshUnreadNotificationCount();
             // Clear pending credentials
             box.remove('pending_activation_email');
             box.remove('pending_activation_password');
@@ -430,16 +433,19 @@ class Controller extends GetxController {
           try {
             await refreshSelfUserInfo();
             await refreshFavorites();
+            await refreshUnreadNotificationCount();
           } catch (e) {
             logger.e('Failed to fetch user after login', error: e);
           }
         } else {
           await refreshFavorites();
+          await refreshUnreadNotificationCount();
         }
       } else {
         final u = user.value;
         user.value = null;
         authorId.value = null;
+        clearUnreadNotificationCount();
         _clearCachedAvatarForUser(u);
         box.remove('access_token');
         bookmarks.clear();
@@ -566,6 +572,28 @@ class Controller extends GetxController {
     hasContentChange.value = false;
     // Scroll to top is handled in UI usually, but refresh data here
     await refreshSearchData();
+  }
+
+  Future<void> refreshUnreadNotificationCount() async {
+    if (!isLogin.value) {
+      unreadNotificationCount.value = 0;
+      return;
+    }
+    try {
+      final count = await api.getUnreadNotificationCount();
+      unreadNotificationCount.value = count;
+    } catch (_) {
+      // Keep current unread count on transient failures.
+    }
+  }
+
+  void decrementUnreadNotificationCount({int by = 1}) {
+    final next = unreadNotificationCount.value - by;
+    unreadNotificationCount.value = next < 0 ? 0 : next;
+  }
+
+  void clearUnreadNotificationCount() {
+    unreadNotificationCount.value = 0;
   }
 
   Future<void> refreshFavorites() async {

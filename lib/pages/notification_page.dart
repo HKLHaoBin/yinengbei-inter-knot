@@ -27,7 +27,6 @@ class _NotificationPageState extends State<NotificationPage>
   final notifications = <NotificationModel>[].obs;
   final isLoading = false.obs;
   final hasMore = true.obs;
-  final unreadCount = 0.obs;
   final selectedTypes = Rx<List<NotificationType>?>(null);
   final currentTabIndex = 0.obs;
   String endCursor = '';
@@ -85,12 +84,7 @@ class _NotificationPageState extends State<NotificationPage>
   }
 
   Future<void> _loadUnreadCount() async {
-    try {
-      final count = await api.getUnreadNotificationCount();
-      unreadCount.value = count;
-    } catch (e) {
-      debugPrint('Load unread count error: $e');
-    }
+    await c.refreshUnreadNotificationCount();
   }
 
   Future<void> _loadNotifications([String endCursor = '']) async {
@@ -157,6 +151,7 @@ class _NotificationPageState extends State<NotificationPage>
     try {
       final success = await api.markNotificationAsRead(notification.documentId!);
       if (success) {
+        c.decrementUnreadNotificationCount();
         final index =
             notifications.indexWhere((n) => n.id == notification.id);
         if (index != -1) {
@@ -174,7 +169,6 @@ class _NotificationPageState extends State<NotificationPage>
             updatedAt: notification.updatedAt,
           );
           notifications.refresh();
-          _loadUnreadCount();
         }
       }
     } catch (e) {
@@ -201,7 +195,7 @@ class _NotificationPageState extends State<NotificationPage>
             updatedAt: n.updatedAt,
           );
         }).toList();
-        unreadCount.value = 0;
+        c.clearUnreadNotificationCount();
         showToast('全部标记已读');
       }
     } catch (e) {
@@ -293,7 +287,7 @@ class _NotificationPageState extends State<NotificationPage>
                           ),
                         ),
                         Obx(() {
-                          if (unreadCount.value == 0) return const SizedBox.shrink();
+                          if (c.unreadNotificationCount.value == 0) return const SizedBox.shrink();
                           return TextButton(
                             onPressed: _markAllAsRead,
                             child: const Text(
@@ -429,7 +423,7 @@ class _NotificationPageState extends State<NotificationPage>
                             );
                           }),
                           Obx(() {
-                            if (unreadCount.value == 0) return const SizedBox.shrink();
+                            if (c.unreadNotificationCount.value == 0) return const SizedBox.shrink();
                             return TextButton.icon(
                               onPressed: _markAllAsRead,
                               icon: const Icon(

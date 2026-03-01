@@ -6,7 +6,6 @@ import 'package:get/get.dart';
 import 'package:inter_knot/components/my_tab.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/pages/notification_page.dart';
-import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/helpers/page_transition_helper.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/controllers/data.dart';
@@ -21,8 +20,6 @@ class MyAppBar extends StatefulWidget {
 
 class _MyAppBarState extends State<MyAppBar> {
   Timer? _debounce;
-  final api = Get.find<Api>();
-  final unreadNotificationCount = 0.obs;
 
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
@@ -34,23 +31,13 @@ class _MyAppBarState extends State<MyAppBar> {
   @override
   void initState() {
     super.initState();
-    _loadUnreadCount();
+    c.refreshUnreadNotificationCount();
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
     super.dispose();
-  }
-
-  Future<void> _loadUnreadCount() async {
-    if (!c.isLogin.value) return;
-    try {
-      final count = await api.getUnreadNotificationCount();
-      unreadNotificationCount.value = count;
-    } catch (e) {
-      debugPrint('Load unread count error: $e');
-    }
   }
 
   @override
@@ -240,7 +227,7 @@ class _MyAppBarState extends State<MyAppBar> {
                                   }
                                 },
                               )),
-                              if (unreadNotificationCount.value > 0)
+                              if (c.unreadNotificationCount.value > 0)
                                 Positioned(
                                   right: 8,
                                   top: 8,
@@ -259,9 +246,9 @@ class _MyAppBarState extends State<MyAppBar> {
                                       minHeight: 16,
                                     ),
                                     child: Text(
-                                      unreadNotificationCount.value > 99
+                                      c.unreadNotificationCount.value > 99
                                           ? '99+'
-                                          : unreadNotificationCount.value.toString(),
+                                          : c.unreadNotificationCount.value.toString(),
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 9,
@@ -295,7 +282,7 @@ class _MyAppBarState extends State<MyAppBar> {
                               color: Colors.white,
                               size: 20,
                             ),
-                            if (unreadNotificationCount.value > 0)
+                            if (c.unreadNotificationCount.value > 0)
                               Positioned(
                                 right: -2,
                                 top: -2,
@@ -314,9 +301,9 @@ class _MyAppBarState extends State<MyAppBar> {
                                     minHeight: 16,
                                   ),
                                   child: Text(
-                                    unreadNotificationCount.value > 99
+                                    c.unreadNotificationCount.value > 99
                                         ? '99+'
-                                        : unreadNotificationCount.value.toString(),
+                                        : c.unreadNotificationCount.value.toString(),
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 9,
@@ -336,7 +323,7 @@ class _MyAppBarState extends State<MyAppBar> {
                               const NotificationPage(),
                               routeName: '/notifications',
                             );
-                            _loadUnreadCount();
+                            c.refreshUnreadNotificationCount();
                           }
                         },
                         tooltip: '消息中心',
