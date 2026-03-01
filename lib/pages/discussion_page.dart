@@ -160,6 +160,13 @@ class _DiscussionPageState extends State<DiscussionPage> {
     });
   }
 
+  void _handleCommentAdded() {
+    if (mounted) {
+      setState(() {});
+    }
+    _scrollToBottom();
+  }
+
   void _startInitialLoad() {
     if (!mounted) return;
     widget.discussion.fetchComments().then((e) async {
@@ -342,7 +349,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                         widget.discussion,
                                                     hData: widget.hData,
                                                     onCommentAdded:
-                                                        _scrollToBottom,
+                                                        _handleCommentAdded,
                                                     onEditSuccess: () =>
                                                         setState(() {}),
                                                   ),
@@ -404,7 +411,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                 onTap:
                                                     _handleNewCommentNotificationTap,
                                               ),
-                                      onCommentAdded: _scrollToBottom,
+                                      onCommentAdded: _handleCommentAdded,
                                       onEditSuccess: () => setState(() {}),
                                     );
                                   },
