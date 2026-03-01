@@ -56,7 +56,8 @@ class _HomePageState extends State<HomePage>
       );
     }
 
-    final child = Column(
+    // Fixed header sections
+    final fixedHeader = Column(
       children: [
         // ── Hero profile card ──
         Obx(() {
@@ -324,7 +325,8 @@ class _HomePageState extends State<HomePage>
                       const MyDiscussionsPage(),
                       routeName: '/my-discussions',
                     );
-                    // 返回后刷新帖子数量
+                    // 返回后刷新用户信息和帖子数量
+                    await c.refreshSelfUserInfo();
                     final aid = c.authorId.value ?? c.user.value?.authorId;
                     if (aid != null && aid.isNotEmpty) {
                       c.myDiscussionsCount.value = await api.getUserDiscussionCount(aid);
