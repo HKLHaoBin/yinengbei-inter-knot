@@ -7,6 +7,7 @@ import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/toast.dart';
+import 'package:inter_knot/models/comment.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
 import 'package:inter_knot/pages/create_discussion_page.dart';
@@ -130,20 +131,17 @@ class DiscussionActionButtonsState extends State<DiscussionActionButtons>
         }
       }
 
+      final submittedParentId = _parentId;
       _textController.clear();
       _cancel();
 
-      // 先更新计数，再按需补齐评论分页，避免新主评论因分页顺序看不到
-      widget.discussion.commentsCount++;
-
-      if (_parentId == null) {
+      if (submittedParentId == null) {
+        // 主评论：先更新计数，再按需补齐评论分页，避免新主评论因分页顺序看不到
+        widget.discussion.commentsCount++;
         await _syncTopLevelCommentsAfterPost();
       } else {
-        // 回复场景：强制允许继续拉取一次，拿到父评论下最新回复
-        if (widget.discussion.comments.isNotEmpty) {
-          widget.discussion.comments.last.hasNextPage = true;
-        }
-        await widget.discussion.fetchComments();
+        // 楼中楼：重拉当前已加载评论窗口，确保已加载父评论的 replies 被整体刷新
+        await _refreshLoadedCommentsAfterReply(submittedParentId);
       }
 
       // 通知父组件刷新UI
@@ -184,6 +182,78 @@ class DiscussionActionButtonsState extends State<DiscussionActionButtons>
     if (widget.discussion.comments.isEmpty) {
       await widget.discussion.fetchComments();
     }
+  }
+
+  Future<void> _reloadCommentsFromStart({
+    required int targetTopLevelCount,
+  }) async {
+    widget.discussion.comments.clear();
+
+    var guard = 0;
+    while (widget.discussion.hasNextPage() &&
+        _loadedTopLevelCommentCount() < targetTopLevelCount &&
+        guard < 20) {
+      await widget.discussion.fetchComments();
+      guard++;
+    }
+
+    if (widget.discussion.comments.isEmpty) {
+      await widget.discussion.fetchComments();
+    }
+  }
+
+  CommentModel? _findLoadedParentComment(String parentId) {
+    for (final page in widget.discussion.comments) {
+      for (final comment in page.nodes) {
+        if (comment.id == parentId) return comment;
+      }
+    }
+    return null;
+  }
+
+  Future<void> _syncParentRepliesAfterReply(String parentId) async {
+    CommentModel? parent = _findLoadedParentComment(parentId);
+
+    // 父评论未加载时先补页到包含该父评论
+    if (parent == null) {
+      if (widget.discussion.comments.isNotEmpty) {
+        widget.discussion.comments.last.hasNextPage = true;
+      }
+      var guard = 0;
+      while (widget.discussion.hasNextPage() &&
+          _findLoadedParentComment(parentId) == null &&
+          guard < 20) {
+        await widget.discussion.fetchComments();
+        guard++;
+      }
+      parent = _findLoadedParentComment(parentId);
+    }
+
+    final latestParent = await api.getCommentDetail(parentId);
+
+    if (parent != null && latestParent != null) {
+      parent.replies
+        ..clear()
+        ..addAll(latestParent.replies);
+      return;
+    }
+
+    // 兜底：无法定向刷新时尝试增量拉取一次主评论列表
+    if (widget.discussion.comments.isNotEmpty) {
+      widget.discussion.comments.last.hasNextPage = true;
+    }
+    await widget.discussion.fetchComments();
+  }
+
+  Future<void> _refreshLoadedCommentsAfterReply(String parentId) async {
+    final loadedBefore = _loadedTopLevelCommentCount();
+
+    // 先尝试定向刷新父评论 replies（轻量）
+    await _syncParentRepliesAfterReply(parentId);
+
+    // 再重拉已加载窗口（强一致），修复 fetchComments 仅追加不更新已加载页的问题
+    final reloadTarget = loadedBefore > 0 ? loadedBefore : 1;
+    await _reloadCommentsFromStart(targetTopLevelCount: reloadTarget);
   }
 
   void _handleTap() async {

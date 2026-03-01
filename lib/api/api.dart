@@ -727,6 +727,43 @@ class Api extends BaseConnect {
     );
   }
 
+  Future<CommentModel?> getCommentDetail(String commentId) async {
+    if (commentId.isEmpty) return null;
+
+    final populateQuery = <String, String>{
+      'populate[0]': 'author',
+      'populate[1]': 'replies',
+      'populate[replies][populate][0]': 'author',
+      'ts': DateTime.now().millisecondsSinceEpoch.toString(),
+    };
+
+    try {
+      final res = await get('/api/comments/$commentId', query: populateQuery);
+      final data = unwrapData<Map<String, dynamic>>(res);
+      return CommentModel.fromJson(data);
+    } catch (_) {
+      // Fallback for deployments where documentId route is disabled.
+    }
+
+    try {
+      final res = await get(
+        '/api/comments',
+        query: {
+          ...populateQuery,
+          'filters[documentId][\$eq]': commentId,
+          'pagination[limit]': '1',
+        },
+      );
+      final list = unwrapData<List<dynamic>>(res);
+      if (list.isEmpty) return null;
+      final first = list.first;
+      if (first is! Map<String, dynamic>) return null;
+      return CommentModel.fromJson(first);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<Response<Map<String, dynamic>>> addDiscussionComment(
     String discussionId,
     String body, {
