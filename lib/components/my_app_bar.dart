@@ -213,32 +213,34 @@ class _MyAppBarState extends State<MyAppBar> {
                             },
                           ),
                           // 消息中心按钮
-                          Stack(
+                          Obx(() => Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              Obx(() => MyTab(
+                              MyTab(
                                 text: '消息',
                                 middle: true,
                                 isSelected: c.selectedIndex.value == 2,
                                 onTap: () async {
                                   if (await c.ensureLogin()) {
-                                    // 桌面端：切换到消息中心页面
                                     c.animateToPage(2, animate: false);
                                   }
                                 },
-                              )),
+                              ),
                               if (c.unreadNotificationCount.value > 0)
                                 Positioned(
-                                  right: 8,
-                                  top: 8,
+                                  right: 18,
+                                  top: 3,
                                   child: Container(
-                                    padding: const EdgeInsets.all(4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.red,
-                                      shape: BoxShape.circle,
+                                      borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
                                         color: Colors.black,
-                                        width: 1.5,
+                                        width: 1,
                                       ),
                                     ),
                                     constraints: const BoxConstraints(
@@ -253,13 +255,14 @@ class _MyAppBarState extends State<MyAppBar> {
                                         color: Colors.white,
                                         fontSize: 9,
                                         fontWeight: FontWeight.bold,
+                                        height: 1,
                                       ),
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
                                 ),
                             ],
-                          ),
+                          )),
                           MyTab(
                             text: '我的',
                             last: true,
@@ -280,12 +283,12 @@ class _MyAppBarState extends State<MyAppBar> {
                             const Icon(
                               Icons.notifications_outlined,
                               color: Colors.white,
-                              size: 20,
+                              size: 24,
                             ),
                             if (c.unreadNotificationCount.value > 0)
                               Positioned(
-                                right: -2,
-                                top: -2,
+                                right: -5,
+                                top: -10,
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
@@ -297,8 +300,8 @@ class _MyAppBarState extends State<MyAppBar> {
                                     ),
                                   ),
                                   constraints: const BoxConstraints(
-                                    minWidth: 16,
-                                    minHeight: 16,
+                                    minWidth: 18,
+                                    minHeight: 18,
                                   ),
                                   child: Text(
                                     c.unreadNotificationCount.value > 99
@@ -306,7 +309,7 @@ class _MyAppBarState extends State<MyAppBar> {
                                         : c.unreadNotificationCount.value.toString(),
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 9,
+                                      fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                     ),
                                     textAlign: TextAlign.center,
