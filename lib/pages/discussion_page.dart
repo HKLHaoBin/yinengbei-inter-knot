@@ -231,6 +231,20 @@ class _DiscussionPageState extends State<DiscussionPage> {
     });
   }
 
+  void _handleCommentAdded() {
+    if (!mounted) return;
+    setState(() {});
+    _scrollToBottom();
+  }
+
+  int _loadedTopLevelCommentCount() {
+    var count = 0;
+    for (final page in widget.discussion.comments) {
+      count += page.nodes.length;
+    }
+    return count;
+  }
+
   Future<void> _handleNewCommentNotificationTap(NewCommentCounts counts) async {
     widget.discussion.commentsCount = counts.serverCount;
     _newCommentCounts.value = const NewCommentCounts(newCount: 0, serverCount: 0);
@@ -239,7 +253,17 @@ class _DiscussionPageState extends State<DiscussionPage> {
       widget.discussion.comments.last.hasNextPage = true;
     }
 
-    await widget.discussion.fetchComments();
+    var guard = 0;
+    while (widget.discussion.hasNextPage() &&
+        _loadedTopLevelCommentCount() < widget.discussion.commentsCount &&
+        guard < 20) {
+      await widget.discussion.fetchComments();
+      guard++;
+    }
+
+    if (widget.discussion.comments.isEmpty) {
+      await widget.discussion.fetchComments();
+    }
     if (mounted) setState(() {});
     _scrollToBottom();
   }
@@ -342,7 +366,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                         widget.discussion,
                                                     hData: widget.hData,
                                                     onCommentAdded:
-                                                        _scrollToBottom,
+                                                        _handleCommentAdded,
                                                     onEditSuccess: () =>
                                                         setState(() {}),
                                                   ),
@@ -404,7 +428,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                 onTap:
                                                     _handleNewCommentNotificationTap,
                                               ),
-                                      onCommentAdded: _scrollToBottom,
+                                      onCommentAdded: _handleCommentAdded,
                                       onEditSuccess: () => setState(() {}),
                                     );
                                   },
