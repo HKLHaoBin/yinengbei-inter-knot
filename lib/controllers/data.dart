@@ -419,6 +419,7 @@ class Controller extends GetxController {
         user.value = null;
         authorId.value = null;
         clearUnreadNotificationCount();
+        myDiscussionsCount.value = 0;
         _clearCachedAvatarForUser(u);
         box.remove('access_token');
         bookmarks.clear();

@@ -615,6 +615,19 @@ class _MyDiscussionsTabState extends State<_MyDiscussionsTab> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
+      // Show login prompt if not logged in
+      if (!c.isLogin.value) {
+        return const Center(
+          child: DiscussionEmptyState(
+            message: '请登录后查看',
+            textStyle: TextStyle(
+              color: Color(0xff808080),
+              fontSize: 16,
+            ),
+          ),
+        );
+      }
+      
       return DiscussionGrid(
         list: discussions(),
         hasNextPage: hasNextPage(),
@@ -707,6 +720,19 @@ class _MyFavoritesTabState extends State<_MyFavoritesTab> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
+      // Show login prompt if not logged in
+      if (!c.isLogin.value) {
+        return const Center(
+          child: DiscussionEmptyState(
+            message: '请登录后查看',
+            textStyle: TextStyle(
+              color: Color(0xff808080),
+              fontSize: 16,
+            ),
+          ),
+        );
+      }
+      
       return DiscussionGrid(
         list: discussions(),
         hasNextPage: hasNextPage(),
