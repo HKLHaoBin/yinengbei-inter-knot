@@ -138,8 +138,7 @@ class MyHomePage extends GetView<Controller> {
             const MyAppBar(),
             Expanded(
               child: PageView(
-                physics:
-                    const CustomPageViewScrollPhysics(), // Use custom physics
+                physics: const NeverScrollableScrollPhysics(), // Disable swipe gesture
                 controller: controller.pageController,
                 onPageChanged: (index) =>
                     controller.selectedIndex.value = index,
