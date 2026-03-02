@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:zoom_tap_animation/zoom_tap_animation.dart';
 
 class TouchRippleFeedback extends StatelessWidget {
   const TouchRippleFeedback({
@@ -8,37 +9,34 @@ class TouchRippleFeedback extends StatelessWidget {
     required this.child,
     this.onLongPress,
     this.borderRadius,
-    this.color = const Color(0x30FFFFFF),
   });
 
   final Widget child;
   final FutureOr<void> Function()? onLongPress;
   final BorderRadius? borderRadius;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final radius = borderRadius ?? BorderRadius.zero;
+    final content = borderRadius == null
+        ? child
+        : ClipRRect(
+            borderRadius: borderRadius!,
+            child: child,
+          );
 
-    return Material(
-      type: MaterialType.transparency,
-      clipBehavior: Clip.antiAlias,
-      borderRadius: radius,
-      child: InkResponse(
-        containedInkWell: true,
-        highlightShape: BoxShape.rectangle,
-        splashFactory: InkSplash.splashFactory,
-        splashColor: color,
-        highlightColor: Colors.transparent,
-        onTap: () {},
-        onLongPress: () {
-          final callback = onLongPress;
-          if (callback != null) {
-            unawaited(Future<void>.sync(callback));
-          }
-        },
-        child: child,
-      ),
+    return ZoomTapAnimation(
+      begin: 1.0,
+      end: 0.95,
+      beginDuration: const Duration(milliseconds: 20),
+      endDuration: const Duration(milliseconds: 120),
+      enableLongTapRepeatEvent: false,
+      onTap: () {},
+      onLongTap: () {
+        final callback = onLongPress;
+        if (callback == null) return;
+        unawaited(Future<void>.sync(callback));
+      },
+      child: content,
     );
   }
 }
