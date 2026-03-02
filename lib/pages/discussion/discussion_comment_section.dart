@@ -8,6 +8,7 @@ class DiscussionCommentSection extends StatelessWidget {
     required this.discussion,
     required this.isInitialLoading,
     required this.onReply,
+    this.onCommentDeleted,
     this.useListView = false,
     this.controller,
     this.physics,
@@ -17,6 +18,7 @@ class DiscussionCommentSection extends StatelessWidget {
   final DiscussionModel discussion;
   final bool isInitialLoading;
   final void Function(String id, String? userName, {bool addPrefix}) onReply;
+  final VoidCallback? onCommentDeleted;
 
   final bool useListView;
   final ScrollController? controller;
@@ -29,6 +31,7 @@ class DiscussionCommentSection extends StatelessWidget {
       discussion: discussion,
       loading: isInitialLoading,
       onReply: onReply,
+      onCommentDeleted: onCommentDeleted,
       useListView: useListView,
       controller: controller,
       physics: physics,

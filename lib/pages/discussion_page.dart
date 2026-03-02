@@ -167,6 +167,12 @@ class _DiscussionPageState extends State<DiscussionPage> {
     _scrollToBottom();
   }
 
+  void _handleCommentDeleted() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   void _startInitialLoad() {
     if (!mounted) return;
     widget.discussion.fetchComments().then((e) async {
@@ -381,6 +387,8 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                               addPrefix:
                                                                   addPrefix,
                                                             ),
+                                                        onCommentDeleted:
+                                                            _handleCommentDeleted,
                                                       ),
                                                     ],
                                                   ),
@@ -412,6 +420,7 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                     _handleNewCommentNotificationTap,
                                               ),
                                       onCommentAdded: _handleCommentAdded,
+                                      onCommentDeleted: _handleCommentDeleted,
                                       onEditSuccess: () => setState(() {}),
                                     );
                                   },

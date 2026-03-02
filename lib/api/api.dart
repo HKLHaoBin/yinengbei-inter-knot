@@ -1030,6 +1030,9 @@ class Api extends BaseConnect {
   Future<Response<Map<String, dynamic>>> deleteDiscussion(String id) =>
       delete('/api/articles/$id');
 
+  Future<Response<Map<String, dynamic>>> deleteComment(String id) =>
+      delete('/api/comments/$id');
+
   Future<PaginationModel<HDataModel>> getPinnedDiscussions(String? endCur) {
     // Reusing search/list endpoint with isPinned=true filter
     final start = int.tryParse(endCur?.isEmpty == true ? '0' : endCur!) ?? 0;

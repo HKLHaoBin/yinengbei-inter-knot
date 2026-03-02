@@ -19,6 +19,7 @@ class DiscussionDesktopBody extends StatelessWidget {
     required this.actionButtonsKey,
     required this.buildNewCommentNotification,
     required this.onCommentAdded,
+    required this.onCommentDeleted,
     required this.onEditSuccess,
   });
 
@@ -31,6 +32,7 @@ class DiscussionDesktopBody extends StatelessWidget {
   final GlobalKey<DiscussionActionButtonsState> actionButtonsKey;
   final Widget Function() buildNewCommentNotification;
   final VoidCallback onCommentAdded;
+  final VoidCallback onCommentDeleted;
   final VoidCallback onEditSuccess;
 
   @override
@@ -135,6 +137,7 @@ class DiscussionDesktopBody extends StatelessWidget {
                               userName,
                               addPrefix: addPrefix,
                             ),
+                            onCommentDeleted: onCommentDeleted,
                           ),
                         ),
                         buildNewCommentNotification(),
