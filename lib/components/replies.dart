@@ -3,6 +3,7 @@ import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/my_chip.dart';
+import 'package:inter_knot/components/touch_ripple_feedback.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/controllers/data.dart';
@@ -216,8 +217,7 @@ class _RepliesState extends State<Replies> {
         for (final reply in widget.comment.replies)
           isMobile
               ? _buildMobileReplyItem(reply, c)
-              : GestureDetector(
-                  behavior: HitTestBehavior.opaque,
+              : TouchRippleFeedback(
                   onLongPress: () => _showReplyActions(reply),
                   child: ListTile(
                     titleAlignment: ListTileTitleAlignment.top,
@@ -387,8 +387,7 @@ class _RepliesState extends State<Replies> {
     final baseTitleStyle =
         Theme.of(context).textTheme.titleMedium ?? const TextStyle();
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return TouchRippleFeedback(
       onLongPress: () => _showReplyActions(reply as CommentModel),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),

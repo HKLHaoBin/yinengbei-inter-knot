@@ -6,6 +6,7 @@ import 'package:inter_knot/components/avatar.dart';
 import 'package:inter_knot/components/image_viewer.dart';
 import 'package:inter_knot/components/my_chip.dart';
 import 'package:inter_knot/components/replies.dart';
+import 'package:inter_knot/components/touch_ripple_feedback.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
@@ -224,8 +225,7 @@ class _CommentState extends State<Comment> {
   }
 
   Widget _buildCommentItem(CommentModel comment, int index, bool isMobile) {
-    Widget content = GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    Widget content = TouchRippleFeedback(
       onLongPress: () => _showCommentActions(comment),
       child: ListTile(
         titleAlignment: ListTileTitleAlignment.top,
