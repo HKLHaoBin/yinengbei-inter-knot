@@ -30,7 +30,10 @@ class _CoverState extends State<Cover> {
     final covers = widget.discussion.covers;
 
     if (covers.isEmpty) {
-      return Assets.images.defaultCover.image(fit: BoxFit.contain);
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Assets.images.defaultCover.image(fit: BoxFit.contain),
+      );
     }
 
     if (covers.length == 1) {
@@ -45,15 +48,18 @@ class _CoverState extends State<Cover> {
             imageUrls: covers,
             heroTagPrefix: 'cover-${widget.discussion.id}',
           ),
-          child: NetworkImageBox(
-            url: url,
-            fit: BoxFit.contain,
-            gaplessPlayback: true,
-            loadingBuilder: (context, progress) => const SizedBox.shrink(),
-            errorBuilder: (context) =>
-                Assets.images.defaultCover.image(fit: BoxFit.contain),
-            fadeInDuration: const Duration(milliseconds: 400),
-            fadeOutDuration: const Duration(milliseconds: 200),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: NetworkImageBox(
+              url: url,
+              fit: BoxFit.contain,
+              gaplessPlayback: true,
+              loadingBuilder: (context, progress) => const SizedBox.shrink(),
+              errorBuilder: (context) =>
+                  Assets.images.defaultCover.image(fit: BoxFit.contain),
+              fadeInDuration: const Duration(milliseconds: 400),
+              fadeOutDuration: const Duration(milliseconds: 200),
+            ),
           ),
         ),
       );
