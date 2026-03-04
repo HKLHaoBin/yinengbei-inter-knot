@@ -6,6 +6,7 @@ import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/api/api_exception.dart';
 import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/controllers/data.dart';
+import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/profile_dialogs.dart';
 import 'package:inter_knot/pages/history_page.dart';
 import 'package:inter_knot/pages/liked_page.dart';
@@ -620,6 +621,69 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  void _showLevelRulesDialog(BuildContext context) {
+    showZZZDialog(
+      context: context,
+      pageBuilder: (context) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 330,
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xff1E1E1E),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xff313132),
+                  width: 3,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '经验规则说明',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    '每日签到：\n- 基础经验：10 XP\n- 连签奖励：每天额外 +2 XP\n- 每日上限：50 XP（基础 + 奖励）\n\n发布文章：\n- 每次发布：12 XP\n\n发表评论：\n- 每次评论：3 XP',
+                    style: TextStyle(
+                      color: Color(0xffB8B8B8),
+                      fontSize: 14,
+                      height: 1.55,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text(
+                        '我知道了',
+                        style: TextStyle(
+                          color: Color(0xffD7FF00),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildMobileLevelAndCheckInSection(BuildContext context, dynamic user) {
     const levelTable = [
       (level: 6, exp: 3200, title: '传奇绳匠'),
@@ -664,14 +728,14 @@ class _HomePageState extends State<HomePage>
     final cannotCheckInNow = !user.canCheckIn;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         color: const Color(0xff1E1E1E),
         border: Border.all(color: const Color(0xff2A2A2A), width: 1),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -700,18 +764,21 @@ class _HomePageState extends State<HomePage>
                   ),
                 ),
                 const Spacer(),
-                Tooltip(
-                  message:
-                      '每日签到 ：\n- 基础经验： 10 XP\n- 连签奖励：每天额外 +2 XP\n- 每日上限： 50 XP (基础 + 奖励)\n发布文章 ：\n- 每次发布： 12 XP\n发表评论 ：\n- 每次评论： 3 XP',
-                  child: const Icon(
-                    Icons.help_outline_rounded,
-                    size: 16,
-                    color: Color(0xff505050),
+                GestureDetector(
+                  onTap: () => _showLevelRulesDialog(context),
+                  behavior: HitTestBehavior.opaque,
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.help_outline_rounded,
+                      size: 16,
+                      color: Color(0xff505050),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             // Level badge + exp
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -761,7 +828,7 @@ class _HomePageState extends State<HomePage>
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             // Progress bar
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
@@ -772,14 +839,14 @@ class _HomePageState extends State<HomePage>
                 minHeight: 8,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             // Check-in button
             SizedBox(
               width: double.infinity,
               child: cannotCheckInNow
                   ? Container(
                       alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
                         color: const Color(0xff2A2A2A),
@@ -879,7 +946,7 @@ class _HomePageState extends State<HomePage>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xffD7FF00),
                         foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
