@@ -25,6 +25,7 @@ dependencies:
   get_storage: ^2.1.1
   html: ^0.15.4
   http: ^1.2.0
+  flutter_image_compress: ^2.4.0
   image_picker: ^1.1.2
   intl: ^0.20.2
   logger: ^2.4.0

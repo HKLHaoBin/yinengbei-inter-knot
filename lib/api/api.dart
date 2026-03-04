@@ -364,6 +364,42 @@ class Api extends BaseConnect {
     return 'image/jpeg';
   }
 
+  String _normalizeImageMimeType({
+    required String filename,
+    required String mimeType,
+  }) {
+    final normalized = mimeType.trim().toLowerCase().split(';').first;
+    const supported = <String>{
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/bmp',
+    };
+
+    final lowerFilename = filename.toLowerCase();
+    final hasKnownImageExtension =
+        lowerFilename.endsWith('.jpg') ||
+            lowerFilename.endsWith('.jpeg') ||
+            lowerFilename.endsWith('.png') ||
+            lowerFilename.endsWith('.gif') ||
+            lowerFilename.endsWith('.webp') ||
+            lowerFilename.endsWith('.bmp');
+
+    // 某些平台（尤其移动端）会返回错误 mimeType；如果文件后缀明确，优先信任后缀。
+    if (hasKnownImageExtension) {
+      return _contentTypeFromFilename(filename);
+    }
+
+    if (normalized == 'image/jpg') return 'image/jpeg';
+
+    if (supported.contains(normalized)) {
+      return normalized;
+    }
+
+    return _contentTypeFromFilename(filename);
+  }
+
   String _slugify(String input, {bool ensureUnique = false}) {
     final normalized = input
         .toLowerCase()
@@ -1300,19 +1336,54 @@ class Api extends BaseConnect {
     required String mimeType,
     required void Function(int percent) onProgress,
   }) async {
+    final normalizedMimeType = _normalizeImageMimeType(
+      filename: filename,
+      mimeType: mimeType,
+    );
+
     final form = FormData({
-      'files': MultipartFile(bytes, filename: filename, contentType: mimeType),
+      'files': MultipartFile(
+        bytes,
+        filename: filename,
+        contentType: normalizedMimeType,
+      ),
     });
 
     final res = await post(
       '/api/upload',
       form,
-      uploadProgress: (percent) => onProgress((percent * 100).round()),
+      uploadProgress: (percent) {
+        final normalizedPercent = percent <= 1 ? percent * 100 : percent;
+        onProgress(normalizedPercent.round().clamp(0, 100).toInt());
+      },
     );
 
     if (res.hasError) {
-      throw ApiException(res.statusText ?? 'Upload failed',
-          statusCode: res.statusCode);
+      String message = res.statusText ?? 'Upload failed';
+      final body = res.body;
+      if (body is Map) {
+        final error = body['error'];
+        if (error is Map && error['message'] != null) {
+          message = error['message'].toString();
+        } else if (error is String && error.isNotEmpty) {
+          message = error;
+        }
+      }
+
+      if (res.statusCode == 413) {
+        message = '图片过大，上传失败（413）';
+      }
+
+      debugPrint(
+        'uploadImage failed: filename=$filename, size=${bytes.length}, '
+        'mime=$mimeType, normalizedMime=$normalizedMimeType, '
+        'status=${res.statusCode}, body=${res.bodyString}',
+      );
+      throw ApiException(
+        message,
+        statusCode: res.statusCode,
+        details: res.bodyString,
+      );
     }
 
     final body = res.body;
