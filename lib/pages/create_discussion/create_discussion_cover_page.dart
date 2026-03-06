@@ -1,9 +1,11 @@
 import 'dart:typed_data';
 
 import 'package:desktop_drop/desktop_drop.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/image_viewer.dart';
+import 'package:inter_knot/helpers/image_compress_helper.dart';
 import 'package:inter_knot/helpers/upload_task.dart';
 
 typedef DroppedImageFile = ({String filename, Uint8List bytes, String mimeType});
@@ -18,6 +20,8 @@ class CreateDiscussionCoverPage extends StatelessWidget {
     required this.onRetryAt,
     required this.onDroppedImages,
     required this.onDraggingChanged,
+    required this.compressFormatOption,
+    required this.onFormatOptionChanged,
   });
 
   final RxList<UploadTask> uploadTasks;
@@ -27,6 +31,8 @@ class CreateDiscussionCoverPage extends StatelessWidget {
   final void Function(UploadTask task) onRetryAt;
   final Future<void> Function(List<DroppedImageFile> files) onDroppedImages;
   final ValueChanged<bool> onDraggingChanged;
+  final CompressFormatOption compressFormatOption;
+  final ValueChanged<CompressFormatOption> onFormatOptionChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +105,109 @@ class CreateDiscussionCoverPage extends StatelessWidget {
             ),
           ),
         ),
+        // 实验性压缩格式切换按钮
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: const BoxDecoration(
+            border: Border(
+              top: BorderSide(color: Color(0xff313132)),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xffFBC02D).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: const Color(0xffFBC02D).withValues(alpha: 0.5),
+                  ),
+                ),
+                child: const Text(
+                  '实验性',
+                  style: TextStyle(
+                    color: Color(0xffFBC02D),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                '压缩格式:',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(width: 8),
+              _buildFormatChip('JPEG', CompressFormatOption.jpeg),
+              const SizedBox(width: 8),
+              _buildFormatChip('无损WebP', CompressFormatOption.losslessWebp),
+              const SizedBox(width: 8),
+              _buildFormatChip('高质量AVIF', CompressFormatOption.highQualityAvif),
+            ],
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildFormatChip(String label, CompressFormatOption option) {
+    final isSelected = compressFormatOption == option;
+    // AVIF 在 Web 平台禁用
+    final isAvif = option == CompressFormatOption.highQualityAvif;
+    final isDisabled = isAvif && kIsWeb;
+
+    return MouseRegion(
+      cursor: isDisabled ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: isDisabled ? null : () => onFormatOptionChanged(option),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: isDisabled
+                ? const Color(0xff1E1E1E)
+                : isSelected
+                    ? const Color(0xffD7FF00).withValues(alpha: 0.2)
+                    : const Color(0xff1E1E1E),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDisabled
+                  ? const Color(0xff313132).withValues(alpha: 0.5)
+                  : isSelected
+                      ? const Color(0xffD7FF00)
+                      : const Color(0xff313132),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: isDisabled
+                      ? Colors.grey.withValues(alpha: 0.5)
+                      : isSelected
+                          ? const Color(0xffD7FF00)
+                          : Colors.grey,
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              if (isDisabled) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.desktop_windows,
+                  size: 10,
+                  color: Colors.grey.withValues(alpha: 0.5),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

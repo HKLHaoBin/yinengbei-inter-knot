@@ -83,6 +83,9 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   bool isLoading = false;
   int _selectedIndex = 0;
 
+  /// 图片压缩格式选项（实验性功能）
+  CompressFormatOption _compressFormatOption = CompressFormatOption.jpeg;
+
   final c = Get.find<Controller>();
   late final api = Get.find<Api>();
 
@@ -190,11 +193,16 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         // 先让 UI 有机会渲染“压缩中”状态
         await Future<void>.delayed(const Duration(milliseconds: 16));
 
-        compressed = await ImageCompressHelper.compress(
+        final result = await ImageCompressHelper.compress(
           bytes: task.bytes,
           filename: task.filename,
           mimeType: task.mimeType,
+          formatOption: _compressFormatOption,
         );
+        compressed = result.bytes;
+        // 更新文件名和 MIME 类型为压缩后的格式
+        task.filename = result.filename;
+        task.mimeType = result.mimeType;
       } finally {
         _releaseCompressionSlot();
       }
@@ -306,22 +314,28 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       // 压缩图片后再上传
       await _acquireCompressionSlot();
       final Uint8List compressed;
+      final String compressedFilename;
+      final String compressedMimeType;
       try {
         // 给 UI 一个渲染帧，避免主线程长任务造成“假死感”
         await Future<void>.delayed(const Duration(milliseconds: 16));
-        compressed = await ImageCompressHelper.compress(
+        final compressResult = await ImageCompressHelper.compress(
           bytes: bytes,
           filename: filename,
           mimeType: mimeType,
+          formatOption: _compressFormatOption,
         );
+        compressed = compressResult.bytes;
+        compressedFilename = compressResult.filename;
+        compressedMimeType = compressResult.mimeType;
       } finally {
         _releaseCompressionSlot();
       }
 
       final result = await api.uploadImage(
         bytes: compressed,
-        filename: filename,
-        mimeType: mimeType,
+        filename: compressedFilename,
+        mimeType: compressedMimeType,
         onProgress: (_) {},
       );
 
@@ -823,6 +837,12 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
           onDraggingChanged: (isDragging) {
             setState(() {
               _isDragging = isDragging;
+            });
+          },
+          compressFormatOption: _compressFormatOption,
+          onFormatOptionChanged: (option) {
+            setState(() {
+              _compressFormatOption = option;
             });
           },
         ),
