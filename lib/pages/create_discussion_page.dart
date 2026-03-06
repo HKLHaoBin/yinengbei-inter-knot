@@ -185,6 +185,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       // 1. 压缩阶段（限流，防止多图并发压缩导致 UI 卡死）
       await _acquireCompressionSlot();
       final Uint8List compressed;
+      late final CompressionResult compressResult;
       try {
         task.status.value = UploadStatus.compressing;
         task.progress.value = 0;
@@ -193,16 +194,13 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         // 先让 UI 有机会渲染“压缩中”状态
         await Future<void>.delayed(const Duration(milliseconds: 16));
 
-        final result = await ImageCompressHelper.compress(
+        compressResult = await ImageCompressHelper.compress(
           bytes: task.bytes,
           filename: task.filename,
           mimeType: task.mimeType,
           formatOption: _compressFormatOption,
         );
-        compressed = result.bytes;
-        // 更新文件名和 MIME 类型为压缩后的格式
-        task.filename = result.filename;
-        task.mimeType = result.mimeType;
+        compressed = compressResult.bytes;
       } finally {
         _releaseCompressionSlot();
       }
@@ -215,8 +213,8 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
       final result = await api.uploadImage(
         bytes: compressed,
-        filename: task.filename,
-        mimeType: task.mimeType,
+        filename: compressResult.filename,
+        mimeType: compressResult.mimeType,
         onProgress: (percent) {
           task.progress.value = percent;
         },
@@ -314,12 +312,13 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       // 压缩图片后再上传
       await _acquireCompressionSlot();
       final Uint8List compressed;
+      late final CompressionResult compressResult;
       final String compressedFilename;
       final String compressedMimeType;
       try {
         // 给 UI 一个渲染帧，避免主线程长任务造成“假死感”
         await Future<void>.delayed(const Duration(milliseconds: 16));
-        final compressResult = await ImageCompressHelper.compress(
+        compressResult = await ImageCompressHelper.compress(
           bytes: bytes,
           filename: filename,
           mimeType: mimeType,

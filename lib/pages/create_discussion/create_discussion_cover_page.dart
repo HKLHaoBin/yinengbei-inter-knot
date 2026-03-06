@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:desktop_drop/desktop_drop.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/image_viewer.dart';
@@ -145,8 +144,6 @@ class CreateDiscussionCoverPage extends StatelessWidget {
               _buildFormatChip('JPEG', CompressFormatOption.jpeg),
               const SizedBox(width: 8),
               _buildFormatChip('无损WebP', CompressFormatOption.losslessWebp),
-              const SizedBox(width: 8),
-              _buildFormatChip('高质量AVIF', CompressFormatOption.highQualityAvif),
             ],
           ),
         ),
@@ -156,55 +153,30 @@ class CreateDiscussionCoverPage extends StatelessWidget {
 
   Widget _buildFormatChip(String label, CompressFormatOption option) {
     final isSelected = compressFormatOption == option;
-    // AVIF 在 Web 平台禁用
-    final isAvif = option == CompressFormatOption.highQualityAvif;
-    final isDisabled = isAvif && kIsWeb;
-
     return MouseRegion(
-      cursor: isDisabled ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
+      cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: isDisabled ? null : () => onFormatOptionChanged(option),
+        onTap: () => onFormatOptionChanged(option),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: isDisabled
-                ? const Color(0xff1E1E1E)
-                : isSelected
-                    ? const Color(0xffD7FF00).withValues(alpha: 0.2)
-                    : const Color(0xff1E1E1E),
+            color: isSelected
+                ? const Color(0xffD7FF00).withValues(alpha: 0.2)
+                : const Color(0xff1E1E1E),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isDisabled
-                  ? const Color(0xff313132).withValues(alpha: 0.5)
-                  : isSelected
-                      ? const Color(0xffD7FF00)
-                      : const Color(0xff313132),
+              color: isSelected
+                  ? const Color(0xffD7FF00)
+                  : const Color(0xff313132),
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: isDisabled
-                      ? Colors.grey.withValues(alpha: 0.5)
-                      : isSelected
-                          ? const Color(0xffD7FF00)
-                          : Colors.grey,
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-              if (isDisabled) ...[
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.desktop_windows,
-                  size: 10,
-                  color: Colors.grey.withValues(alpha: 0.5),
-                ),
-              ],
-            ],
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? const Color(0xffD7FF00) : Colors.grey,
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
           ),
         ),
       ),

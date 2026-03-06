@@ -32,14 +32,14 @@ class UploadTask {
   /// 本地唯一标识
   final String localId;
 
-  /// 文件名（压缩后可能会改变）
-  String filename;
+  /// 文件名
+  final String filename;
 
   /// 原始字节（上传用）
   Uint8List bytes;
 
-  /// MIME 类型（压缩后可能会改变）
-  String mimeType;
+  /// MIME 类型
+  final String mimeType;
 
   /// 上传状态
   final Rx<UploadStatus> status = UploadStatus.pending.obs;

@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_avif/flutter_avif.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 /// 压缩格式选项
@@ -8,8 +7,6 @@ enum CompressFormatOption {
   jpeg,
   /// 无损 WebP（实验性）
   losslessWebp,
-  /// 高质量 AVIF（实验性）
-  highQualityAvif,
 }
 
 /// 压缩结果
@@ -39,11 +36,6 @@ class ImageCompressHelper {
   /// 低于此大小不压缩（200KB）
   static const int _skipThreshold = 200 * 1024;
 
-  /// AVIF 编码量化器参数 (0-63, 值越小质量越高)
-  /// 设置量化器值以达到约 85% 质量
-  static const int _avifMaxQuantizer = 20;
-  static const int _avifMinQuantizer = 10;
-
   /// 压缩图片字节数据
   ///
   /// [bytes] 原始图片二进制
@@ -69,23 +61,6 @@ class ImageCompressHelper {
     }
 
     try {
-      // AVIF 格式使用 flutter_avif 库编码（Web 平台不支持，降级为 JPEG）
-      if (formatOption == CompressFormatOption.highQualityAvif) {
-        if (!kIsWeb) {
-          final avifBytes = await _compressToAvif(bytes);
-          // 更新文件名后缀为 .avif
-          final newFilename = _changeExtension(filename, 'avif');
-          return CompressionResult(
-            bytes: avifBytes,
-            filename: newFilename,
-            mimeType: 'image/avif',
-          );
-        } else {
-          // Web 平台降级为高质量 JPEG
-          debugPrint('[ImageCompress] AVIF not supported on Web, using high quality JPEG instead');
-        }
-      }
-
       final CompressFormat format;
       final int quality;
       final String newExtension;
@@ -97,12 +72,6 @@ class ImageCompressHelper {
           quality = 100; // 无损 WebP
           newExtension = 'webp';
           newMimeType = 'image/webp';
-        case CompressFormatOption.highQualityAvif:
-          // Web 平台：降级为高质量 JPEG (quality 90)
-          format = CompressFormat.jpeg;
-          quality = 90;
-          newExtension = 'jpg';
-          newMimeType = 'image/jpeg';
         case CompressFormatOption.jpeg:
         default:
           format = _isWebp(filename, mimeType)
@@ -154,35 +123,6 @@ class ImageCompressHelper {
     } catch (e) {
       debugPrint('[ImageCompress] Failed: $e, using original');
       return CompressionResult(bytes: bytes, filename: filename, mimeType: mimeType);
-    }
-  }
-
-  /// 使用 flutter_avif 编码为 AVIF 格式
-  static Future<Uint8List> _compressToAvif(Uint8List bytes) async {
-    try {
-      // 使用 flutter_avif 编码为 AVIF
-      // 量化器参数：0-63，值越小质量越高
-      final avifBytes = await encodeAvif(
-        bytes,
-        maxQuantizer: _avifMaxQuantizer,
-        minQuantizer: _avifMinQuantizer,
-        speed: 6, // 编码速度 (0-10)，6 是质量和速度的折中
-      );
-
-      // 如果压缩后反而变大，使用原图
-      if (avifBytes.length >= bytes.length) {
-        debugPrint(
-            '[ImageCompress] AVIF Skipped: compressed ${avifBytes.length} >= original ${bytes.length}');
-        return bytes;
-      }
-
-      debugPrint(
-          '[ImageCompress] AVIF(高质量): ${bytes.length} -> ${avifBytes.length} bytes '
-          '(${(100 - avifBytes.length * 100 ~/ bytes.length)}% saved)');
-      return avifBytes;
-    } catch (e) {
-      debugPrint('[ImageCompress] AVIF encoding failed: $e, fallback to original');
-      return bytes;
     }
   }
 
