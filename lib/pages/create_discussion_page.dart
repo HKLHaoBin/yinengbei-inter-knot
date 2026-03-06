@@ -721,20 +721,92 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         );
       } else {
         // Create Mode
-        var slug = _slugify(title);
+        final baseSlug = _slugify(title);
+        var slug = baseSlug == 'post' ? _slugifyUnique(title) : baseSlug;
         final user = c.user.value;
         final authorId = c.authorId.value ?? await c.ensureAuthorForUser(user);
         if (authorId == null || authorId.isEmpty) {
           throw Exception('无法关联作者，请重新登录后再试');
         }
 
+        dynamic currentCoverId = finalCoverId;
         res = await api.createArticle(
           title: title,
           text: markdownText,
           slug: slug,
-          coverId: finalCoverId,
+          coverId: currentCoverId,
           authorId: authorId,
         );
+
+        final firstError = res.body?['error'];
+        final firstErrorCode = firstError is Map
+            ? firstError['code']?.toString()
+            : null;
+        if (firstErrorCode == 'PolicyError') {
+          debugPrint(
+            '[CreateArticle] PolicyError. '
+            'slug=$slug, authorId=$authorId, coverType=${finalCoverId.runtimeType}, '
+            'coverCount=${currentCoverId is List ? currentCoverId.length : (currentCoverId == null ? 0 : 1)}, '
+            'textHasWebp=${markdownText.toLowerCase().contains(".webp")}',
+          );
+        }
+
+        // 一些后端策略只接受单封面关系；若当前是多封面数组，自动回退为首图重试。
+        if (firstErrorCode == 'PolicyError' &&
+            currentCoverId is List &&
+            currentCoverId.isNotEmpty) {
+          final firstCover = currentCoverId.first;
+          currentCoverId = firstCover;
+          debugPrint(
+            '[CreateArticle] Retry with single cover due to PolicyError: $firstCover',
+          );
+          res = await api.createArticle(
+            title: title,
+            text: markdownText,
+            slug: slug,
+            coverId: currentCoverId,
+            authorId: authorId,
+          );
+        }
+
+        final secondError = res.body?['error'];
+        final secondErrorCode = secondError is Map
+            ? secondError['code']?.toString()
+            : null;
+        // 某些后端策略不允许客户端显式传 author，要求后端按登录态绑定作者。
+        if (secondErrorCode == 'PolicyError') {
+          debugPrint(
+            '[CreateArticle] Retry without author due to PolicyError. authorId=$authorId',
+          );
+          res = await api.createArticle(
+            title: title,
+            text: markdownText,
+            slug: slug,
+            coverId: currentCoverId,
+          );
+        }
+
+        final thirdError = res.body?['error'];
+        final thirdErrorCode = thirdError is Map
+            ? thirdError['code']?.toString()
+            : null;
+        // slug 为保底值（如 post）时，策略/唯一性冲突概率高，强制唯一 slug 再重试。
+        if (thirdErrorCode == 'PolicyError') {
+          final uniqueSlug = _slugifyUnique(title);
+          if (uniqueSlug != slug) {
+            slug = uniqueSlug;
+            debugPrint(
+              '[CreateArticle] Retry with unique slug due to PolicyError: $slug',
+            );
+            res = await api.createArticle(
+              title: title,
+              text: markdownText,
+              slug: slug,
+              coverId: currentCoverId,
+              authorId: authorId,
+            );
+          }
+        }
 
         // Check for error in REST format (error object) or GraphQL format (errors list)
         final resBody = res.body;
@@ -748,7 +820,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
               title: title,
               text: markdownText,
               slug: slug,
-              coverId: finalCoverId,
+              coverId: currentCoverId,
               authorId: authorId,
             );
           }
