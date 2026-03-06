@@ -13,6 +13,7 @@ import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/drop_zone.dart';
 import 'package:inter_knot/helpers/image_compress_helper.dart';
 import 'package:inter_knot/helpers/normalize_markdown.dart';
+import 'package:inter_knot/helpers/box.dart';
 import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/helpers/upload_task.dart';
 import 'package:inter_knot/helpers/web_hooks.dart';
@@ -53,6 +54,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   static const _maxCoverImages = 9;
   static const _maxImageBytes = 15 * 1024 * 1024;
   static const _allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+  static const _draftStorageKey = 'create_discussion_draft';
 
   final PageController _pageController = PageController();
   final titleController = TextEditingController();
@@ -87,6 +89,245 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   final c = Get.find<Controller>();
   late final api = Get.find<Api>();
+
+  bool get _hasMeaningfulDesktopBody {
+    for (final op in _quillController.document.toDelta().toList()) {
+      final data = op.data;
+      if (data is String) {
+        final normalized = data.replaceAll(RegExp(r'[\s\u200B-\u200D\uFEFF]'), '');
+        if (normalized.isNotEmpty) {
+          return true;
+        }
+        continue;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  String _currentBodyText({required bool isMobile}) {
+    if (isMobile) {
+      return _mobileBodyController.text.trim();
+    }
+    if (!_hasMeaningfulDesktopBody) {
+      return '';
+    }
+    final delta = _quillController.document.toDelta();
+    return normalizeMarkdown(DeltaToMarkdown().convert(delta)).trim();
+  }
+
+  bool get _isMobileEditorActive {
+    return mounted && MediaQuery.sizeOf(context).width < 600;
+  }
+
+  String get _activeBodyText {
+    return _currentBodyText(isMobile: _isMobileEditorActive);
+  }
+
+  bool get _hasDraftCovers => _uploadTasks.isNotEmpty;
+
+  bool get _hasCurrentDraftContent {
+    final title = titleController.text.trim();
+    final body = _activeBodyText.trim();
+    return title.isNotEmpty || body.isNotEmpty || _hasDraftCovers;
+  }
+
+  bool get _hasDraftContent {
+    return _hasCurrentDraftContent;
+  }
+
+  Future<void> _saveDraft() async {
+    if (!_hasCurrentDraftContent) {
+      await _clearDraft();
+      return;
+    }
+
+    final draft = <String, dynamic>{
+      'title': titleController.text.trim(),
+      'body': _activeBodyText,
+      'covers': _uploadTasks
+          .where((task) => task.status.value == UploadStatus.done)
+          .map((task) => <String, dynamic>{
+                'id': task.serverId,
+                'url': task.serverUrl,
+              })
+          .where((item) =>
+              (item['id'] as String?)?.isNotEmpty == true &&
+              (item['url'] as String?)?.isNotEmpty == true)
+          .toList(),
+      'savedAt': DateTime.now().toIso8601String(),
+    };
+    await box.write(_draftStorageKey, draft);
+  }
+
+  Future<void> _clearDraft() async {
+    await box.remove(_draftStorageKey);
+  }
+
+  void _restoreDraftIfNeeded() {
+    if (widget.discussion != null) {
+      return;
+    }
+    final raw = box.read(_draftStorageKey);
+    if (raw is! Map) {
+      return;
+    }
+
+    final draft = Map<String, dynamic>.from(raw);
+    final title = (draft['title'] as String? ?? '').trim();
+    final body = (draft['body'] as String? ?? '').trim();
+    final covers = (draft['covers'] as List<dynamic>? ?? <dynamic>[])
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+    if (title.isEmpty && body.isEmpty) {
+      if (covers.isEmpty) return;
+    }
+
+    titleController.text = title;
+    _mobileBodyController.text = body;
+    try {
+      final mdDocument = md.Document(
+        encodeHtml: false,
+        extensionSet: md.ExtensionSet.gitHubWeb,
+      );
+      final mdToDelta = MarkdownToDelta(markdownDocument: mdDocument);
+      final delta = mdToDelta.convert(body);
+      _quillController.document = quill.Document.fromDelta(delta);
+    } catch (e) {
+      debugPrint('Draft markdown parsing failed: $e');
+      _quillController.document = quill.Document()..insert(0, body);
+    }
+
+    _uploadTasks.assignAll(
+      covers.map((cover) {
+        final task = UploadTask(
+          localId: 'draft_cover_${cover['id'] ?? _uploadTasks.length}',
+          filename: '',
+          bytes: Uint8List(0),
+          mimeType: 'image/jpeg',
+        );
+        task.serverId = cover['id']?.toString();
+        task.serverUrl = cover['url']?.toString();
+        task.status.value = UploadStatus.done;
+        task.progress.value = 100;
+        return task;
+      }),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        showToast('已加载暂存内容');
+      }
+    });
+  }
+
+  Future<String?> _showExitOptionsDialog() {
+    return showZZZDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      pageBuilder: (context) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 360,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xff1E1E1E),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xff313132),
+                  width: 4,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '退出发布',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '当前内容还未发布。你可以取消退出、暂存内容，或直接退出。',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop('cancel'),
+                        child: const Text('取消'),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop('stash'),
+                        child: const Text(
+                          '暂存',
+                          style: TextStyle(color: Color(0xffD7FF00)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop('exit'),
+                        child: const Text(
+                          '退出',
+                          style: TextStyle(color: Colors.redAccent),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<bool> _handleExitRequest() async {
+    if (widget.discussion != null || !_hasDraftContent) {
+      if (widget.discussion == null && !_hasDraftContent) {
+        await _clearDraft();
+      }
+      Get.back();
+      return true;
+    }
+
+    final action = await _showExitOptionsDialog();
+    if (!mounted) {
+      return false;
+    }
+
+    if (action == 'stash') {
+      await _saveDraft();
+      if (!mounted) {
+        return false;
+      }
+      Get.back();
+      showToast('已暂存，下次将自动恢复');
+      return true;
+    }
+
+    if (action == 'exit') {
+      await _clearDraft();
+      if (!mounted) {
+        return false;
+      }
+      Get.back();
+      return true;
+    }
+
+    return false;
+  }
 
   bool _isAllowedImageFilename(String filename) {
     final ext = filename.split('.').last.toLowerCase();
@@ -554,6 +795,8 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         _uploadTasks.add(task);
       }
     }
+
+    _restoreDraftIfNeeded();
   }
 
   String _slugify(String input) {
@@ -632,13 +875,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   Future<void> _submit({bool isMobile = false}) async {
     final title = titleController.text.trim();
-    final String markdownText;
-    if (isMobile) {
-      markdownText = _mobileBodyController.text.trim();
-    } else {
-      final delta = _quillController.document.toDelta();
-      markdownText = normalizeMarkdown(DeltaToMarkdown().convert(delta));
-    }
+    final markdownText = _currentBodyText(isMobile: isMobile);
 
     // Pass all uploaded images as cover
     // If backend supports multiple, we send list.
@@ -789,6 +1026,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         );
       }
 
+      await _clearDraft();
       Get.back(result: true);
       showToast(widget.discussion != null ? '修改成功' : '发帖成功');
       // Refresh list
@@ -880,7 +1118,9 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
             CreateDiscussionHeader(
               controller: c,
               title: '发布委托',
-              onClose: () => Get.back(),
+              onClose: () {
+                _handleExitRequest();
+              },
             ),
             // Body
             Expanded(
@@ -929,35 +1169,29 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       ),
     );
 
-    return SafeArea(
-      child: Center(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final safeW = constraints.maxWidth;
-            final safeH = constraints.maxHeight;
-            return SizedBox(
-              width: safeW * layoutFactor,
-              height: safeH * layoutFactor,
-              child: FittedBox(
-                child: SizedBox(
-                  width: safeW * baseFactor,
-                  height: safeH * baseFactor,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(59, 255, 255, 255),
-                      borderRadius: isWindowed
-                          ? const BorderRadius.only(
-                              topLeft: Radius.circular(16),
-                              bottomLeft: Radius.circular(16),
-                              bottomRight: Radius.circular(16),
-                            )
-                          : BorderRadius.zero,
-                    ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleExitRequest();
+      },
+      child: SafeArea(
+        child: Center(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final safeW = constraints.maxWidth;
+              final safeH = constraints.maxHeight;
+              return SizedBox(
+                width: safeW * layoutFactor,
+                height: safeH * layoutFactor,
+                child: FittedBox(
+                  child: SizedBox(
+                    width: safeW * baseFactor,
+                    height: safeH * baseFactor,
                     child: Container(
-                      padding: const EdgeInsets.all(2),
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.black,
+                        color: const Color.fromARGB(59, 255, 255, 255),
                         borderRadius: isWindowed
                             ? const BorderRadius.only(
                                 topLeft: Radius.circular(16),
@@ -966,22 +1200,35 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                               )
                             : BorderRadius.zero,
                       ),
-                      child: ClipRRect(
-                        borderRadius: isWindowed
-                            ? const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                bottomLeft: Radius.circular(16),
-                                bottomRight: Radius.circular(16),
-                              )
-                            : BorderRadius.zero,
-                        child: scaffold,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: isWindowed
+                              ? const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  bottomLeft: Radius.circular(16),
+                                  bottomRight: Radius.circular(16),
+                                )
+                              : BorderRadius.zero,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: isWindowed
+                              ? const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  bottomLeft: Radius.circular(16),
+                                  bottomRight: Radius.circular(16),
+                                )
+                              : BorderRadius.zero,
+                          child: scaffold,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
