@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_quill/flutter_quill.dart' as quill;
-import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/image_viewer.dart';
 import 'package:inter_knot/helpers/upload_task.dart';
@@ -9,22 +7,20 @@ class CreateDiscussionEditorPage extends StatelessWidget {
   const CreateDiscussionEditorPage({
     super.key,
     required this.titleController,
-    required this.quillController,
+    required this.bodyController,
     required this.onPickAndUploadImage,
     this.isMobile = false,
-    this.mobileBodyController,
     this.mobileUploadTasks,
     this.onRemoveMobileImage,
     this.onRetryMobileImage,
   });
 
   final TextEditingController titleController;
-  final quill.QuillController quillController;
+  final TextEditingController bodyController;
   final VoidCallback onPickAndUploadImage;
 
   // Mobile-only
   final bool isMobile;
-  final TextEditingController? mobileBodyController;
   final RxList<UploadTask>? mobileUploadTasks;
   final void Function(int index)? onRemoveMobileImage;
   final void Function(UploadTask task)? onRetryMobileImage;
@@ -34,64 +30,122 @@ class CreateDiscussionEditorPage extends StatelessWidget {
     if (isMobile) {
       return _MobileEditorBody(
         titleController: titleController,
-        bodyController: mobileBodyController!,
+        bodyController: bodyController,
         uploadTasks: mobileUploadTasks!,
         onRemoveImage: onRemoveMobileImage!,
         onRetryImage: onRetryMobileImage!,
       );
     }
 
-    // ── Desktop: Quill editor ──
+    return _DesktopEditorBody(
+      titleController: titleController,
+      bodyController: bodyController,
+      onPickAndUploadImage: onPickAndUploadImage,
+    );
+  }
+}
+
+class _DesktopEditorBody extends StatefulWidget {
+  const _DesktopEditorBody({
+    required this.titleController,
+    required this.bodyController,
+    required this.onPickAndUploadImage,
+  });
+
+  final TextEditingController titleController;
+  final TextEditingController bodyController;
+  final VoidCallback onPickAndUploadImage;
+
+  @override
+  State<_DesktopEditorBody> createState() => _DesktopEditorBodyState();
+}
+
+class _DesktopEditorBodyState extends State<_DesktopEditorBody> {
+  final _titleFocus = FocusNode();
+  final _bodyFocus = FocusNode();
+
+  @override
+  void dispose() {
+    _titleFocus.dispose();
+    _bodyFocus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
         TextField(
-          controller: titleController,
+          controller: widget.titleController,
+          focusNode: _titleFocus,
+          maxLines: 1,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
           decoration: const InputDecoration(
-            hintText: '标题',
-            border: OutlineInputBorder(),
+            hintText: '请输入标题',
+            hintStyle: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xff505050),
+            ),
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           ),
         ),
-        const SizedBox(height: 16),
-        quill.QuillSimpleToolbar(
-          controller: quillController,
-          config: quill.QuillSimpleToolbarConfig(
-            showFontFamily: false,
-            showFontSize: false,
-            showSearchButton: false,
-            showSubscript: false,
-            showSuperscript: false,
-            showColorButton: false,
-            showBackgroundColorButton: false,
-            toolbarIconAlignment: WrapAlignment.start,
-            multiRowsDisplay: false,
-            customButtons: [
-              quill.QuillToolbarCustomButtonOptions(
-                icon: const Icon(Icons.image),
-                onPressed: onPickAndUploadImage,
+        const Divider(height: 1, color: Color(0xff2A2A2A)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+          child: Row(
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: widget.onPickAndUploadImage,
+                icon: const Icon(Icons.image_outlined, size: 18),
+                label: const Text('插入图片'),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  '正文按 Markdown 原文保存，换行和空行会按输入保留。',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 13,
+                  ),
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
-              borderRadius: BorderRadius.circular(4),
+              color: const Color(0xff111111),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xff2A2A2A)),
             ),
-            child: quill.QuillEditor.basic(
-              controller: quillController,
-              config: quill.QuillEditorConfig(
-                placeholder: '请输入文本',
-                padding: const EdgeInsets.all(16),
-                embedBuilders: [
-                  ...FlutterQuillEmbeds.editorBuilders(
-                    imageEmbedConfig: QuillEditorImageEmbedConfig(
-                      onImageClicked: (url) {},
-                    ),
-                  ),
-                  const _DividerEmbedBuilder(),
-                ],
+            child: TextField(
+              controller: widget.bodyController,
+              focusNode: _bodyFocus,
+              maxLines: null,
+              expands: true,
+              keyboardType: TextInputType.multiline,
+              textAlignVertical: TextAlignVertical.top,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Color(0xffE0E0E0),
+                height: 1.7,
+              ),
+              decoration: const InputDecoration(
+                hintText: '说点什么吧...\n\n支持 Markdown，例如：\n# 标题\n- 列表\n![图片](url)',
+                hintStyle: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xff505050),
+                  height: 1.6,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.all(16),
               ),
             ),
           ),
@@ -408,24 +462,5 @@ class _MobileImageTile extends StatelessWidget {
       case UploadStatus.done:
         return const SizedBox.shrink();
     }
-  }
-}
-
-class _DividerEmbedBuilder extends quill.EmbedBuilder {
-  const _DividerEmbedBuilder();
-
-  @override
-  String get key => 'divider';
-
-  @override
-  Widget build(BuildContext context, quill.EmbedContext embedContext) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Divider(
-        height: 1,
-        thickness: 1,
-        color: Color(0xff313132),
-      ),
-    );
   }
 }

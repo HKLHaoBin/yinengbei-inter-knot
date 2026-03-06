@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inter_knot/api/api.dart';
@@ -12,12 +11,10 @@ import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/drop_zone.dart';
 import 'package:inter_knot/helpers/image_compress_helper.dart';
-import 'package:inter_knot/helpers/normalize_markdown.dart';
 import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/helpers/upload_task.dart';
 import 'package:inter_knot/helpers/web_hooks.dart';
 import 'package:inter_knot/models/captcha.dart';
-import 'package:markdown_quill/markdown_quill.dart';
 
 import 'package:inter_knot/pages/create_discussion/create_discussion_desktop_footer.dart';
 import 'package:inter_knot/pages/create_discussion/create_discussion_desktop_sidebar.dart';
@@ -56,8 +53,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   final PageController _pageController = PageController();
   final titleController = TextEditingController();
-  final _mobileBodyController = TextEditingController();
-  final _quillController = quill.QuillController.basic();
+  final _bodyController = TextEditingController();
 
   // Images State — each image is tracked as an UploadTask with its own status/progress
   final RxList<UploadTask> _uploadTasks = <UploadTask>[].obs;
@@ -105,8 +101,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         return;
       }
 
-      // 在光标位置插入占位符并开始上传
-      final index = _quillController.selection.start;
+      final index = _bodySelectionOffset;
       _uploadImageAndInsert(
         insertIndex: index,
         filename: filename,
@@ -276,7 +271,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     }
   }
 
-  /// 粘贴图片 -> 上传 -> 替换为 HTML 图片标签
+  /// 粘贴图片 -> 上传 -> 替换为 Markdown 图片语法
   void _uploadImageAndInsert({
     required int insertIndex,
     required String filename,
@@ -286,12 +281,10 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     final taskId = DateTime.now().millisecondsSinceEpoch.toString();
     final token = '{{uploading:$taskId}}';
 
-    // 插入占位符并移动光标到占位符后
-    _quillController.replaceText(
-      insertIndex,
-      0,
-      token,
-      TextSelection.collapsed(offset: insertIndex + token.length),
+    _replaceBodyRange(
+      start: insertIndex,
+      end: insertIndex,
+      replacement: token,
     );
 
     _uploadAndReplace(
@@ -342,42 +335,48 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       // 构建完整 URL
       final fullUrl = _toFullImageUrl(url);
 
-      // 使用 Quill Image Embed
-      _replaceTokenWithImage(token, fullUrl);
+      _replaceTokenWithImage(token, filename, fullUrl);
     } catch (e) {
       _replaceToken(token, '上传失败：$filename ($e)');
     }
   }
 
-  void _replaceTokenWithImage(String token, String imageUrl) {
+  int get _bodySelectionOffset {
+    final selection = _bodyController.selection;
+    if (!selection.isValid) return _bodyController.text.length;
+    final offset = selection.start;
+    if (offset < 0 || offset > _bodyController.text.length) {
+      return _bodyController.text.length;
+    }
+    return offset;
+  }
+
+  void _replaceBodyRange({
+    required int start,
+    required int end,
+    required String replacement,
+  }) {
+    final text = _bodyController.text;
+    final safeStart = start.clamp(0, text.length) as int;
+    final safeEnd = end.clamp(safeStart, text.length) as int;
+    final updated = text.replaceRange(safeStart, safeEnd, replacement);
+    _bodyController.value = TextEditingValue(
+      text: updated,
+      selection: TextSelection.collapsed(
+        offset: safeStart + replacement.length,
+      ),
+    );
+  }
+
+  void _replaceTokenWithImage(String token, String filename, String imageUrl) {
     final index = _findTokenIndex(token);
     if (index == null) return;
 
-    // 先删除 token
-    _quillController.replaceText(
-      index,
-      token.length,
-      '',
-      TextSelection.collapsed(offset: index),
-    );
-
-    // 插入图片 Embed
-    // 默认设置图片大小为 160px，以匹配封面上传样式
-    _quillController.document.insert(index, quill.BlockEmbed.image(imageUrl));
-    _quillController.formatText(index, 1,
-        const quill.Attribute('width', quill.AttributeScope.ignore, '160'));
-    _quillController.formatText(index, 1,
-        const quill.Attribute('height', quill.AttributeScope.ignore, '160'));
-    _quillController.formatText(
-        index,
-        1,
-        const quill.Attribute('style', quill.AttributeScope.ignore,
-            'display: inline; margin: 0 0 1em 0'));
-
-    // 移动光标到图片后 (Embed 长度为 1)
-    _quillController.updateSelection(
-      TextSelection.collapsed(offset: index + 1),
-      quill.ChangeSource.local,
+    final markdownImage = '![${filename.split('.').first}]($imageUrl)';
+    _replaceBodyRange(
+      start: index,
+      end: index + token.length,
+      replacement: markdownImage,
     );
   }
 
@@ -385,39 +384,15 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     final index = _findTokenIndex(token);
     if (index == null) return;
 
-    // 先删除 token，再插入 HTML，避免转义导致的替换错位
-    _quillController.replaceText(
-      index,
-      token.length,
-      '',
-      TextSelection.collapsed(offset: index),
-    );
-    _quillController.replaceText(
-      index,
-      0,
-      replacement,
-      TextSelection.collapsed(offset: index + replacement.length),
-    );
-    _quillController.updateSelection(
-      TextSelection.collapsed(offset: index + replacement.length),
-      quill.ChangeSource.local,
+    _replaceBodyRange(
+      start: index,
+      end: index + token.length,
+      replacement: replacement,
     );
   }
 
   int? _findTokenIndex(String token) {
-    final delta = _quillController.document.toDelta();
-    final buffer = StringBuffer();
-    for (final op in delta.toList()) {
-      final data = op.data;
-      if (data is String) {
-        buffer.write(data);
-      } else {
-        // embeds count as length 1 in document indices
-        buffer.write('\uFFFC');
-      }
-    }
-    final text = buffer.toString();
-    final pos = text.indexOf(token);
+    final pos = _bodyController.text.indexOf(token);
     if (pos == -1) return null;
     return pos;
   }
@@ -491,7 +466,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     final filename = file.name;
     final mimeType = file.mimeType ?? 'image/jpeg';
 
-    final index = _quillController.selection.start;
+    final index = _bodySelectionOffset;
     _uploadImageAndInsert(
       insertIndex: index,
       filename: filename,
@@ -504,8 +479,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   void dispose() {
     _pageController.dispose();
     titleController.dispose();
-    _mobileBodyController.dispose();
-    _quillController.dispose();
+    _bodyController.dispose();
     if (kIsWeb) {
       removePasteListener();
       removeDropZone();
@@ -524,20 +498,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
     if (widget.discussion != null) {
       titleController.text = widget.discussion!.title;
-      _mobileBodyController.text = widget.discussion!.rawBodyText;
-      // Convert raw markdown to Delta for Quill
-      try {
-        final mdDocument = md.Document(
-          encodeHtml: false,
-          extensionSet: md.ExtensionSet.gitHubWeb,
-        );
-        final mdToDelta = MarkdownToDelta(markdownDocument: mdDocument);
-        final delta = mdToDelta.convert(widget.discussion!.rawBodyText);
-        _quillController.document = quill.Document.fromDelta(delta);
-      } catch (e) {
-        debugPrint('Markdown parsing failed: $e');
-        _quillController.document.insert(0, widget.discussion!.rawBodyText);
-      }
+      _bodyController.text = widget.discussion!.rawBodyText;
 
       // Load existing covers as already-done upload tasks
       for (final cover in widget.discussion!.coverImages) {
@@ -630,15 +591,9 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     return false;
   }
 
-  Future<void> _submit({bool isMobile = false}) async {
+  Future<void> _submit() async {
     final title = titleController.text.trim();
-    final String markdownText;
-    if (isMobile) {
-      markdownText = _mobileBodyController.text.trim();
-    } else {
-      final delta = _quillController.document.toDelta();
-      markdownText = normalizeMarkdown(DeltaToMarkdown().convert(delta));
-    }
+    final markdownText = _bodyController.text;
 
     // Pass all uploaded images as cover
     // If backend supports multiple, we send list.
@@ -662,7 +617,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       return;
     }
     // Content check: either text or images must exist
-    if (markdownText.isEmpty && _uploadedImages.isEmpty) {
+    if (markdownText.trim().isEmpty && _uploadedImages.isEmpty) {
       showToast('内容不能为空', isError: true);
       return;
     }
@@ -814,13 +769,12 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     final double zoomScale = isWindowed ? 1.1 : 1.0;
     final double layoutFactor = baseFactor * zoomScale;
 
-    // Mobile uses a simple TextField editor; desktop uses the Quill PageView
+    // Mobile and desktop now share the same Markdown text source.
     final mobileEditor = CreateDiscussionEditorPage(
       titleController: titleController,
-      quillController: _quillController,
+      bodyController: _bodyController,
       onPickAndUploadImage: _pickAndUploadImage,
       isMobile: true,
-      mobileBodyController: _mobileBodyController,
       mobileUploadTasks: _uploadTasks,
       onRemoveMobileImage: _removeUploadTask,
       onRetryMobileImage: _retryUploadTask,
@@ -838,7 +792,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       children: [
         CreateDiscussionEditorPage(
           titleController: titleController,
-          quillController: _quillController,
+          bodyController: _bodyController,
           onPickAndUploadImage: _pickAndUploadImage,
         ),
         CreateDiscussionCoverPage(
@@ -860,11 +814,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     final scaffold = Scaffold(
       backgroundColor: const Color(0xff121212),
       bottomNavigationBar: isDesktop
-          ? null
-          : Obx(() => CreateDiscussionMobileNav(
+              ? null
+              : Obx(() => CreateDiscussionMobileNav(
                 isLoading: isLoading,
                 onPickImage: _pickImages,
-                onSubmit: () => _submit(isMobile: true),
+                onSubmit: _submit,
                 imageCount: _uploadTasks.length,
                 uploadingCount: _uploadTasks
                     .where((t) =>
