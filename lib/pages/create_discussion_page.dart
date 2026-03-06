@@ -60,6 +60,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   // Images State — each image is tracked as an UploadTask with its own status/progress
   final RxList<UploadTask> _uploadTasks = <UploadTask>[].obs;
   bool _isDragging = false;  // 拖拽状态
+  UploadImageFormat _imageUploadFormat = UploadImageFormat.webp;
 
   // 压缩是 CPU 密集型任务：限制并发，避免 UI 卡顿（Web 单线程更明显）
   final Queue<Completer<void>> _compressionWaiters = Queue<Completer<void>>();
@@ -181,7 +182,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     try {
       // 1. 压缩阶段（限流，防止多图并发压缩导致 UI 卡死）
       await _acquireCompressionSlot();
-      final Uint8List compressed;
+      final CompressedImageData compressed;
       try {
         task.status.value = UploadStatus.compressing;
         task.progress.value = 0;
@@ -194,21 +195,22 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
           bytes: task.bytes,
           filename: task.filename,
           mimeType: task.mimeType,
+          targetFormat: _imageUploadFormat,
         );
       } finally {
         _releaseCompressionSlot();
       }
-      task.bytes = compressed;
 
       // 2. 上传阶段
       task.status.value = UploadStatus.uploading;
       task.progress.value = 0;
       _uploadTasks.refresh();
 
-      final result = await api.uploadImage(
-        bytes: compressed,
-        filename: task.filename,
-        mimeType: task.mimeType,
+      final result = await _uploadImageWithFallback(
+        originalBytes: task.bytes,
+        originalFilename: task.filename,
+        originalMimeType: task.mimeType,
+        compressed: compressed,
         onProgress: (percent) {
           task.progress.value = percent;
         },
@@ -305,7 +307,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     try {
       // 压缩图片后再上传
       await _acquireCompressionSlot();
-      final Uint8List compressed;
+      final CompressedImageData compressed;
       try {
         // 给 UI 一个渲染帧，避免主线程长任务造成“假死感”
         await Future<void>.delayed(const Duration(milliseconds: 16));
@@ -313,15 +315,17 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
           bytes: bytes,
           filename: filename,
           mimeType: mimeType,
+          targetFormat: _imageUploadFormat,
         );
       } finally {
         _releaseCompressionSlot();
       }
 
-      final result = await api.uploadImage(
-        bytes: compressed,
-        filename: filename,
-        mimeType: mimeType,
+      final result = await _uploadImageWithFallback(
+        originalBytes: bytes,
+        originalFilename: filename,
+        originalMimeType: mimeType,
+        compressed: compressed,
         onProgress: (_) {},
       );
 
@@ -344,6 +348,41 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       _replaceTokenWithImage(token, fullUrl);
     } catch (e) {
       _replaceToken(token, '上传失败：$filename ($e)');
+    }
+  }
+
+  Future<Map<String, dynamic>?> _uploadImageWithFallback({
+    required Uint8List originalBytes,
+    required String originalFilename,
+    required String originalMimeType,
+    required CompressedImageData compressed,
+    required void Function(int percent) onProgress,
+  }) async {
+    try {
+      return await api.uploadImage(
+        bytes: compressed.bytes,
+        filename: compressed.filename,
+        mimeType: compressed.mimeType,
+        onProgress: onProgress,
+      );
+    } catch (e) {
+      final changed = compressed.filename != originalFilename ||
+          compressed.mimeType != originalMimeType ||
+          compressed.bytes.length != originalBytes.length;
+      if (!changed) rethrow;
+
+      debugPrint(
+        'Compressed upload failed, fallback to original. '
+        'compressed=${compressed.filename}/${compressed.mimeType}/${compressed.bytes.length}, '
+        'original=$originalFilename/$originalMimeType/${originalBytes.length}, err=$e',
+      );
+
+      return api.uploadImage(
+        bytes: originalBytes,
+        filename: originalFilename,
+        mimeType: originalMimeType,
+        onProgress: onProgress,
+      );
     }
   }
 
@@ -720,17 +759,22 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         // Try to extract Strapi error message
         final errorBody = res.body;
         String? msg;
+        String? errCode;
         if (errorBody != null) {
           final error = errorBody['error'];
           final errors = errorBody['errors'];
           if (error is Map) {
             msg = error['message']?.toString();
+            errCode = error['code']?.toString();
           } else if (errors is List && errors.isNotEmpty) {
             final first = errors.first;
             if (first is Map) {
               msg = first['message']?.toString();
             }
           }
+        }
+        if (errCode == 'PolicyError' && _imageUploadFormat == UploadImageFormat.webp) {
+          throw Exception('后端策略拒绝当前内容（PolicyError）。请切换为 JPG 后重新上传图片再发布。');
         }
         throw Exception(msg ?? res.statusText ?? 'Unknown error');
       }
@@ -837,6 +881,12 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                 isLoading: isLoading,
                 onPickImage: _pickImages,
                 onSubmit: () => _submit(isMobile: true),
+                selectedFormat: _imageUploadFormat,
+                onFormatChanged: (value) {
+                  setState(() {
+                    _imageUploadFormat = value;
+                  });
+                },
                 imageCount: _uploadTasks.length,
                 uploadingCount: _uploadTasks
                     .where((t) =>
@@ -888,6 +938,12 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                               CreateDiscussionDesktopFooter(
                                 isLoading: isLoading,
                                 onSubmit: _submit,
+                                selectedFormat: _imageUploadFormat,
+                                onFormatChanged: (value) {
+                                  setState(() {
+                                    _imageUploadFormat = value;
+                                  });
+                                },
                               ),
                             ],
                           ),
