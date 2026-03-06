@@ -129,7 +129,7 @@ DiscussionModel parseDiscussionData(Map<String, dynamic> json) {
     bodyHTML: html,
     bodyText: bodyText,
     coverImages: covers,
-    rawBodyText: normalized,
+    rawBodyText: rawBody,
     // number: ... Removed
     id: json['documentId'] as String? ??
         json['id']?.toString() ??

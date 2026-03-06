@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/image_viewer.dart';
 import 'package:inter_knot/controllers/data.dart';
+import 'package:inter_knot/helpers/prepare_markdown_for_display.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:markdown_widget/markdown_widget.dart' hide ImageViewer;
 import 'package:url_launcher/url_launcher_string.dart';
@@ -42,7 +43,7 @@ class _DiscussionDetailBoxState extends State<DiscussionDetailBox> {
               const SizedBox(height: 16),
               SelectionArea(
                 child: MarkdownWidget(
-                  data: discussion.rawBodyText,
+                  data: prepareMarkdownForDisplay(discussion.rawBodyText),
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   config: MarkdownConfig.darkConfig.copy(
