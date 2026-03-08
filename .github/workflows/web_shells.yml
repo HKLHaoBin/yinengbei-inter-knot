@@ -6,11 +6,6 @@ on:
 permissions:
   contents: read
 
-env:
-  PEM: ${{ secrets.PEM }}
-  CLIENT_ID: ${{ secrets.CLIENT_ID }}
-  CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-
 jobs:
   build_web:
     name: Build Web
@@ -26,9 +21,6 @@ jobs:
 
       - name: Install Flutter dependencies
         run: flutter pub get
-
-      - name: Generate secrets
-        run: dart gen_secrets.dart
 
       - name: Build web bundle
         run: flutter build web --release --web-renderer html
