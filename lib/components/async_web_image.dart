@@ -13,7 +13,6 @@ class AsyncWebImage extends StatelessWidget {
   final WebHtmlElementStrategy webHtmlElementStrategy;
   final Widget Function(BuildContext context)? placeholderBuilder;
   final Widget Function(BuildContext context, Object error)? errorBuilder;
-  final void Function(ImageInfo)? onImageLoaded;
 
   const AsyncWebImage({
     super.key,
@@ -29,7 +28,6 @@ class AsyncWebImage extends StatelessWidget {
     this.webHtmlElementStrategy = WebHtmlElementStrategy.never,
     this.placeholderBuilder,
     this.errorBuilder,
-    this.onImageLoaded,
   });
 
   @override
@@ -46,19 +44,6 @@ class AsyncWebImage extends StatelessWidget {
       gaplessPlayback: gaplessPlayback,
       webHtmlElementStrategy: webHtmlElementStrategy,
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-        if (frame != null && onImageLoaded != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            final imageStream = NetworkImage(url).resolve(
-              const ImageConfiguration(),
-            );
-            imageStream.addListener(
-              ImageStreamListener((info, _) {
-                onImageLoaded?.call(info);
-              }),
-            );
-          });
-        }
-
         if (wasSynchronouslyLoaded) return child;
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
