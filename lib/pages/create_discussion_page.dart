@@ -51,7 +51,7 @@ class CreateDiscussionPage extends StatefulWidget {
 
 class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   static const _maxCoverImages = 9;
-  static const _maxImageBytes = 15 * 1024 * 1024;
+  static const _maxImageBytes = 30 * 1024 * 1024; // 30MB
   static const _allowedImageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
   final PageController _pageController = PageController();
@@ -149,7 +149,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
     for (final file in toUpload) {
       if (file.bytes.length > _maxImageBytes) {
-        showToast('图片 ${file.filename} 超过 15MB，已跳过', isError: true);
+        showToast('图片 ${file.filename} 超过 30MB，已跳过', isError: true);
         continue;
       }
       _enqueueUploadTask(
@@ -462,7 +462,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       try {
         final len = await file.length();
         if (len > _maxImageBytes) {
-          showToast('图片 ${file.name} 超过 15MB，已跳过', isError: true);
+          showToast('图片 ${file.name} 超过 30MB，已跳过', isError: true);
           continue;
         }
 
@@ -803,9 +803,8 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       if (widget.discussion != null) {
         widget.discussion!.title = title;
         widget.discussion!.rawBodyText = textValue;
-        widget.discussion!.editorState = editorState == null
-            ? null
-            : List<dynamic>.from(editorState);
+        widget.discussion!.editorState =
+            editorState == null ? null : List<dynamic>.from(editorState);
         widget.discussion!.bodyHTML = md.markdownToHtml(
           textValue,
           extensionSet: md.ExtensionSet.gitHubWeb,

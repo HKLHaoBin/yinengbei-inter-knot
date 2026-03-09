@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +5,11 @@ import 'package:get/get.dart';
 import 'package:inter_knot/components/image_viewer.dart';
 import 'package:inter_knot/helpers/upload_task.dart';
 
-typedef DroppedImageFile = ({String filename, Uint8List bytes, String mimeType});
+typedef DroppedImageFile = ({
+  String filename,
+  Uint8List bytes,
+  String mimeType
+});
 
 class CreateDiscussionCoverPage extends StatelessWidget {
   const CreateDiscussionCoverPage({
@@ -34,9 +36,7 @@ class CreateDiscussionCoverPage extends StatelessWidget {
     final content = Container(
       decoration: BoxDecoration(
         border: Border.all(
-          color: isDragging
-              ? const Color(0xffFBC02D)
-              : Colors.transparent,
+          color: isDragging ? const Color(0xffFBC02D) : Colors.transparent,
           width: 2,
         ),
         borderRadius: BorderRadius.circular(8),
@@ -247,11 +247,13 @@ class _UploadTaskTile extends StatelessWidget {
         child: GestureDetector(
           onTap: () {
             final doneUrls = allTasks
-                .where((t) => t.status.value == UploadStatus.done && t.serverUrl != null)
+                .where((t) =>
+                    t.status.value == UploadStatus.done && t.serverUrl != null)
                 .map((t) => t.serverUrl!)
                 .toList();
             final doneIndex = allTasks
-                .where((t) => t.status.value == UploadStatus.done && t.serverUrl != null)
+                .where((t) =>
+                    t.status.value == UploadStatus.done && t.serverUrl != null)
                 .toList()
                 .indexOf(task);
             if (doneUrls.isNotEmpty) {

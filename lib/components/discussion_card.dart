@@ -354,6 +354,8 @@ class Cover extends StatefulWidget {
 }
 
 class _CoverState extends State<Cover> {
+  double? _imageAspectRatio; // 图片加载后的实际宽高比
+
   @override
   Widget build(BuildContext context) {
     // Prefer the high-res image from coverImages if available
@@ -368,31 +370,54 @@ class _CoverState extends State<Cover> {
         fit: BoxFit.cover,
       );
     } else {
-      image = NetworkImageBox(
-        url: highResUrl,
+      image = Image.network(
+        highResUrl,
         fit: BoxFit.cover,
         alignment: Alignment.topCenter,
         filterQuality: FilterQuality.high,
         gaplessPlayback: true,
-        preferHtmlElementOnWeb: true,
-        loadingBuilder: (context, progress) => const SizedBox.shrink(),
-        errorBuilder: (context) =>
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            return child;
+          }
+          return const SizedBox.shrink();
+        },
+        errorBuilder: (context, error, stackTrace) =>
             Assets.images.defaultCover.image(fit: BoxFit.cover),
-        fadeInDuration: const Duration(milliseconds: 500),
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (frame != null && _imageAspectRatio == null) {
+            // 图片加载完成，获取实际尺寸
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final imageStream = NetworkImage(highResUrl).resolve(
+                const ImageConfiguration(),
+              );
+              imageStream.addListener(
+                ImageStreamListener((info, _) {
+                  if (mounted) {
+                    setState(() {
+                      final image = info.image;
+                      _imageAspectRatio = image.width / image.height;
+                    });
+                  }
+                }),
+              );
+            });
+          }
+          return child;
+        },
       );
     }
 
-    final coverImage = widget.discussion.coverImages.isNotEmpty
-        ? widget.discussion.coverImages.first
-        : null;
-    final double imgW = coverImage?.width?.toDouble() ?? 643;
-    final double imgH = coverImage?.height?.toDouble() ?? 408;
-    final double rawAspectRatio = imgW / imgH;
-    final double displayAspectRatio =
-        rawAspectRatio < 0.75 ? 0.75 : rawAspectRatio;
+    // 使用图片加载后的实际宽高比，如果还没加载完则使用默认值 643:408
+    final double displayAspectRatio = _imageAspectRatio ?? (643 / 408);
+
+    // 限制最小宽高比，防止图片过高
+    // 最小宽高比 0.75 (3:4)，即高度最多是宽度的 1.33 倍
+    final double clampedAspectRatio =
+        displayAspectRatio < 0.75 ? 0.75 : displayAspectRatio;
 
     return AspectRatio(
-      aspectRatio: displayAspectRatio,
+      aspectRatio: clampedAspectRatio,
       child: ClipRect(
         child: AnimatedScale(
           scale: widget.isHovering ? 1.1 : 1.0,

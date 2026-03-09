@@ -44,31 +44,14 @@ class _DiscussionPageState extends State<DiscussionPage> {
   final ValueNotifier<NewCommentCounts> _newCommentCounts =
       ValueNotifier(const NewCommentCounts(newCount: 0, serverCount: 0));
   bool _isDetailLoading = true;
+  double? _mobileCoverAspectRatio; // 移动端封面的实际宽高比
 
-  // 为移动端封面计算一个更友好的宽高比：
-  // - 横图：接近原始比例，但不会太扁
-  // - 竖图：明显更高一些，方便在手机上查看
+  // 移动端封面使用图片加载后的实际宽高比，如果还没加载完则使用默认值 16:9
+  // 限制最小宽高比为 0.6，防止竖图过高
   double _getMobileCoverAspectRatio() {
-    final covers = widget.discussion.coverImages;
-    if (covers.isNotEmpty) {
-      final first = covers.first;
-      final w = first.width?.toDouble();
-      final h = first.height?.toDouble();
-      if (w != null && h != null && w > 0 && h > 0) {
-        final raw = w / h;
-        num clamped;
-        if (raw < 1.0) {
-          // 竖屏：将宽高比限制在 [0.5, 0.7] 区间，让高度更舒适一些
-          clamped = raw.clamp(0.5, 0.7);
-        } else {
-          // 横屏：限制在 [1.2, 2.0] 区间，避免过于扁长
-          clamped = raw.clamp(1.2, 2.0);
-        }
-        return clamped.toDouble();
-      }
-    }
-    // 没有尺寸信息时的兜底：使用原来的 16:9
-    return 16 / 9;
+    final aspectRatio = _mobileCoverAspectRatio ?? (16 / 9);
+    // 最小宽高比 0.6 (3:5)，即高度最多是宽度的 1.67 倍
+    return aspectRatio < 0.6 ? 0.6 : aspectRatio;
   }
 
   Future<void> _fetchArticleDetails() async {
@@ -240,7 +223,8 @@ class _DiscussionPageState extends State<DiscussionPage> {
 
   Future<void> _handleNewCommentNotificationTap(NewCommentCounts counts) async {
     widget.discussion.commentsCount = counts.serverCount;
-    _newCommentCounts.value = const NewCommentCounts(newCount: 0, serverCount: 0);
+    _newCommentCounts.value =
+        const NewCommentCounts(newCount: 0, serverCount: 0);
 
     if (widget.discussion.comments.isNotEmpty) {
       widget.discussion.comments.last.hasNextPage = true;
@@ -327,7 +311,17 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                             .shrink()
                                                         : Cover(
                                                             discussion: widget
-                                                                .discussion),
+                                                                .discussion,
+                                                            onImageLoaded:
+                                                                (aspectRatio) {
+                                                              if (mounted) {
+                                                                setState(() {
+                                                                  _mobileCoverAspectRatio =
+                                                                      aspectRatio;
+                                                                });
+                                                              }
+                                                            },
+                                                          ),
                                                   ),
                                                 ),
                                               ),
@@ -335,8 +329,8 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                 child: _isDetailLoading
                                                     ? const SizedBox.shrink()
                                                     : DiscussionDetailBox(
-                                                        discussion: widget
-                                                            .discussion,
+                                                        discussion:
+                                                            widget.discussion,
                                                       ),
                                               ),
                                               SliverPersistentHeader(
@@ -376,11 +370,10 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                                             actionButtonsKey
                                                                 .currentState
                                                                 ?.replyTo(
-                                                              id,
-                                                              userName,
-                                                              addPrefix:
-                                                                  addPrefix,
-                                                            ),
+                                                          id,
+                                                          userName,
+                                                          addPrefix: addPrefix,
+                                                        ),
                                                       ),
                                                     ],
                                                   ),
@@ -390,7 +383,8 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                           ),
                                           NewCommentNotification(
                                             countsListenable: _newCommentCounts,
-                                            onTap: _handleNewCommentNotificationTap,
+                                            onTap:
+                                                _handleNewCommentNotificationTap,
                                           ),
                                         ],
                                       );
@@ -404,13 +398,11 @@ class _DiscussionPageState extends State<DiscussionPage> {
                                           leftScrollController,
                                       scrollController: scrollController,
                                       actionButtonsKey: actionButtonsKey,
-                                      buildNewCommentNotification:
-                                          () => NewCommentNotification(
-                                                countsListenable:
-                                                    _newCommentCounts,
-                                                onTap:
-                                                    _handleNewCommentNotificationTap,
-                                              ),
+                                      buildNewCommentNotification: () =>
+                                          NewCommentNotification(
+                                        countsListenable: _newCommentCounts,
+                                        onTap: _handleNewCommentNotificationTap,
+                                      ),
                                       onCommentAdded: _handleCommentAdded,
                                       onEditSuccess: () => setState(() {}),
                                     );

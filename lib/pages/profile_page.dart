@@ -165,7 +165,6 @@ class _ProfilePageState extends State<ProfilePage>
     final level = user?['level'] as int? ?? 1;
     final exp = user?['exp'] as int? ?? 0;
 
-    final articleCount = stats?['articleCount'] as int? ?? 0;
     final totalViews = stats?['totalViews'] as int? ?? 0;
     final totalComments = stats?['totalComments'] as int? ?? 0;
     final totalLikes = stats?['totalLikes'] as int? ?? 0;

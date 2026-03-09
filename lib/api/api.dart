@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import 'package:inter_knot/api/api_exception.dart';
 import 'package:inter_knot/constants/api_config.dart';
 import 'package:inter_knot/helpers/box.dart';
@@ -76,7 +77,8 @@ class AuthApi extends GetConnect {
   }
 
   Future<({String? token, AuthorModel user})> login(
-      String email, String password, {CaptchaPayload? captcha}) async {
+      String email, String password,
+      {CaptchaPayload? captcha}) async {
     final res = await post(
       captcha == null ? '/api/auth/local' : '/api/auth/local-with-captcha',
       _withCaptcha({'identifier': email, 'password': password}, captcha),
@@ -427,40 +429,6 @@ class Api extends BaseConnect {
     return 'image/jpeg';
   }
 
-  String _normalizeImageMimeType({
-    required String filename,
-    required String mimeType,
-  }) {
-    final normalized = mimeType.trim().toLowerCase().split(';').first;
-    const supported = <String>{
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'image/bmp',
-    };
-
-    final lowerFilename = filename.toLowerCase();
-    final hasKnownImageExtension =
-        lowerFilename.endsWith('.jpg') ||
-            lowerFilename.endsWith('.jpeg') ||
-            lowerFilename.endsWith('.png') ||
-            lowerFilename.endsWith('.gif') ||
-            lowerFilename.endsWith('.webp') ||
-            lowerFilename.endsWith('.bmp');
-
-    // 某些平台（尤其移动端）会返回错误 mimeType；如果文件后缀明确，优先信任后缀。
-    if (hasKnownImageExtension) {
-      return _contentTypeFromFilename(filename);
-    }
-
-    if (supported.contains(normalized)) {
-      return normalized;
-    }
-
-    return _contentTypeFromFilename(filename);
-  }
-
   Future<CaptchaConfigModel> getCaptchaConfig() async {
     final res = await get('/api/captcha/config');
     final body = unwrapData<Map<String, dynamic>>(res);
@@ -633,14 +601,15 @@ class Api extends BaseConnect {
     await post('/api/articles/$id/view', {});
   }
 
-  Future<({
-    int exp,
-    int level,
-    String? lastCheckInDate,
-    int? consecutiveCheckInDays,
-    DateTime? nextEligibleAtUtc,
-    bool canCheckIn,
-  })> getMyExp() async {
+  Future<
+      ({
+        int exp,
+        int level,
+        String? lastCheckInDate,
+        int? consecutiveCheckInDays,
+        DateTime? nextEligibleAtUtc,
+        bool canCheckIn,
+      })> getMyExp() async {
     final res = await get('/api/me/exp');
 
     if (res.hasError) {
@@ -660,8 +629,7 @@ class Api extends BaseConnect {
       consecutiveCheckInDays: (body['consecutiveCheckInDays'] as num?)?.toInt(),
       nextEligibleAtUtc: DateTime.tryParse(
         body['nextEligibleAt']?.toString() ?? '',
-      )
-          ?.toUtc(),
+      )?.toUtc(),
       canCheckIn: body['canCheckIn'] as bool? ?? true,
     );
   }
@@ -1359,15 +1327,15 @@ class Api extends BaseConnect {
     }
   }
 
-  Future<({
-    String message,
-    int? reward,
-    int? consecutiveDays,
-    int? rank,
-    int? currentExp,
-    int? currentLevel,
-  })>
-      checkIn({CaptchaPayload? captcha}) async {
+  Future<
+      ({
+        String message,
+        int? reward,
+        int? consecutiveDays,
+        int? rank,
+        int? currentExp,
+        int? currentLevel,
+      })> checkIn({CaptchaPayload? captcha}) async {
     final res = await post(
       '/api/check-in',
       captcha == null ? <String, dynamic>{} : {'captcha': captcha.toJson()},
@@ -1417,30 +1385,23 @@ class Api extends BaseConnect {
     required String filename,
     String? contentType,
   }) async {
-    final uploadRes = await post(
-      '/api/upload',
-      FormData({
-        'files': MultipartFile(
-          bytes,
-          filename: filename,
-          contentType: contentType ?? _contentTypeFromFilename(filename),
-        ),
-      }),
-      contentType: 'multipart/form-data',
+    final result = await uploadImageDirect(
+      bytes: bytes,
+      filename: filename,
+      mimeType: contentType ?? _contentTypeFromFilename(filename),
+      path: 'avatars',
+      onProgress: (_) {}, // 头像上传不需要进度回调
     );
 
-    // upload response in strapi is typically a list of files
-    final uploadedList = unwrapData<List<dynamic>>(uploadRes);
-    if (uploadedList.isEmpty) {
+    if (result == null) {
       throw ApiException('Upload failed');
     }
 
-    final uploaded = uploadedList.first as Map;
-    final rawAvatarId = uploaded['id'] ?? uploaded['documentId'];
+    final rawAvatarId = result['id'];
     if (rawAvatarId == null) {
       throw ApiException('Upload response missing file id');
     }
-    final uploadedUrl = _normalizeFileUrl(uploaded['url'] as String?);
+    final uploadedUrl = _normalizeFileUrl(result['url'] as String?);
 
     // Update Author with new avatar
     final updateRes = await put(
@@ -1469,7 +1430,103 @@ class Api extends BaseConnect {
     }
   }
 
-  /// 通用图片上传，支持所有平台
+  /// 直传图片到对象存储
+  ///
+  /// [bytes] - 图片二进制数据
+  /// [filename] - 文件名
+  /// [mimeType] - MIME 类型，如 'image/png'
+  /// [path] - 存储路径，如 'avatars', 'editor'
+  /// [onProgress] - 进度回调，参数为 0-100
+  Future<Map<String, dynamic>?> uploadImageDirect({
+    required List<int> bytes,
+    required String filename,
+    required String mimeType,
+    String path = 'editor',
+    required void Function(int percent) onProgress,
+  }) async {
+    final token = box.read<String>('access_token') ?? '';
+    final authHeaders = token.isNotEmpty
+        ? {'Authorization': 'Bearer $token'}
+        : <String, String>{};
+
+    // 1. 获取签名
+    final signRes = await postWithRetry(
+      '/api/direct-upload/sign',
+      {
+        'filename': filename,
+        'mimeType': mimeType,
+        'size': bytes.length,
+        'path': path,
+        'fileInfo': {
+          'name': filename,
+          'alternativeText': filename,
+        },
+      },
+      headers: authHeaders,
+      operationName: 'DirectUpload Sign',
+    );
+
+    if (signRes.hasError) {
+      throw ApiException(
+        signRes.statusText ?? '获取上传签名失败',
+        statusCode: signRes.statusCode,
+      );
+    }
+
+    final signData = unwrapData<Map<String, dynamic>>(signRes);
+    final uploadUrl = signData['uploadUrl'] as String;
+    final uploadToken = signData['uploadToken'] as String;
+    final headers = (signData['headers'] as Map<String, dynamic>?)
+            ?.map((k, v) => MapEntry(k, v.toString())) ??
+        <String, String>{};
+
+    onProgress(10);
+
+    // 2. 直传到对象存储（使用原始字节流）
+    try {
+      final uploadResp = await http.put(
+        Uri.parse(uploadUrl),
+        headers: headers,
+        body: bytes,
+      );
+
+      if (uploadResp.statusCode != 200 && uploadResp.statusCode != 204) {
+        throw ApiException(
+          '上传到对象存储失败: ${uploadResp.statusCode} ${uploadResp.body}',
+          statusCode: uploadResp.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('上传到对象存储失败: $e');
+    }
+
+    onProgress(80);
+
+    // 3. 完成上传
+    final completeRes = await postWithRetry(
+      '/api/direct-upload/complete',
+      {
+        'uploadToken': uploadToken,
+      },
+      headers: authHeaders,
+      operationName: 'DirectUpload Complete',
+    );
+
+    if (completeRes.hasError) {
+      throw ApiException(
+        completeRes.statusText ?? '完成上传失败',
+        statusCode: completeRes.statusCode,
+      );
+    }
+
+    onProgress(100);
+
+    final completeData = unwrapData<Map<String, dynamic>>(completeRes);
+    return completeData;
+  }
+
+  /// 通用图片上传（使用直传）
   ///
   /// [bytes] - 图片二进制数据
   /// [filename] - 文件名
@@ -1481,75 +1538,23 @@ class Api extends BaseConnect {
     required String mimeType,
     required void Function(int percent) onProgress,
   }) async {
-    final normalizedMimeType = _normalizeImageMimeType(
+    return uploadImageDirect(
+      bytes: bytes,
       filename: filename,
       mimeType: mimeType,
+      onProgress: onProgress,
     );
-
-    final form = FormData({
-      'files': MultipartFile(
-        bytes,
-        filename: filename,
-        contentType: normalizedMimeType,
-      ),
-    });
-
-    final res = await post(
-      '/api/upload',
-      form,
-      uploadProgress: (percent) {
-        final normalizedPercent = percent <= 1 ? percent * 100 : percent;
-        onProgress(normalizedPercent.round().clamp(0, 100).toInt());
-      },
-    );
-
-    if (res.hasError) {
-      String message = res.statusText ?? 'Upload failed';
-      final body = res.body;
-      if (body is Map) {
-        final error = body['error'];
-        if (error is Map && error['message'] != null) {
-          message = error['message'].toString();
-        } else if (error is String && error.isNotEmpty) {
-          message = error;
-        }
-      }
-
-      if (res.statusCode == 413) {
-        message = '图片过大，上传失败（413）';
-      }
-
-      debugPrint(
-        'uploadImage failed: filename=$filename, size=${bytes.length}, '
-        'mime=$mimeType, normalizedMime=$normalizedMimeType, '
-        'status=${res.statusCode}, body=${res.bodyString}',
-      );
-      throw ApiException(
-        message,
-        statusCode: res.statusCode,
-        details: res.bodyString,
-      );
-    }
-
-    final body = res.body;
-    if (body is List && body.isNotEmpty) {
-      return body.first as Map<String, dynamic>;
-    } else if (body is Map<String, dynamic>) {
-      // Sometimes Strapi returns a single object depending on plugin config?
-      // Standard upload returns array.
-      return body;
-    }
-
-    return null;
   }
 
   Future<int> getUnreadNotificationCount() async {
     try {
       final res = await get('/api/notifications/unread-count');
       if (res.hasError) {
-        debugPrint('GetUnreadCount Error: ${res.statusCode} - ${res.bodyString}');
+        debugPrint(
+            'GetUnreadCount Error: ${res.statusCode} - ${res.bodyString}');
         if (res.statusCode == 403) {
-          debugPrint('Permission denied. Make sure user is logged in and has proper permissions.');
+          debugPrint(
+              'Permission denied. Make sure user is logged in and has proper permissions.');
         }
         return 0;
       }
@@ -1579,7 +1584,8 @@ class Api extends BaseConnect {
       );
 
       if (res.hasError) {
-        debugPrint('GetNotifications Error: ${res.statusCode} - ${res.bodyString}');
+        debugPrint(
+            'GetNotifications Error: ${res.statusCode} - ${res.bodyString}');
         if (res.statusCode == 403) {
           throw ApiException('没有权限访问通知', statusCode: 403);
         }
@@ -1606,7 +1612,8 @@ class Api extends BaseConnect {
       {},
     );
     if (res.hasError) {
-      debugPrint('MarkNotificationRead Error: ${res.statusCode} - ${res.bodyString}');
+      debugPrint(
+          'MarkNotificationRead Error: ${res.statusCode} - ${res.bodyString}');
       return false;
     }
     final body = res.body;
@@ -1622,7 +1629,8 @@ class Api extends BaseConnect {
       {},
     );
     if (res.hasError) {
-      debugPrint('MarkAllNotificationsRead Error: ${res.statusCode} - ${res.bodyString}');
+      debugPrint(
+          'MarkAllNotificationsRead Error: ${res.statusCode} - ${res.bodyString}');
       return false;
     }
     final body = res.body;
@@ -1688,7 +1696,8 @@ class Api extends BaseConnect {
     );
 
     if (res.hasError) {
-      debugPrint('BatchCheckLikes Error: ${res.statusCode} - ${res.bodyString}');
+      debugPrint(
+          'BatchCheckLikes Error: ${res.statusCode} - ${res.bodyString}');
       return {};
     }
 
@@ -1725,7 +1734,7 @@ class Api extends BaseConnect {
     );
 
     final data = unwrapData<List<dynamic>>(res);
-    
+
     // Inject author data into each article if provided
     if (authorData != null) {
       for (final article in data) {
@@ -1734,7 +1743,7 @@ class Api extends BaseConnect {
         }
       }
     }
-    
+
     await _mergeReadStatus(data, tag: 'ProfileArticles');
 
     final hasNext = data.length >= ApiConfig.defaultPageSize;

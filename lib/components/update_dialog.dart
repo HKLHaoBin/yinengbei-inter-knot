@@ -12,8 +12,8 @@ Future<void> showUpdateDialog(
   return showDialog(
     context: context,
     barrierDismissible: !updateInfo.forceUpdate,
-    builder: (context) => WillPopScope(
-      onWillPop: () async => !updateInfo.forceUpdate,
+    builder: (context) => PopScope(
+      canPop: !updateInfo.forceUpdate,
       child: _UpdateDialog(updateInfo: updateInfo),
     ),
   );
@@ -21,16 +21,17 @@ Future<void> showUpdateDialog(
 
 class _UpdateDialog extends StatefulWidget {
   final UpdateInfo updateInfo;
-  
+
   const _UpdateDialog({required this.updateInfo});
-  
+
   @override
   State<_UpdateDialog> createState() => _UpdateDialogState();
 }
 
-class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserver {
+class _UpdateDialogState extends State<_UpdateDialog>
+    with WidgetsBindingObserver {
   bool _waitingForPermission = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -41,11 +42,11 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
       _startProgressSync();
     }
   }
-  
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     // When app resumes from settings, retry installation
     if (state == AppLifecycleState.resumed && _waitingForPermission) {
       _waitingForPermission = false;
@@ -57,13 +58,13 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
       });
     }
   }
-  
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
-  
+
   void _startProgressSync() {
     Future.doWhile(() async {
       await Future.delayed(const Duration(milliseconds: 100));
@@ -74,10 +75,11 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
       return false;
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    final isDownloading = UpdateService.downloadStatus == DownloadStatus.downloading;
+    final isDownloading =
+        UpdateService.downloadStatus == DownloadStatus.downloading;
     final downloadProgress = UpdateService.downloadProgress;
     final downloadStatus = UpdateService.statusMessage;
     return AlertDialog(
@@ -126,7 +128,8 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.arrow_forward, size: 16, color: Color(0xff808080)),
+                const Icon(Icons.arrow_forward,
+                    size: 16, color: Color(0xff808080)),
                 const SizedBox(width: 8),
                 Text(
                   '最新版本：${widget.updateInfo.version}',
@@ -174,7 +177,8 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
                 ),
               ),
             ),
-            if (isDownloading || UpdateService.downloadStatus == DownloadStatus.completed) ...[
+            if (isDownloading ||
+                UpdateService.downloadStatus == DownloadStatus.completed) ...[
               const SizedBox(height: 16),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,7 +196,8 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
                     child: LinearProgressIndicator(
                       value: downloadProgress,
                       backgroundColor: const Color(0xff2A2A2A),
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xffD7FF00)),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xffD7FF00)),
                       minHeight: 6,
                     ),
                   ),
@@ -203,7 +208,8 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
         ),
       ),
       actions: [
-        if (!isDownloading && UpdateService.downloadStatus != DownloadStatus.completed) ...[
+        if (!isDownloading &&
+            UpdateService.downloadStatus != DownloadStatus.completed) ...[
           if (!widget.updateInfo.forceUpdate)
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -226,7 +232,8 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-        ] else if (UpdateService.downloadStatus == DownloadStatus.completed) ...[
+        ] else if (UpdateService.downloadStatus ==
+            DownloadStatus.completed) ...[
           if (!widget.updateInfo.forceUpdate)
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -253,10 +260,10 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
       ],
     );
   }
-  
+
   Future<void> _downloadAndInstall() async {
     _startProgressSync();
-    
+
     try {
       final filePath = await UpdateService.downloadApk(
         widget.updateInfo.downloadUrl,
@@ -266,7 +273,7 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
           }
         },
       );
-      
+
       if (filePath == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -275,7 +282,7 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
         }
         return;
       }
-      
+
       // Download completed, update UI to show install button
       if (mounted) {
         setState(() {});
@@ -288,15 +295,15 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
       }
     }
   }
-  
+
   Future<void> _installDownloadedApk() async {
     final filePath = UpdateService.downloadedFilePath;
     if (filePath == null) return;
-    
+
     try {
       // Try to install APK
       final success = await UpdateService.installApk(filePath);
-      
+
       // If failed (permission denied), guide user to settings
       if (!success && Platform.isAndroid && mounted) {
         final shouldOpenSettings = await showDialog<bool>(
@@ -318,7 +325,8 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('取消', style: TextStyle(color: Color(0xff808080))),
+                child: const Text('取消',
+                    style: TextStyle(color: Color(0xff808080))),
               ),
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
@@ -331,7 +339,7 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
             ],
           ),
         );
-        
+
         if (shouldOpenSettings == true) {
           // Use Intent to jump to install permission settings
           final packageInfo = await PackageInfo.fromPlatform();
@@ -339,14 +347,14 @@ class _UpdateDialogState extends State<_UpdateDialog> with WidgetsBindingObserve
             action: 'android.settings.MANAGE_UNKNOWN_APP_SOURCES',
             data: 'package:${packageInfo.packageName}',
           );
-          
+
           // Set waiting flag before jumping to settings
           _waitingForPermission = true;
           await intent.launch();
         }
         return;
       }
-      
+
       if (mounted) {
         Navigator.of(context).pop();
       }

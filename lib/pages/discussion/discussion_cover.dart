@@ -8,9 +8,14 @@ import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/models/discussion.dart';
 
 class Cover extends StatefulWidget {
-  const Cover({super.key, required this.discussion});
+  const Cover({
+    super.key,
+    required this.discussion,
+    this.onImageLoaded,
+  });
 
   final DiscussionModel discussion;
+  final void Function(double aspectRatio)? onImageLoaded;
 
   @override
   State<Cover> createState() => _CoverState();
@@ -51,15 +56,36 @@ class _CoverState extends State<Cover> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: NetworkImageBox(
-              url: url,
+            child: Image.network(
+              url,
               fit: BoxFit.contain,
               gaplessPlayback: true,
-              loadingBuilder: (context, progress) => const SizedBox.shrink(),
-              errorBuilder: (context) =>
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) {
+                  return child;
+                }
+                return const SizedBox.shrink();
+              },
+              errorBuilder: (context, error, stackTrace) =>
                   Assets.images.defaultCover.image(fit: BoxFit.contain),
-              fadeInDuration: const Duration(milliseconds: 400),
-              fadeOutDuration: const Duration(milliseconds: 200),
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                if (frame != null && widget.onImageLoaded != null) {
+                  // 图片加载完成，获取实际尺寸
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final imageStream = NetworkImage(url).resolve(
+                      const ImageConfiguration(),
+                    );
+                    imageStream.addListener(
+                      ImageStreamListener((info, _) {
+                        final image = info.image;
+                        final aspectRatio = image.width / image.height;
+                        widget.onImageLoaded?.call(aspectRatio);
+                      }),
+                    );
+                  });
+                }
+                return child;
+              },
             ),
           ),
         ),
