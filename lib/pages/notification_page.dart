@@ -23,6 +23,7 @@ class _NotificationPageState extends State<NotificationPage>
   final c = Get.find<Controller>();
   final scrollController = ScrollController();
   late TabController _tabController;
+  Worker? _loginWorker;
 
   final notifications = <NotificationModel>[].obs;
   final isLoading = false.obs;
@@ -31,12 +32,21 @@ class _NotificationPageState extends State<NotificationPage>
   final currentTabIndex = 0.obs;
   String endCursor = '';
 
-  final List<({List<NotificationType>? types, String label, IconData icon})> _tabs = [
+  final List<({List<NotificationType>? types, String label, IconData icon})>
+      _tabs = [
     (types: null, label: '全部', icon: Icons.all_inbox),
-    (types: [NotificationType.comment, NotificationType.reply], label: '回复', icon: Icons.reply),
+    (
+      types: [NotificationType.comment, NotificationType.reply],
+      label: '回复',
+      icon: Icons.reply
+    ),
     (types: [NotificationType.like], label: '点赞', icon: Icons.thumb_up),
     (types: [NotificationType.favorite], label: '收藏', icon: Icons.favorite),
-    (types: [NotificationType.mention], label: '@我', icon: Icons.alternate_email),
+    (
+      types: [NotificationType.mention],
+      label: '@我',
+      icon: Icons.alternate_email
+    ),
     (types: [NotificationType.system], label: '系统', icon: Icons.notifications),
   ];
 
@@ -46,11 +56,14 @@ class _NotificationPageState extends State<NotificationPage>
     _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(_onTabChanged);
     scrollController.addListener(_onScroll);
-    _loadNotifications();
-    _loadUnreadCount();
-    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadNotifications();
+      _loadUnreadCount();
+    });
+
     // 监听登录状态变化，登录后自动刷新数据
-    ever(c.isLogin, (isLogin) {
+    _loginWorker = ever(c.isLogin, (isLogin) {
       if (isLogin) {
         _refresh();
       }
@@ -59,6 +72,7 @@ class _NotificationPageState extends State<NotificationPage>
 
   @override
   void dispose() {
+    _loginWorker?.dispose();
     _tabController.dispose();
     scrollController.dispose();
     super.dispose();
@@ -90,13 +104,13 @@ class _NotificationPageState extends State<NotificationPage>
 
   Future<void> _loadNotifications([String endCursor = '']) async {
     if (isLoading.value) return;
-    
+
     // 检查登录状态，未登录时直接返回，不显示错误
     if (!c.isLogin.value) {
       isLoading.value = false;
       return;
     }
-    
+
     isLoading.value = true;
 
     try {
@@ -150,11 +164,11 @@ class _NotificationPageState extends State<NotificationPage>
     if (notification.isRead || notification.documentId == null) return;
 
     try {
-      final success = await api.markNotificationAsRead(notification.documentId!);
+      final success =
+          await api.markNotificationAsRead(notification.documentId!);
       if (success) {
         c.decrementUnreadNotificationCount();
-        final index =
-            notifications.indexWhere((n) => n.id == notification.id);
+        final index = notifications.indexWhere((n) => n.id == notification.id);
         if (index != -1) {
           notifications[index] = NotificationModel(
             id: notification.id,
@@ -214,11 +228,12 @@ class _NotificationPageState extends State<NotificationPage>
         notification.articleDocumentId!.isNotEmpty) {
       try {
         // 先获取文章详情
-        final discussion = await api.getArticleDetail(notification.articleDocumentId!);
-        
+        final discussion =
+            await api.getArticleDetail(notification.articleDocumentId!);
+
         // 缓存到HDataModel
         HDataModel.upsertCachedDiscussion(discussion);
-        
+
         // 创建HDataModel实例
         final hData = HDataModel(
           id: discussion.id,
@@ -226,7 +241,7 @@ class _NotificationPageState extends State<NotificationPage>
           createdAt: discussion.createdAt,
           isPinned: false,
         );
-        
+
         // 使用和主页一样的弹窗方式展示文章详情
         if (!mounted) return;
         await showZZZDialog(
@@ -272,11 +287,13 @@ class _NotificationPageState extends State<NotificationPage>
                 children: [
                   // 标题栏
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                     child: Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          icon:
+                              const Icon(Icons.arrow_back, color: Colors.white),
                           onPressed: () => Get.back(),
                         ),
                         const Expanded(
@@ -290,12 +307,14 @@ class _NotificationPageState extends State<NotificationPage>
                           ),
                         ),
                         Obx(() {
-                          if (c.unreadNotificationCount.value == 0) return const SizedBox.shrink();
+                          if (c.unreadNotificationCount.value == 0)
+                            return const SizedBox.shrink();
                           return TextButton(
                             onPressed: _markAllAsRead,
                             child: const Text(
                               '全部已读',
-                              style: TextStyle(color: Color(0xffD7FF00), fontSize: 14),
+                              style: TextStyle(
+                                  color: Color(0xffD7FF00), fontSize: 14),
                             ),
                           );
                         }),
@@ -310,7 +329,8 @@ class _NotificationPageState extends State<NotificationPage>
                     unselectedLabelColor: Colors.white60,
                     indicatorColor: const Color(0xffD7FF00),
                     indicatorWeight: 3,
-                    labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    labelStyle: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w600),
                     unselectedLabelStyle: const TextStyle(fontSize: 15),
                     tabs: _tabs.map((tab) => Tab(text: tab.label)).toList(),
                   ),
@@ -323,7 +343,8 @@ class _NotificationPageState extends State<NotificationPage>
             child: TabBarView(
               controller: _tabController,
               physics: const NeverScrollableScrollPhysics(), // 禁用左右滑动
-              children: List.generate(_tabs.length, (index) => _buildNotificationList()),
+              children: List.generate(
+                  _tabs.length, (index) => _buildNotificationList()),
             ),
           ),
         ],
@@ -358,7 +379,8 @@ class _NotificationPageState extends State<NotificationPage>
                       final tab = _tabs[index];
                       final isSelected = currentIndex == index;
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
                           child: GestureDetector(
@@ -366,23 +388,30 @@ class _NotificationPageState extends State<NotificationPage>
                               _tabController.animateTo(index);
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
                               decoration: BoxDecoration(
-                                color: isSelected ? const Color(0xffD7FF00) : Colors.transparent,
+                                color: isSelected
+                                    ? const Color(0xffD7FF00)
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
                                 children: [
                                   Icon(
                                     tab.icon,
-                                    color: isSelected ? Colors.black : Colors.white,
+                                    color: isSelected
+                                        ? Colors.black
+                                        : Colors.white,
                                     size: 20,
                                   ),
                                   const SizedBox(width: 12),
                                   Text(
                                     tab.label,
                                     style: TextStyle(
-                                      color: isSelected ? Colors.black : Colors.white,
+                                      color: isSelected
+                                          ? Colors.black
+                                          : Colors.white,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 15,
                                     ),
@@ -403,11 +432,13 @@ class _NotificationPageState extends State<NotificationPage>
                   children: [
                     // 当前页面标题框（B站风格）
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 20),
                       decoration: const BoxDecoration(
                         color: Color(0xff0A0A0A),
                         border: Border(
-                          bottom: BorderSide(color: Color(0xff2A2A2A), width: 1),
+                          bottom:
+                              BorderSide(color: Color(0xff2A2A2A), width: 1),
                         ),
                       ),
                       child: Row(
@@ -426,7 +457,8 @@ class _NotificationPageState extends State<NotificationPage>
                             );
                           }),
                           Obx(() {
-                            if (c.unreadNotificationCount.value == 0) return const SizedBox.shrink();
+                            if (c.unreadNotificationCount.value == 0)
+                              return const SizedBox.shrink();
                             return TextButton.icon(
                               onPressed: _markAllAsRead,
                               icon: const Icon(

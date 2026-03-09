@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_skill/flutter_skill.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:inter_knot/api/api.dart';
@@ -22,6 +23,9 @@ import 'package:inter_knot/services/update_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (kDebugMode) {
+    FlutterSkillBinding.ensureInitialized();
+  }
   await GetStorage.init();
   Get.put(AuthApi());
   Get.put(Api());
