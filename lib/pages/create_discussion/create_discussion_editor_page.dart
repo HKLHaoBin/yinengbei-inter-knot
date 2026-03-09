@@ -1,8 +1,15 @@
+// ignore_for_file: experimental_member_use
+
+import 'dart:async';
+
+import 'package:dart_quill_delta/dart_quill_delta.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/image_viewer.dart';
+import 'package:inter_knot/helpers/markdown_import.dart';
 import 'package:inter_knot/helpers/upload_task.dart';
 
 class CreateDiscussionEditorPage extends StatelessWidget {
@@ -26,7 +33,6 @@ class CreateDiscussionEditorPage extends StatelessWidget {
   final quill.QuillController quillController;
   final VoidCallback onPickAndUploadImage;
 
-  // Mobile-only
   final bool isMobile;
   final TextEditingController? mobileBodyController;
   final RxList<UploadTask>? mobileUploadTasks;
@@ -53,11 +59,88 @@ class CreateDiscussionEditorPage extends StatelessWidget {
       );
     }
 
-    // Desktop: Quill editor
+    return _DesktopEditorBody(
+      titleController: titleController,
+      quillController: quillController,
+      onPickAndUploadImage: onPickAndUploadImage,
+    );
+  }
+}
+
+class _DesktopEditorBody extends StatefulWidget {
+  const _DesktopEditorBody({
+    required this.titleController,
+    required this.quillController,
+    required this.onPickAndUploadImage,
+  });
+
+  final TextEditingController titleController;
+  final quill.QuillController quillController;
+  final VoidCallback onPickAndUploadImage;
+
+  @override
+  State<_DesktopEditorBody> createState() => _DesktopEditorBodyState();
+}
+
+class _DesktopEditorBodyState extends State<_DesktopEditorBody> {
+  bool _isPasteShortcut(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (event.logicalKey != LogicalKeyboardKey.keyV) return false;
+    return HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isMetaPressed;
+  }
+
+  Future<void> _handlePasteShortcut(TextSelection selection) async {
+    final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = clipboardData?.text;
+    if (text == null || text.isEmpty) return;
+
+    final controller = widget.quillController;
+    controller.updateSelection(selection, quill.ChangeSource.local);
+
+    if (!looksLikeMarkdown(text)) {
+      controller.replaceText(
+        selection.start,
+        selection.end - selection.start,
+        text,
+        TextSelection.collapsed(offset: selection.start + text.length),
+      );
+      return;
+    }
+
+    try {
+      final markdownDelta = markdownToDocumentDelta(text);
+      final composed = Delta()
+        ..retain(selection.start)
+        ..delete(selection.end - selection.start);
+      controller.compose(
+        composed.concat(markdownDelta),
+        selection,
+        quill.ChangeSource.local,
+      );
+    } catch (_) {
+      controller.replaceText(
+        selection.start,
+        selection.end - selection.start,
+        text,
+        TextSelection.collapsed(offset: selection.start + text.length),
+      );
+    }
+  }
+
+  KeyEventResult? _onKeyPressed(KeyEvent event, quill.Node? node) {
+    if (!_isPasteShortcut(event)) return null;
+    final selection = widget.quillController.selection;
+    unawaited(_handlePasteShortcut(selection));
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
         TextField(
-          controller: titleController,
+          controller: widget.titleController,
           decoration: const InputDecoration(
             hintText: '标题',
             border: OutlineInputBorder(),
@@ -65,7 +148,7 @@ class CreateDiscussionEditorPage extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         quill.QuillSimpleToolbar(
-          controller: quillController,
+          controller: widget.quillController,
           config: quill.QuillSimpleToolbarConfig(
             showFontFamily: false,
             showFontSize: false,
@@ -79,7 +162,7 @@ class CreateDiscussionEditorPage extends StatelessWidget {
             customButtons: [
               quill.QuillToolbarCustomButtonOptions(
                 icon: const Icon(Icons.image),
-                onPressed: onPickAndUploadImage,
+                onPressed: widget.onPickAndUploadImage,
               ),
             ],
           ),
@@ -92,10 +175,11 @@ class CreateDiscussionEditorPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
             ),
             child: quill.QuillEditor.basic(
-              controller: quillController,
+              controller: widget.quillController,
               config: quill.QuillEditorConfig(
-                placeholder: '请输入文本',
+                placeholder: '请尽情发挥吧',
                 padding: const EdgeInsets.all(16),
+                onKeyPressed: _onKeyPressed,
                 embedBuilders: [
                   ...FlutterQuillEmbeds.editorBuilders(
                     imageEmbedConfig: QuillEditorImageEmbedConfig(
@@ -366,12 +450,10 @@ class _MobileImageTile extends StatelessWidget {
         height: 90,
         child: Stack(
           children: [
-            // Preview image
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: _buildPreview(context, status),
             ),
-            // Overlay for non-done states
             if (status != UploadStatus.done)
               Positioned.fill(
                 child: ClipRRect(
@@ -384,7 +466,6 @@ class _MobileImageTile extends StatelessWidget {
                   ),
                 ),
               ),
-            // Remove button
             Positioned(
               top: 4,
               right: 4,
@@ -400,7 +481,6 @@ class _MobileImageTile extends StatelessWidget {
                 ),
               ),
             ),
-            // Retry button for errors
             if (status == UploadStatus.error)
               Positioned(
                 bottom: 4,
@@ -411,7 +491,9 @@ class _MobileImageTile extends StatelessWidget {
                     onTap: onRetry,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xffD7FF00),
                         borderRadius: BorderRadius.circular(10),
@@ -437,7 +519,8 @@ class _MobileImageTile extends StatelessWidget {
   void _openImageViewer(BuildContext context) {
     final doneTasks = allTasks
         .where(
-            (t) => t.status.value == UploadStatus.done && t.serverUrl != null)
+          (t) => t.status.value == UploadStatus.done && t.serverUrl != null,
+        )
         .toList();
     final doneUrls = doneTasks.map((t) => t.serverUrl!).toList();
     final doneIndex = doneTasks.indexWhere((t) => t.localId == task.localId);
@@ -532,8 +615,11 @@ class _MobileImageTile extends StatelessWidget {
           ),
         );
       case UploadStatus.error:
-        return const Icon(Icons.error_outline,
-            color: Colors.redAccent, size: 24);
+        return const Icon(
+          Icons.error_outline,
+          color: Colors.redAccent,
+          size: 24,
+        );
       case UploadStatus.done:
         return const SizedBox.shrink();
     }
