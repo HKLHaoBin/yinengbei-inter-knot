@@ -14,47 +14,14 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage>
-    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
+    with AutomaticKeepAliveClientMixin {
   final c = Get.find<Controller>();
-
-  late final AnimationController _colorController;
-  late final Animation<Color?> _colorAnimation;
-
-  final ValueNotifier<bool> _isHovering = ValueNotifier(false);
-  final ValueNotifier<bool> _isRefreshHovering = ValueNotifier(false);
-
-  @override
-  void initState() {
-    super.initState();
-    _colorController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    )..repeat(reverse: true);
-
-    _colorAnimation = ColorTween(
-      begin: const Color(0xfffbfe00),
-      end: const Color(0xffdcfe00),
-    ).animate(CurvedAnimation(
-      parent: _colorController,
-      curve: Curves.linear,
-    ));
-  }
 
   final keyboardVisibilityController = KeyboardVisibilityController();
   late final keyboardSubscription =
       keyboardVisibilityController.onChange.listen((visible) {
     if (!visible) FocusManager.instance.primaryFocus?.unfocus();
   });
-
-  @override
-  void dispose() {
-    _colorController.dispose();
-    _isHovering.dispose();
-    _isRefreshHovering.dispose();
-    keyboardSubscription.cancel();
-    _scrollController.dispose();
-    super.dispose();
-  }
 
   late final fetchData = retryThrottle(
     c.searchData,
@@ -64,6 +31,13 @@ class _SearchPageState extends State<SearchPage>
   final ScrollController _scrollController = ScrollController();
 
   @override
+  void dispose() {
+    keyboardSubscription.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     super.build(context);
     final width = MediaQuery.of(context).size.width;
@@ -71,13 +45,6 @@ class _SearchPageState extends State<SearchPage>
 
     return Stack(
       children: [
-        Positioned.fill(
-          child: Image.asset(
-            'assets/images/zzz.webp',
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-          ),
-        ),
         Column(
           children: [
             Expanded(
@@ -85,7 +52,6 @@ class _SearchPageState extends State<SearchPage>
                 children: [
                   isCompact
                       ? RefreshIndicator(
-                          // 让指示器完全出现在 AppBar 下方，不被顶部透明区域遮挡
                           edgeOffset: 0,
                           displacement: 56,
                           onRefresh: () async {
@@ -155,7 +121,8 @@ class _SearchPageState extends State<SearchPage>
                         },
                         child: shouldShow
                             ? Center(
-                                key: ValueKey('new-post-banner-$count-$hasChange'),
+                                key: ValueKey(
+                                    'new-post-banner-$count-$hasChange'),
                                 child: Material(
                                   color: const Color(0xffD7FF00),
                                   borderRadius: BorderRadius.circular(24),
@@ -166,7 +133,6 @@ class _SearchPageState extends State<SearchPage>
                                     borderRadius: BorderRadius.circular(24),
                                     onTap: () async {
                                       await c.showNewPosts();
-                                      // Ensure layout is built before scrolling
                                       WidgetsBinding.instance
                                           .addPostFrameCallback((_) {
                                         if (_scrollController.hasClients) {
@@ -221,140 +187,32 @@ class _SearchPageState extends State<SearchPage>
           Positioned(
             bottom: 24,
             right: 24,
-            child: Container(
-              height: 64,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xff1A1A1A).withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(
-                  color: const Color(0xff333333),
-                  width: 1.5,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _ZzzDesktopActionButton(
+                  icon: Icons.refresh_rounded,
+                  label: '刷新',
+                  width: 48,
+                  iconOnly: true,
+                  enableClickFlash: true,
+                  onTap: () async {
+                    c.refreshSearchData();
+                  },
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Refresh Button
-                  ValueListenableBuilder<bool>(
-                    valueListenable: _isRefreshHovering,
-                    builder: (context, isHovering, child) {
-                      return AnimatedBuilder(
-                        animation: _colorAnimation,
-                        builder: (context, child) {
-                          return Material(
-                            color: isHovering
-                                ? _colorAnimation.value
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(28),
-                            child: InkWell(
-                              onHover: (value) =>
-                                  _isRefreshHovering.value = value,
-                              splashColor: Colors.transparent,
-                              highlightColor: Colors.transparent,
-                              borderRadius: BorderRadius.circular(28),
-                              onTap: () {
-                                c.refreshSearchData();
-                              },
-                              child: Container(
-                                width: 56,
-                                height: 56,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.refresh_rounded,
-                                  color:
-                                      isHovering ? Colors.black : Colors.white,
-                                  size: 24,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  Container(
-                    width: 1,
-                    height: 24,
-                    color: const Color(0xff333333),
-                  ),
-                  const SizedBox(width: 4),
-                  // Create Discussion Button
-                  ValueListenableBuilder<bool>(
-                    valueListenable: _isHovering,
-                    builder: (context, isHovering, child) {
-                      return AnimatedBuilder(
-                        animation: _colorAnimation,
-                        builder: (context, child) {
-                          return Material(
-                            color: isHovering
-                                ? _colorAnimation.value
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(28),
-                            child: InkWell(
-                              onHover: (value) => _isHovering.value = value,
-                              splashColor: Colors.transparent,
-                              highlightColor: Colors.transparent,
-                              borderRadius: BorderRadius.circular(28),
-                              onTap: () async {
-                                if (await c.ensureLogin()) {
-                                  CreateDiscussionPage.show(context);
-                                }
-                              },
-                              child: Container(
-                                height: 56,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 20),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(28),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xffFBC02D),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.add,
-                                        color: Colors.black,
-                                        size: 16,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      '发布委托',
-                                      style: TextStyle(
-                                        color: isHovering
-                                            ? Colors.black
-                                            : Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ],
-              ),
+                const SizedBox(height: 12),
+                _ZzzDesktopActionButton(
+                  icon: Icons.add,
+                  label: '发布委托',
+                  width: 188,
+                  onTap: () async {
+                    if (await c.ensureLogin()) {
+                      CreateDiscussionPage.show(context);
+                    }
+                  },
+                ),
+              ],
             ),
           ),
       ],
@@ -363,4 +221,326 @@ class _SearchPageState extends State<SearchPage>
 
   @override
   bool get wantKeepAlive => true;
+}
+
+class _ZzzDesktopActionButton extends StatefulWidget {
+  const _ZzzDesktopActionButton({
+    required this.icon,
+    required this.label,
+    required this.width,
+    required this.onTap,
+    this.iconOnly = false,
+    this.enableClickFlash = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final double width;
+  final Future<void> Function() onTap;
+  final bool iconOnly;
+  final bool enableClickFlash;
+
+  @override
+  State<_ZzzDesktopActionButton> createState() =>
+      _ZzzDesktopActionButtonState();
+}
+
+class _ZzzDesktopActionButtonState extends State<_ZzzDesktopActionButton>
+    with SingleTickerProviderStateMixin {
+  static const _hoverColor = Color(0xffD9FA00);
+  static const _outerFill = Color(0xff313131);
+  static const _specialSauceCurve = Cubic(0.25, 0.1, 0.75, 1);
+  static const _buttonHeight = 48.0;
+  static const _iconSlotSize = 44.0;
+
+  bool _isHovering = false;
+  bool _isFlashing = false;
+  bool _isFlashOff = false;
+  int _flashToken = 0;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseSpreadAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 670),
+    );
+
+    _pulseSpreadAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: -2.0, end: 2.0),
+        weight: 25,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 2.0, end: 7.0),
+        weight: 25,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 7.0, end: 1.0),
+        weight: 25,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: -2.0),
+        weight: 25,
+      ),
+    ]).animate(
+      CurvedAnimation(
+        parent: _pulseController,
+        curve: _specialSauceCurve,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  void _setHovering(bool value) {
+    if (_isHovering == value) return;
+    setState(() => _isHovering = value);
+    _syncPulseState();
+  }
+
+  void _syncPulseState() {
+    final shouldPulse = _isHovering || _isFlashing;
+    if (shouldPulse) {
+      if (!_pulseController.isAnimating) {
+        _pulseController
+          ..reset()
+          ..repeat();
+      }
+      return;
+    }
+
+    _pulseController
+      ..stop()
+      ..reset();
+  }
+
+  Future<void> _playClickFlash() async {
+    if (!widget.enableClickFlash) return;
+
+    final token = ++_flashToken;
+    setState(() {
+      _isFlashing = true;
+      _isFlashOff = true;
+    });
+    _syncPulseState();
+
+    Future<void> step(int delayMs, VoidCallback cb) async {
+      await Future<void>.delayed(Duration(milliseconds: delayMs));
+      if (!mounted || token != _flashToken) return;
+      setState(cb);
+      _syncPulseState();
+    }
+
+    await step(50, () {
+      _isFlashOff = false;
+    });
+    await step(50, () {
+      _isFlashOff = true;
+    });
+    await step(50, () {
+      _isFlashOff = false;
+    });
+    await step(50, () {
+      _isFlashing = false;
+      _isFlashOff = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const borderRadius = BorderRadius.all(Radius.circular(999));
+
+    return MouseRegion(
+      onEnter: (_) => _setHovering(true),
+      onExit: (_) => _setHovering(false),
+      child: AnimatedBuilder(
+        animation: _pulseController,
+        builder: (context, child) {
+          final showPulse = _isHovering || _isFlashing;
+          final showActive = showPulse && !_isFlashOff;
+          final pulseSpread = showPulse ? _pulseSpreadAnimation.value : 0.0;
+
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (showPulse)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: borderRadius,
+                        boxShadow: [
+                          BoxShadow(
+                            color: _hoverColor,
+                            blurRadius: 0,
+                            spreadRadius: pulseSpread,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  splashColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                  borderRadius: borderRadius,
+                  onTap: () async {
+                    _playClickFlash();
+                    await widget.onTap();
+                  },
+                  child: AnimatedContainer(
+                    duration: Duration.zero,
+                    curve: Curves.easeOut,
+                    width: widget.width,
+                    height: _buttonHeight,
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: showActive ? _hoverColor : _outerFill,
+                      borderRadius: borderRadius,
+                      border: Border.all(
+                        color: showActive ? _hoverColor : Colors.black,
+                        width: 2,
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: borderRadius,
+                          child: widget.iconOnly
+                              ? Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    ColoredBox(
+                                      color: showActive
+                                          ? _hoverColor
+                                          : Colors.black,
+                                    ),
+                                    if (!showActive)
+                                      const CustomPaint(
+                                        painter: _ZzzButtonPatternPainter(),
+                                      ),
+                                    Center(
+                                      child: Icon(
+                                        widget.icon,
+                                        color: showActive
+                                            ? Colors.black
+                                            : const Color(0xffefefef),
+                                        size: 22,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    ColoredBox(
+                                      color: showActive
+                                          ? _hoverColor
+                                          : Colors.black,
+                                    ),
+                                    if (!showActive)
+                                      const CustomPaint(
+                                        painter: _ZzzButtonPatternPainter(),
+                                      ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: 40,
+                                        right: 16,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          widget.label,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: showActive
+                                                ? Colors.black
+                                                : const Color(0xffefefef),
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w700,
+                                            fontStyle: FontStyle.italic,
+                                            height: 1.2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                        if (!widget.iconOnly)
+                          Positioned(
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            child: AnimatedContainer(
+                              duration: Duration.zero,
+                              curve: Curves.easeOut,
+                              width: _iconSlotSize,
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                borderRadius: borderRadius,
+                                border: Border.all(
+                                  color: showActive ? _hoverColor : _outerFill,
+                                  width: 4,
+                                ),
+                              ),
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color:
+                                      showActive ? Colors.black : _hoverColor,
+                                ),
+                                child: Icon(
+                                  widget.icon,
+                                  color:
+                                      showActive ? _hoverColor : Colors.black,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ZzzButtonPatternPainter extends CustomPainter {
+  const _ZzzButtonPatternPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const blockSize = 4.0;
+    final blackPaint = Paint()..color = Colors.black;
+    final darkPaint = Paint()..color = const Color(0xff121212);
+
+    for (double y = 0; y < size.height; y += blockSize) {
+      for (double x = 0; x < size.width; x += blockSize) {
+        final isDark =
+            ((x / blockSize).floor() + (y / blockSize).floor()).isOdd;
+        canvas.drawRect(
+          Rect.fromLTWH(x, y, blockSize, blockSize),
+          isDark ? darkPaint : blackPaint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

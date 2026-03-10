@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:inter_knot/components/click_region.dart';
+import 'package:inter_knot/components/close_svg_button.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/download_helper.dart';
@@ -466,10 +467,7 @@ class _ImageViewerState extends State<ImageViewer>
                                     ),
                                   ),
                                 ),
-                                ClickRegion(
-                                  child: Assets.images.closeBtn.image(),
-                                  onTap: closeViewer,
-                                ),
+                                CloseSvgButton(onTap: closeViewer),
                               ],
                             ),
                           ),

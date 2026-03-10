@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/my_tab.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
@@ -78,11 +79,11 @@ class _MyAppBarState extends State<MyAppBar> {
                         );
                       })
                     else
-                      Image.asset(
-                        'assets/images/zzzicon.png',
+                      SvgPicture.asset(
+                        'assets/images/zzzicon.svg',
                         width: 48,
                         height: 48,
-                        filterQuality: FilterQuality.medium,
+                        fit: BoxFit.contain,
                       ),
                     if (!isCompact) ...[
                       const SizedBox(width: 12),
@@ -102,7 +103,8 @@ class _MyAppBarState extends State<MyAppBar> {
                 // 新增：搜索栏
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: isCompact ? 8 : 16),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: isCompact ? 8 : 16),
                     child: Align(
                       alignment: Alignment.center,
                       child: Container(
@@ -213,55 +215,57 @@ class _MyAppBarState extends State<MyAppBar> {
                           ),
                           // 消息中心按钮
                           Obx(() => Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              MyTab(
-                                text: '消息',
-                                middle: true,
-                                isSelected: c.selectedIndex.value == 2,
-                                onTap: () async {
-                                  if (await c.ensureLogin()) {
-                                    c.animateToPage(2, animate: false);
-                                  }
-                                },
-                              ),
-                              if (c.unreadNotificationCount.value > 0)
-                                Positioned(
-                                  right: 18,
-                                  top: 3,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 5,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Colors.black,
-                                        width: 1,
-                                      ),
-                                    ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 16,
-                                      minHeight: 16,
-                                    ),
-                                    child: Text(
-                                      c.unreadNotificationCount.value > 99
-                                          ? '99+'
-                                          : c.unreadNotificationCount.value.toString(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold,
-                                        height: 1,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
+                                clipBehavior: Clip.none,
+                                children: [
+                                  MyTab(
+                                    text: '消息',
+                                    middle: true,
+                                    isSelected: c.selectedIndex.value == 2,
+                                    onTap: () async {
+                                      if (await c.ensureLogin()) {
+                                        c.animateToPage(2, animate: false);
+                                      }
+                                    },
                                   ),
-                                ),
-                            ],
-                          )),
+                                  if (c.unreadNotificationCount.value > 0)
+                                    Positioned(
+                                      right: 18,
+                                      top: 3,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 5,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: Colors.black,
+                                            width: 1,
+                                          ),
+                                        ),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 16,
+                                          minHeight: 16,
+                                        ),
+                                        child: Text(
+                                          c.unreadNotificationCount.value > 99
+                                              ? '99+'
+                                              : c.unreadNotificationCount.value
+                                                  .toString(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            height: 1,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              )),
                           MyTab(
                             text: '我的',
                             last: true,
@@ -305,7 +309,8 @@ class _MyAppBarState extends State<MyAppBar> {
                                   child: Text(
                                     c.unreadNotificationCount.value > 99
                                         ? '99+'
-                                        : c.unreadNotificationCount.value.toString(),
+                                        : c.unreadNotificationCount.value
+                                            .toString(),
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 10,

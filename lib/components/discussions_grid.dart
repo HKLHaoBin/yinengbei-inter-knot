@@ -84,14 +84,11 @@ class _DiscussionGridState extends State<DiscussionGrid>
       return TweenAnimationBuilder<double>(
         key: ValueKey('insert-$id-${shouldAnimate ? 1 : 0}'),
         tween: Tween(begin: shouldAnimate ? 0 : 1, end: 1),
-        duration:
-            Duration(milliseconds: shouldAnimate ? 520 : 180),
+        duration: Duration(milliseconds: shouldAnimate ? 520 : 180),
         curve: shouldAnimate ? Curves.easeOutCubic : Curves.easeOut,
         child: child,
         builder: (context, value, builtChild) {
-          final opacity = value < 0
-              ? 0.0
-              : (value > 1 ? 1.0 : value);
+          final opacity = value < 0 ? 0.0 : (value > 1 ? 1.0 : value);
           final dy = (1 - value) * 16;
           final scale = 0.985 + (0.015 * value);
           return Opacity(
@@ -158,7 +155,6 @@ class _DiscussionGridState extends State<DiscussionGrid>
     super.didUpdateWidget(oldWidget);
     if (widget.controller != oldWidget.controller) {
       if (oldWidget.controller == null) {
-        // old was local, dispose it
         if (_isLocalController) {
           scrollController.dispose();
           _isLocalController = false;
@@ -179,7 +175,6 @@ class _DiscussionGridState extends State<DiscussionGrid>
     if (_isLocalController) {
       scrollController.dispose();
     }
-    // DO NOT dispose external controller here
     super.dispose();
   }
 
@@ -191,7 +186,6 @@ class _DiscussionGridState extends State<DiscussionGrid>
     final fetchData = widget.fetchData;
     final hasNextPage = widget.hasNextPage;
 
-    // Performance: Use layout builder only if list is empty to avoid unnecessary rebuilds
     if (list.isEmpty) {
       return LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(
@@ -202,7 +196,8 @@ class _DiscussionGridState extends State<DiscussionGrid>
             child: Center(
               child: Obx(() {
                 final isSearching = Get.find<Controller>().isSearching.value;
-                final isLoading = isSearching || (hasNextPage && fetchData != null);
+                final isLoading =
+                    isSearching || (hasNextPage && fetchData != null);
                 if (isLoading) {
                   return const DiscussionEmptyState(
                     message: '正在和绳网系统建立联系...',
@@ -215,7 +210,7 @@ class _DiscussionGridState extends State<DiscussionGrid>
                   );
                 }
                 return const DiscussionEmptyState(
-                  message: '暂无相关帖子',
+                  message: '- 暂无相关帖子 -',
                   textStyle: TextStyle(
                     color: Color.fromARGB(255, 233, 233, 233),
                     fontSize: 16,
@@ -227,10 +222,15 @@ class _DiscussionGridState extends State<DiscussionGrid>
         ),
       );
     }
+
     return LayoutBuilder(
       builder: (context, con) {
         final width = MediaQuery.of(context).size.width;
         final isCompact = width < 640;
+        final mainAxisSpacing = isCompact ? 10.0 : 12.0;
+        final crossAxisSpacing = isCompact ? 8.0 : 10.0;
+        final maxCrossAxisExtent = isCompact ? 273.0 : 264.0;
+
         final child = Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1450),
@@ -249,11 +249,11 @@ class _DiscussionGridState extends State<DiscussionGrid>
                 physics: !isCompact
                     ? const NeverScrollableScrollPhysics()
                     : const BouncingScrollPhysics(),
-                padding: const EdgeInsets.all(4).copyWith(top: 16),
+                padding: const EdgeInsets.fromLTRB(10, 16, 10, 10),
                 gridDelegate: SliverWaterfallFlowDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 275,
-                  mainAxisSpacing: 2,
-                  crossAxisSpacing: 1,
+                  maxCrossAxisExtent: maxCrossAxisExtent,
+                  mainAxisSpacing: mainAxisSpacing,
+                  crossAxisSpacing: crossAxisSpacing,
                   lastChildLayoutTypeBuilder: (index) => index == items.length
                       ? LastChildLayoutType.foot
                       : LastChildLayoutType.none,
@@ -282,8 +282,6 @@ class _DiscussionGridState extends State<DiscussionGrid>
                   }
                   final item = items[index];
 
-                  // Performance Optimization: Check synchronous cache first
-                  // This avoids creating FutureBuilder for already loaded items, reducing build overhead and flickering
                   final cachedDiscussion = item.cachedDiscussion;
                   if (cachedDiscussion != null) {
                     return RepaintBoundary(
@@ -323,12 +321,14 @@ class _DiscussionGridState extends State<DiscussionGrid>
                                 child: Padding(
                                   padding: const EdgeInsets.all(16),
                                   child: Center(
-                                      child: SelectableText('${snaphost.error}')),
+                                      child:
+                                          SelectableText('${snaphost.error}')),
                                 ),
                               ),
                             );
                           }
-                          if (snaphost.connectionState == ConnectionState.done) {
+                          if (snaphost.connectionState ==
+                              ConnectionState.done) {
                             return Card(
                               clipBehavior: Clip.antiAlias,
                               color: const Color(0xff222222),
@@ -347,7 +347,7 @@ class _DiscussionGridState extends State<DiscussionGrid>
                                   aspectRatio: 5 / 6,
                                   child: Padding(
                                     padding: EdgeInsets.all(16),
-                                    child: Center(child: Text('讨论已删除')),
+                                    child: Center(child: Text('帖子已删除')),
                                   ),
                                 ),
                               ),
@@ -363,6 +363,7 @@ class _DiscussionGridState extends State<DiscussionGrid>
             ),
           ),
         );
+
         if (!isCompact) {
           return SmoothScroll(
             controller: scrollController,

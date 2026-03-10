@@ -10,6 +10,19 @@ import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/models/discussion.dart';
 import 'package:inter_knot/models/h_data.dart';
 
+const _discussionCardOuterRadius = BorderRadius.only(
+  topLeft: Radius.circular(24),
+  topRight: Radius.circular(24),
+  bottomLeft: Radius.circular(24),
+);
+const _discussionCardInnerRadius = BorderRadius.only(
+  topLeft: Radius.circular(20),
+  topRight: Radius.circular(20),
+  bottomLeft: Radius.circular(20),
+);
+const _discussionCardBorderWidth = 4.0;
+const _discussionCardFill = Color(0xff222222);
+
 class NetworkImageBox extends StatelessWidget {
   const NetworkImageBox({
     super.key,
@@ -160,173 +173,163 @@ class _DiscussionCardState extends State<DiscussionCard>
         setState(() => _isHovering = false);
         _breathingController.stop();
       },
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        elevation: 1,
-        color: const Color(0xff222222),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-            bottomLeft: Radius.circular(24),
-          ),
-        ),
-        child: AnimatedBuilder(
-          animation: _breathingAnimation,
-          builder: (context, child) {
-            return Container(
-              foregroundDecoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                  bottomLeft: Radius.circular(24),
-                ),
-                border: Border.all(
-                  width: 4,
-                  color: _isHovering
-                      ? (_breathingAnimation.value ?? const Color(0xfffbfe00))
-                      : (widget.discussion.isPinned
-                          ? Colors.blue
-                          : Colors.black),
+      child: AnimatedBuilder(
+        animation: _breathingAnimation,
+        builder: (context, child) {
+          final borderColor = _isHovering
+              ? (_breathingAnimation.value ?? const Color(0xfffbfe00))
+              : (widget.discussion.isPinned ? Colors.blue : Colors.black);
+          return Card(
+            clipBehavior: Clip.antiAlias,
+            elevation: 1,
+            color: borderColor,
+            shape: const RoundedRectangleBorder(
+              borderRadius: _discussionCardOuterRadius,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(_discussionCardBorderWidth),
+              child: ClipRRect(
+                borderRadius: _discussionCardInnerRadius,
+                child: Material(
+                  color: _discussionCardFill,
+                  child: InkWell(
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                    hoverColor: Colors.transparent,
+                    onTap: widget.onTap,
+                    child: child,
+                  ),
                 ),
               ),
-              child: InkWell(
-                splashColor: Colors.transparent,
-                highlightColor: Colors.transparent,
-                hoverColor: Colors.transparent,
-                onTap: widget.onTap,
-                child: child,
-              ),
-            );
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                children: [
-                  Cover(
-                    discussion: widget.discussion,
-                    isHovering: _isHovering,
-                  ),
-                  Positioned(
-                    top: 11,
-                    left: 16,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.remove_red_eye_outlined,
-                            size: 24, color: Colors.white),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${widget.discussion.views}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(
-                                offset: Offset(1, 1),
-                                blurRadius: 2,
-                                color: Colors.black54,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(
-                width: double.infinity,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.centerLeft,
+            ),
+          );
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                Cover(
+                  discussion: widget.discussion,
+                  isHovering: _isHovering,
+                ),
+                Positioned(
+                  top: 11,
+                  left: 16,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Positioned(
-                        top: -28,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            color: Color(0xff222222),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Avatar(
-                            widget.discussion.author.avatar,
-                            size: 50,
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 54),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Obx(() {
-                              final user = Get.find<Controller>().user.value;
-                              final authorId =
-                                  Get.find<Controller>().authorId.value ??
-                                      user?.authorId;
-                              final isMe = authorId != null &&
-                                  authorId == widget.discussion.author.authorId;
-
-                              return Text(
-                                widget.discussion.author.name,
-                                style: TextStyle(
-                                  color: isMe
-                                      ? const Color(0xFFFFBC2E)
-                                      : Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              );
-                            }),
-                            const SizedBox(height: 4),
-                            const Divider(height: 1),
+                      const Icon(Icons.remove_red_eye_outlined,
+                          size: 24, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${widget.discussion.views}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              offset: Offset(1, 1),
+                              blurRadius: 2,
+                              color: Colors.black54,
+                            ),
                           ],
                         ),
                       ),
                     ],
                   ),
                 ),
+              ],
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.centerLeft,
+                  children: [
+                    Positioned(
+                      top: -28,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: _discussionCardFill,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Avatar(
+                          widget.discussion.author.avatar,
+                          size: 50,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 54),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Obx(() {
+                            final user = Get.find<Controller>().user.value;
+                            final authorId =
+                                Get.find<Controller>().authorId.value ??
+                                    user?.authorId;
+                            final isMe = authorId != null &&
+                                authorId == widget.discussion.author.authorId;
+
+                            return Text(
+                              widget.discussion.author.name,
+                              style: TextStyle(
+                                color: isMe
+                                    ? const Color(0xFFFFBC2E)
+                                    : Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            );
+                          }),
+                          const SizedBox(height: 4),
+                          const Divider(height: 1),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                widget.discussion.title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color:
+                          widget.discussion.isRead ? Colors.grey : Colors.blue,
+                    ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+            ),
+            if (widget.discussion.rawBodyText.trim().isNotEmpty) ...[
+              const SizedBox(height: 4),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  widget.discussion.title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: widget.discussion.isRead
-                            ? Colors.grey
-                            : Colors.blue,
-                      ),
+                  widget.discussion.bodyText,
+                  style: const TextStyle(
+                    color: Color(0xffE0E0E0),
+                    fontSize: 15,
+                  ),
                   overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
+                  maxLines: 1,
                 ),
               ),
-              if (widget.discussion.rawBodyText.trim().isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    widget.discussion.bodyText,
-                    style: const TextStyle(
-                      color: Color(0xffE0E0E0),
-                      fontSize: 15,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
             ],
-          ),
+            const SizedBox(height: 12),
+          ],
         ),
       ),
     );
@@ -354,6 +357,47 @@ class Cover extends StatefulWidget {
 }
 
 class _CoverState extends State<Cover> {
+  String? _resolvedImageUrl;
+  ImageStream? _imageStream;
+  ImageStreamListener? _imageStreamListener;
+
+  void _resolveImageAspectRatio(String imageUrl) {
+    if (_resolvedImageUrl == imageUrl) {
+      return;
+    }
+
+    if (_imageStream != null && _imageStreamListener != null) {
+      _imageStream!.removeListener(_imageStreamListener!);
+    }
+
+    _resolvedImageUrl = imageUrl;
+    final imageStream = NetworkImage(imageUrl).resolve(
+      const ImageConfiguration(),
+    );
+    final imageStreamListener = ImageStreamListener((info, _) {
+      if (!mounted || _resolvedImageUrl != imageUrl) {
+        return;
+      }
+
+      setState(() {
+        final image = info.image;
+        _imageAspectRatio = image.width / image.height;
+      });
+    });
+
+    _imageStream = imageStream;
+    _imageStreamListener = imageStreamListener;
+    imageStream.addListener(imageStreamListener);
+  }
+
+  @override
+  void dispose() {
+    if (_imageStream != null && _imageStreamListener != null) {
+      _imageStream!.removeListener(_imageStreamListener!);
+    }
+    super.dispose();
+  }
+
   double? _imageAspectRatio; // 图片加载后的实际宽高比
 
   @override
@@ -370,21 +414,20 @@ class _CoverState extends State<Cover> {
         fit: BoxFit.cover,
       );
     } else {
-      image = Image.network(
-        highResUrl,
+      _resolveImageAspectRatio(highResUrl);
+      image = NetworkImageBox(
+        url: highResUrl,
         fit: BoxFit.cover,
         alignment: Alignment.topCenter,
         filterQuality: FilterQuality.high,
         gaplessPlayback: true,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) {
-            return child;
-          }
+        preferHtmlElementOnWeb: true,
+        loadingBuilder: (context, progress) {
           return const SizedBox.shrink();
         },
-        errorBuilder: (context, error, stackTrace) =>
+        errorBuilder: (context) =>
             Assets.images.defaultCover.image(fit: BoxFit.cover),
-        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        /* frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
           if (frame != null && _imageAspectRatio == null) {
             // 图片加载完成，获取实际尺寸
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -404,7 +447,7 @@ class _CoverState extends State<Cover> {
             });
           }
           return child;
-        },
+        }, */
       );
     }
 
@@ -438,90 +481,94 @@ class DiscussionCardSkeleton extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       elevation: 1,
-      color: const Color(0xff222222),
+      color: Colors.black,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-          bottomLeft: Radius.circular(24),
-        ),
-        side: BorderSide(width: 4),
+        borderRadius: _discussionCardOuterRadius,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Cover placeholder
-          const AspectRatio(
-            aspectRatio: 643 / 408,
-            child: ColoredBox(color: Colors.white10),
-          ),
-          SizedBox(
-            width: double.infinity,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.centerLeft,
-                children: [
-                  // Avatar placeholder
-                  Positioned(
-                    top: -28,
-                    child: Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: Colors.white10,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xff222222),
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 54),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(_discussionCardBorderWidth),
+        child: ClipRRect(
+          borderRadius: _discussionCardInnerRadius,
+          child: ColoredBox(
+            color: _discussionCardFill,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Cover placeholder
+                const AspectRatio(
+                  aspectRatio: 643 / 408,
+                  child: ColoredBox(color: Colors.white10),
+                ),
+                SizedBox(
+                  width: double.infinity,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.centerLeft,
                       children: [
-                        const SizedBox(height: 4),
-                        // Author name placeholder
-                        Container(
-                          width: 80,
-                          height: 14,
-                          color: Colors.white10,
+                        // Avatar placeholder
+                        Positioned(
+                          top: -28,
+                          child: Container(
+                            width: 54,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              color: Colors.white10,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _discussionCardFill,
+                                width: 2,
+                              ),
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        const Divider(height: 1),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 54),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              // Author name placeholder
+                              Container(
+                                width: 80,
+                                height: 14,
+                                color: Colors.white10,
+                              ),
+                              const SizedBox(height: 4),
+                              const Divider(height: 1),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                // Title placeholder
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Container(
+                    width: double.infinity,
+                    height: 16,
+                    color: Colors.white10,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Container(
+                    width: 200,
+                    height: 16,
+                    color: Colors.white10,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          // Title placeholder
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Container(
-              width: double.infinity,
-              height: 16,
-              color: Colors.white10,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Container(
-              width: 200,
-              height: 16,
-              color: Colors.white10,
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
+        ),
       ),
     );
   }

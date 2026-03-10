@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/avatar.dart';
+import 'package:inter_knot/components/close_svg_button.dart';
 import 'package:inter_knot/components/discussions_grid.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/logger.dart';
@@ -611,7 +612,8 @@ class _ProfilePageState extends State<ProfilePage>
             child: GestureDetector(
               onTap: () {}, // 阻止点击穿透
               child: Container(
-                constraints: const BoxConstraints(maxWidth: 1200, maxHeight: 900),
+                constraints:
+                    const BoxConstraints(maxWidth: 1200, maxHeight: 900),
                 margin: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
                   image: DecorationImage(
@@ -881,10 +883,7 @@ class _ProfilePageState extends State<ProfilePage>
                 ],
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.grey),
-              onPressed: () => Get.back(),
-            ),
+            CloseSvgButton(onTap: () => Get.back()),
           ],
         ),
       ),
@@ -945,7 +944,8 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildDesktopTabItem(String text, int count, int index, bool isSelected) {
+  Widget _buildDesktopTabItem(
+      String text, int count, int index, bool isSelected) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: MouseRegion(
@@ -982,7 +982,9 @@ class _ProfilePageState extends State<ProfilePage>
                       Text(
                         count.toString(),
                         style: TextStyle(
-                          color: isSelected ? Colors.black.withValues(alpha: 0.6) : const Color(0xff808080),
+                          color: isSelected
+                              ? Colors.black.withValues(alpha: 0.6)
+                              : const Color(0xff808080),
                           fontSize: 12,
                         ),
                       ),
@@ -1045,7 +1047,8 @@ class _ProfilePageState extends State<ProfilePage>
             const SizedBox(height: 24),
             _buildDesktopStatItem(Icons.visibility_outlined, '浏览', totalViews),
             const SizedBox(height: 16),
-            _buildDesktopStatItem(Icons.comment_outlined, '收到评论', totalComments),
+            _buildDesktopStatItem(
+                Icons.comment_outlined, '收到评论', totalComments),
             const SizedBox(height: 16),
             _buildDesktopStatItem(Icons.thumb_up_outlined, '点赞', totalLikes),
           ],

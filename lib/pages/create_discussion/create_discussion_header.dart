@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/avatar.dart';
-import 'package:inter_knot/components/click_region.dart';
+import 'package:inter_knot/components/close_svg_button.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
 
@@ -65,10 +65,7 @@ class CreateDiscussionHeader extends StatelessWidget {
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-          ClickRegion(
-            child: Assets.images.closeBtn.image(),
-            onTap: onClose,
-          ),
+          CloseSvgButton(onTap: onClose),
         ],
       ),
     );
