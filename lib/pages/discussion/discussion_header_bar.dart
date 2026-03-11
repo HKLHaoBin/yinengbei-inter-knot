@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/avatar.dart';
-import 'package:inter_knot/components/close_svg_button.dart';
+import 'package:inter_knot/components/click_region.dart';
 import 'package:inter_knot/components/my_chip.dart';
 import 'package:inter_knot/constants/globals.dart';
 import 'package:inter_knot/controllers/data.dart';
@@ -148,7 +148,10 @@ class DiscussionHeaderBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          CloseSvgButton(onTap: () => Get.back()),
+          ClickRegion(
+            child: Assets.images.closeBtn.image(),
+            onTap: () => Get.back(),
+          ),
         ],
       ),
     );

@@ -30,32 +30,40 @@ Future<T?> showZZZDialog<T>({
               child: AnimatedBuilder(
                 animation: animation,
                 builder: (context, child) {
+                  final opacity =
+                      const Interval(0, 0.01).transform(animation.value);
+                  // Skip rendering entirely when fully transparent
+                  if (opacity == 0) {
+                    return const SizedBox.shrink();
+                  }
                   return Opacity(
-                    opacity: const Interval(0, 0.01).transform(animation.value),
+                    opacity: opacity,
                     child: child!,
                   );
                 },
-                child: IgnorePointer(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Blur Effect
-                      BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: const SizedBox.expand(),
-                      ),
-                      // Texture + Overlay
-                      Container(
-                        color:
-                            Colors.black.withValues(alpha: 0.6), // Dark overlay
-                        child: CustomPaint(
-                          painter: PatternPainter(
-                            color: Colors.white
-                                .withValues(alpha: 0.15), // Subtle lines
+                child: RepaintBoundary(
+                  child: IgnorePointer(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Blur Effect
+                        BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: const SizedBox.expand(),
+                        ),
+                        // Texture + Overlay
+                        Container(
+                          color: Colors.black
+                              .withValues(alpha: 0.6), // Dark overlay
+                          child: CustomPaint(
+                            painter: PatternPainter(
+                              color: Colors.white
+                                  .withValues(alpha: 0.15), // Subtle lines
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

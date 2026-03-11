@@ -1,13 +1,11 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:inter_knot/components/click_region.dart';
 import 'package:inter_knot/components/discussion_card.dart'
     show NetworkImageBox;
 import 'package:inter_knot/components/image_viewer.dart';
+import 'package:inter_knot/gen/assets.gen.dart';
 import 'package:inter_knot/models/discussion.dart';
-
-const _defaultDiscussionCoverAsset = 'assets/images/default-cover.svg';
 
 class Cover extends StatefulWidget {
   const Cover({
@@ -40,10 +38,7 @@ class _CoverState extends State<Cover> {
     if (covers.isEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: SvgPicture.asset(
-          _defaultDiscussionCoverAsset,
-          fit: BoxFit.contain,
-        ),
+        child: Assets.images.defaultCover.image(fit: BoxFit.contain),
       );
     }
 
@@ -71,10 +66,8 @@ class _CoverState extends State<Cover> {
                 }
                 return const SizedBox.shrink();
               },
-              errorBuilder: (context, error, stackTrace) => SvgPicture.asset(
-                _defaultDiscussionCoverAsset,
-                fit: BoxFit.contain,
-              ),
+              errorBuilder: (context, error, stackTrace) =>
+                  Assets.images.defaultCover.image(fit: BoxFit.contain),
               frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
                 if (frame != null && widget.onImageLoaded != null) {
                   // 图片加载完成，获取实际尺寸

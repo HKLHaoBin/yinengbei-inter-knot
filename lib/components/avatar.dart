@@ -1,8 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-
-const _defaultAvatarAsset = 'assets/images/profile-photo.svg';
+import 'package:inter_knot/gen/assets.gen.dart';
 
 class Avatar extends StatelessWidget {
   const Avatar(
@@ -21,8 +19,7 @@ class Avatar extends StatelessWidget {
     final hasSrc = src != null && src!.trim().isNotEmpty;
     final avatar = ClipOval(
       child: !hasSrc
-          ? SvgPicture.asset(
-              _defaultAvatarAsset,
+          ? Assets.images.profilePhoto.image(
               height: size,
               width: size,
               fit: BoxFit.cover,
@@ -34,8 +31,8 @@ class Avatar extends StatelessWidget {
               fit: BoxFit.cover,
               fadeInDuration: Duration.zero,
               fadeOutDuration: Duration.zero,
-              errorWidget: (context, url, error) => SvgPicture.asset(
-                _defaultAvatarAsset,
+              errorWidget: (context, url, error) =>
+                  Assets.images.profilePhoto.image(
                 height: size,
                 width: size,
                 fit: BoxFit.cover,

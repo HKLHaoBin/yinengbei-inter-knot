@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/components/my_tab.dart';
 import 'package:inter_knot/gen/assets.gen.dart';
@@ -79,11 +78,11 @@ class _MyAppBarState extends State<MyAppBar> {
                         );
                       })
                     else
-                      SvgPicture.asset(
-                        'assets/images/zzzicon.svg',
+                      Image.asset(
+                        'assets/images/zzzicon.png',
                         width: 48,
                         height: 48,
-                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.medium,
                       ),
                     if (!isCompact) ...[
                       const SizedBox(width: 12),

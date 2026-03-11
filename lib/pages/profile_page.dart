@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/components/avatar.dart';
-import 'package:inter_knot/components/close_svg_button.dart';
 import 'package:inter_knot/components/discussions_grid.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/logger.dart';
@@ -883,7 +882,10 @@ class _ProfilePageState extends State<ProfilePage>
                 ],
               ),
             ),
-            CloseSvgButton(onTap: () => Get.back()),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.grey),
+              onPressed: () => Get.back(),
+            ),
           ],
         ),
       ),
