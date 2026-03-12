@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:inter_knot/components/zzz_desktop_action_button.dart';
 
 class CreateDiscussionDesktopFooter extends StatelessWidget {
   const CreateDiscussionDesktopFooter({
@@ -24,7 +25,12 @@ class CreateDiscussionDesktopFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final isBusy = isSavingDraft || isPublishing;
     final buttonEnabled = submitEnabled && !isBusy;
-    final buttonText = isSavingDraft ? '正在保存' : '发布';
+    final buttonLabel = isPublishing
+        ? '发布中'
+        : isSavingDraft
+            ? '保存草稿中'
+            : '发布';
+    final buttonIcon = isSavingDraft ? Icons.save_outlined : Icons.add;
 
     return Container(
       margin: const EdgeInsets.only(
@@ -67,55 +73,13 @@ class CreateDiscussionDesktopFooter extends StatelessWidget {
             )
           else
             const SizedBox.shrink(),
-          Material(
-            color: buttonEnabled
-                ? const Color(0xff1A1A1A)
-                : const Color(0xff111111),
-            borderRadius: BorderRadius.circular(28),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(28),
-              onTap: buttonEnabled ? onSubmit : null,
-              child: Container(
-                height: 56,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Color(0xffFBC02D),
-                        shape: BoxShape.circle,
-                      ),
-                      child: isPublishing
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.black,
-                              ),
-                            )
-                          : Icon(
-                              isSavingDraft ? Icons.save_outlined : Icons.send,
-                              color: Colors.black,
-                              size: 16,
-                            ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      buttonText,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          ZzzDesktopActionButton(
+            icon: buttonIcon,
+            label: buttonLabel,
+            width: 188,
+            enabled: buttonEnabled,
+            isLoading: isPublishing,
+            onTap: buttonEnabled ? () => onSubmit() : null,
           ),
         ],
       ),

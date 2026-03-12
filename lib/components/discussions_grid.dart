@@ -58,6 +58,8 @@ class DiscussionGrid extends StatefulWidget {
     this.controller,
     this.reorderHistoryOnOpen = true,
     this.onOpenItem,
+    this.compactMaxCrossAxisExtent,
+    this.desktopMaxCrossAxisExtent,
   });
 
   final Set<HDataModel> list;
@@ -65,6 +67,8 @@ class DiscussionGrid extends StatefulWidget {
   final void Function()? fetchData;
   final ScrollController? controller;
   final bool reorderHistoryOnOpen;
+  final double? compactMaxCrossAxisExtent;
+  final double? desktopMaxCrossAxisExtent;
   final Future<void> Function(
     BuildContext context,
     HDataModel item,
@@ -239,7 +243,9 @@ class _DiscussionGridState extends State<DiscussionGrid>
         final isCompact = width < 640;
         final mainAxisSpacing = isCompact ? 10.0 : 12.0;
         final crossAxisSpacing = isCompact ? 8.0 : 10.0;
-        final maxCrossAxisExtent = isCompact ? 273.0 : 264.0;
+        final maxCrossAxisExtent = isCompact
+            ? (widget.compactMaxCrossAxisExtent ?? 273.0)
+            : (widget.desktopMaxCrossAxisExtent ?? 264.0);
 
         final child = Center(
           child: ConstrainedBox(

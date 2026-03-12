@@ -1299,11 +1299,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                             children: [
                               Expanded(
                                 child: Container(
-                                  margin: const EdgeInsets.only(
+                                  margin: EdgeInsets.only(
                                     top: 16,
                                     left: 8,
                                     right: 16,
-                                    bottom: 8,
+                                    bottom: _selectedIndex == 2 ? 16 : 8,
                                   ),
                                   decoration: BoxDecoration(
                                     color: const Color(0xff070707),
@@ -1315,19 +1315,20 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                   ),
                                 ),
                               ),
-                              CreateDiscussionDesktopFooter(
-                                isSavingDraft: _isSavingDraft,
-                                isPublishing: _isPublishing,
-                                onSubmit: () => _publish(),
-                                submitEnabled: _canPublish,
-                                showCompressionToggle: _selectedIndex == 1,
-                                compressBeforeUpload: _compressBeforeUpload,
-                                onCompressionChanged: (value) {
-                                  setState(() {
-                                    _compressBeforeUpload = value;
-                                  });
-                                },
-                              ),
+                              if (_selectedIndex != 2)
+                                CreateDiscussionDesktopFooter(
+                                  isSavingDraft: _isSavingDraft,
+                                  isPublishing: _isPublishing,
+                                  onSubmit: () => _publish(),
+                                  submitEnabled: _canPublish,
+                                  showCompressionToggle: _selectedIndex == 1,
+                                  compressBeforeUpload: _compressBeforeUpload,
+                                  onCompressionChanged: (value) {
+                                    setState(() {
+                                      _compressBeforeUpload = value;
+                                    });
+                                  },
+                                ),
                             ],
                           ),
                         ),

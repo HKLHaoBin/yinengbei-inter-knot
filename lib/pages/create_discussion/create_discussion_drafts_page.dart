@@ -105,6 +105,7 @@ class CreateDiscussionDraftsPage extends StatelessWidget {
             fetchData: onFetchMore,
             reorderHistoryOnOpen: false,
             onOpenItem: onOpenDraft,
+            desktopMaxCrossAxisExtent: 240,
           ),
         ),
       ],
