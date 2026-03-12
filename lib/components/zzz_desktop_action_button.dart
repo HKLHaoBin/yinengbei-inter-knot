@@ -2,6 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+enum ZzzDesktopActionButtonTone {
+  primary,
+  danger,
+}
+
 class ZzzDesktopActionButton extends StatefulWidget {
   const ZzzDesktopActionButton({
     super.key,
@@ -13,6 +18,7 @@ class ZzzDesktopActionButton extends StatefulWidget {
     this.enableClickFlash = false,
     this.enabled = true,
     this.isLoading = false,
+    this.tone = ZzzDesktopActionButtonTone.primary,
   });
 
   final IconData icon;
@@ -23,6 +29,7 @@ class ZzzDesktopActionButton extends StatefulWidget {
   final bool enableClickFlash;
   final bool enabled;
   final bool isLoading;
+  final ZzzDesktopActionButtonTone tone;
 
   @override
   State<ZzzDesktopActionButton> createState() => _ZzzDesktopActionButtonState();
@@ -30,7 +37,7 @@ class ZzzDesktopActionButton extends StatefulWidget {
 
 class _ZzzDesktopActionButtonState extends State<ZzzDesktopActionButton>
     with SingleTickerProviderStateMixin {
-  static const _hoverColor = Color(0xffD9FA00);
+  static const _primaryHoverColor = Color(0xffD9FA00);
   static const _outerFill = Color(0xff313131);
   static const _specialSauceCurve = Cubic(0.25, 0.1, 0.75, 1);
   static const _buttonHeight = 48.0;
@@ -175,33 +182,41 @@ class _ZzzDesktopActionButtonState extends State<ZzzDesktopActionButton>
           final borderColor = !_isInteractive
               ? const Color(0xff1A1A1A)
               : showActive
-                  ? _hoverColor
+                  ? _primaryHoverColor
                   : Colors.black;
           final outerFillColor = !_isInteractive
               ? const Color(0xff262626)
               : showActive
-                  ? _hoverColor
+                  ? _primaryHoverColor
                   : _outerFill;
           final contentFillColor = !_isInteractive
               ? const Color(0xff101010)
               : showActive
-                  ? _hoverColor
+                  ? _primaryHoverColor
                   : Colors.black;
           final labelColor = !_isInteractive
               ? const Color(0xff727272)
               : showActive
                   ? Colors.black
                   : const Color(0xffefefef);
-          final accentColor = !_isInteractive
-              ? const Color(0xff4A4A4A)
-              : showActive
-                  ? Colors.black
-                  : _hoverColor;
-          final accentForeground = !_isInteractive
-              ? const Color(0xff1A1A1A)
-              : showActive
-                  ? _hoverColor
-                  : Colors.black;
+          final baseAccentColor =
+              widget.tone == ZzzDesktopActionButtonTone.danger
+                  ? const Color(0xffFF5A5A)
+                  : _primaryHoverColor;
+          final accentBackgroundColor = widget.isLoading
+              ? Colors.transparent
+              : !_isInteractive
+                  ? const Color(0xff4A4A4A)
+                  : showActive
+                      ? Colors.black
+                      : baseAccentColor;
+          final accentForeground = widget.isLoading
+              ? baseAccentColor
+              : !_isInteractive
+                  ? const Color(0xff1A1A1A)
+                  : showActive
+                      ? _primaryHoverColor
+                      : Colors.black;
 
           return Stack(
             clipBehavior: Clip.none,
@@ -214,7 +229,7 @@ class _ZzzDesktopActionButtonState extends State<ZzzDesktopActionButton>
                         borderRadius: borderRadius,
                         boxShadow: [
                           BoxShadow(
-                            color: _hoverColor,
+                            color: _primaryHoverColor,
                             blurRadius: 0,
                             spreadRadius: pulseSpread,
                           ),
@@ -334,7 +349,7 @@ class _ZzzDesktopActionButtonState extends State<ZzzDesktopActionButton>
                                   color: !_isInteractive
                                       ? const Color(0xff262626)
                                       : showActive
-                                          ? _hoverColor
+                                          ? _primaryHoverColor
                                           : _outerFill,
                                   width: 4,
                                 ),
@@ -342,7 +357,7 @@ class _ZzzDesktopActionButtonState extends State<ZzzDesktopActionButton>
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: accentColor,
+                                  color: accentBackgroundColor,
                                 ),
                                 child: Center(
                                   child: widget.isLoading

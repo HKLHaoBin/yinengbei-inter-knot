@@ -10,6 +10,8 @@ import 'package:inter_knot/pages/discussion_page.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:waterfall_flow/waterfall_flow.dart';
 
+const homeAlignedDesktopDiscussionCardExtent = 232.0;
+
 class DiscussionEmptyState extends StatelessWidget {
   const DiscussionEmptyState({
     super.key,

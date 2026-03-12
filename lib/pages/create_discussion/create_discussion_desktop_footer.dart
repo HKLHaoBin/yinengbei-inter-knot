@@ -7,23 +7,29 @@ class CreateDiscussionDesktopFooter extends StatelessWidget {
     required this.isSavingDraft,
     required this.isPublishing,
     required this.onSubmit,
+    this.isDeletingDraft = false,
     this.submitEnabled = true,
     this.showCompressionToggle = false,
     this.compressBeforeUpload = true,
     this.onCompressionChanged,
+    this.showDeleteButton = false,
+    this.onDeleteDraft,
   });
 
   final bool isSavingDraft;
   final bool isPublishing;
+  final bool isDeletingDraft;
   final VoidCallback onSubmit;
   final bool submitEnabled;
   final bool showCompressionToggle;
   final bool compressBeforeUpload;
   final ValueChanged<bool>? onCompressionChanged;
+  final bool showDeleteButton;
+  final VoidCallback? onDeleteDraft;
 
   @override
   Widget build(BuildContext context) {
-    final isBusy = isSavingDraft || isPublishing;
+    final isBusy = isSavingDraft || isPublishing || isDeletingDraft;
     final buttonEnabled = submitEnabled && !isBusy;
     final buttonLabel = isPublishing
         ? '发布中'
@@ -31,6 +37,7 @@ class CreateDiscussionDesktopFooter extends StatelessWidget {
             ? '保存草稿中'
             : '发布';
     final buttonIcon = isSavingDraft ? Icons.save_outlined : Icons.add;
+    final deleteEnabled = showDeleteButton && !isBusy && onDeleteDraft != null;
 
     return Container(
       margin: const EdgeInsets.only(
@@ -73,13 +80,30 @@ class CreateDiscussionDesktopFooter extends StatelessWidget {
             )
           else
             const SizedBox.shrink(),
-          ZzzDesktopActionButton(
-            icon: buttonIcon,
-            label: buttonLabel,
-            width: 188,
-            enabled: buttonEnabled,
-            isLoading: isPublishing,
-            onTap: buttonEnabled ? () => onSubmit() : null,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (showDeleteButton) ...[
+                ZzzDesktopActionButton(
+                  icon: Icons.delete_outline,
+                  label: isDeletingDraft ? '删除中' : '删除草稿',
+                  width: 188,
+                  tone: ZzzDesktopActionButtonTone.danger,
+                  enabled: deleteEnabled,
+                  isLoading: isDeletingDraft,
+                  onTap: deleteEnabled ? () => onDeleteDraft?.call() : null,
+                ),
+                const SizedBox(width: 12),
+              ],
+              ZzzDesktopActionButton(
+                icon: buttonIcon,
+                label: buttonLabel,
+                width: 188,
+                enabled: buttonEnabled,
+                isLoading: isPublishing,
+                onTap: buttonEnabled ? () => onSubmit() : null,
+              ),
+            ],
           ),
         ],
       ),

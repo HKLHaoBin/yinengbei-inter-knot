@@ -80,6 +80,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   bool _isInitializingDraft = false;
   bool _isSavingDraft = false;
   bool _isPublishing = false;
+  bool _isDeletingDraft = false;
   bool _hasUnsavedChanges = false;
   bool _suppressChangeTracking = false;
   bool _isDesktopEditorActive = true;
@@ -135,9 +136,15 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       !_isInitializingDraft &&
       !_isSavingDraft &&
       !_isPublishing &&
+      !_isDeletingDraft &&
       !_isCoverUploading &&
       titleController.text.trim().isNotEmpty &&
       (_currentBodyText.trim().isNotEmpty || _uploadedImages.isNotEmpty);
+
+  bool get _supportsDeleteCurrentDraft =>
+      _documentId != null &&
+      _documentId!.isNotEmpty &&
+      (_activeDiscussion?.hasPublishedVersion != true);
 
   String get _currentBodyText {
     if (_isDesktopEditorActive) {
@@ -907,6 +914,10 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         _activeDiscussion = discussion;
       }
 
+      if (_activeDiscussion != null) {
+        HDataModel.upsertCachedDiscussion(_activeDiscussion!);
+      }
+
       if (_selectedIndex == 2 || previousDocumentId == null) {
         unawaited(_refreshDraftEntries(silent: true));
       }
@@ -1032,6 +1043,59 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
     if (mounted) {
       Get.back();
+    }
+  }
+
+  Future<void> _deleteCurrentDraft() async {
+    final documentId = _documentId;
+    if (documentId == null ||
+        documentId.isEmpty ||
+        !_supportsDeleteCurrentDraft) {
+      return;
+    }
+
+    final confirmed = await showDeleteConfirmDialog(
+      context: context,
+      title: '确认删除草稿',
+      message: '确定要删除这个草稿吗？此操作不可恢复。',
+      width: 300,
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isDeletingDraft = true;
+      });
+    }
+
+    try {
+      final res = await api.deleteDiscussion(documentId);
+      if (res.hasError) {
+        throw Exception(_extractResponseMessage(res));
+      }
+
+      _autoSaveDebounce?.cancel();
+      await _refreshDraftEntries(silent: true);
+
+      if (!mounted) {
+        return;
+      }
+
+      Get.back(result: true);
+      showToast('草稿已删除');
+    } catch (e) {
+      if (mounted) {
+        showToast('删除草稿失败: $e', isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isDeletingDraft = false;
+        });
+      }
     }
   }
 
@@ -1319,6 +1383,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                 CreateDiscussionDesktopFooter(
                                   isSavingDraft: _isSavingDraft,
                                   isPublishing: _isPublishing,
+                                  isDeletingDraft: _isDeletingDraft,
                                   onSubmit: () => _publish(),
                                   submitEnabled: _canPublish,
                                   showCompressionToggle: _selectedIndex == 1,
@@ -1328,6 +1393,9 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                       _compressBeforeUpload = value;
                                     });
                                   },
+                                  showDeleteButton: _selectedIndex != 2 &&
+                                      _supportsDeleteCurrentDraft,
+                                  onDeleteDraft: _deleteCurrentDraft,
                                 ),
                             ],
                           ),

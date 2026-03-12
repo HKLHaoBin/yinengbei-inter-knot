@@ -252,6 +252,8 @@ class _MyPageDesktopState extends State<MyPageDesktop>
                       list: c.history(),
                       hasNextPage: false,
                       reorderHistoryOnOpen: false,
+                      desktopMaxCrossAxisExtent:
+                          homeAlignedDesktopDiscussionCardExtent,
                     )),
               ],
             ),
@@ -640,6 +642,7 @@ class _MyDiscussionsTabState extends State<_MyDiscussionsTab> {
         list: discussions(),
         hasNextPage: hasNextPage(),
         fetchData: fetchData,
+        desktopMaxCrossAxisExtent: homeAlignedDesktopDiscussionCardExtent,
       );
     });
   }
@@ -749,6 +752,7 @@ class _MyFavoritesTabState extends State<_MyFavoritesTab> {
         list: discussions(),
         hasNextPage: hasNextPage(),
         fetchData: fetchData,
+        desktopMaxCrossAxisExtent: homeAlignedDesktopDiscussionCardExtent,
       );
     });
   }

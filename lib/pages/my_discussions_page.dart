@@ -111,6 +111,7 @@ class _MyDiscussionsPageState extends State<MyDiscussionsPage>
             list: discussions,
             hasNextPage: hasNextPage.value,
             fetchData: fetchData,
+            desktopMaxCrossAxisExtent: homeAlignedDesktopDiscussionCardExtent,
           );
         }),
       ),

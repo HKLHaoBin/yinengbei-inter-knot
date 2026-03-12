@@ -173,15 +173,29 @@ class _DiscussionPageState extends State<DiscussionPage> {
 
   void _startNewCommentCheck() {
     _newCommentCheckTimer?.cancel();
+    unawaited(_checkNewComments(syncOnly: true));
     _newCommentCheckTimer =
         Timer.periodic(const Duration(seconds: 15), (timer) {
       _checkNewComments();
     });
   }
 
-  Future<void> _checkNewComments() async {
+  Future<void> _checkNewComments({bool syncOnly = false}) async {
     try {
       final count = await Get.find<Api>().getCommentCount(widget.discussion.id);
+      if (syncOnly) {
+        final shouldRefresh = count != widget.discussion.commentsCount;
+        widget.discussion.commentsCount = count;
+        if (_newCommentCounts.value.newCount > 0) {
+          _newCommentCounts.value =
+              const NewCommentCounts(newCount: 0, serverCount: 0);
+        }
+        if (shouldRefresh && mounted) {
+          setState(() {});
+        }
+        return;
+      }
+
       if (count > widget.discussion.commentsCount) {
         _newCommentCounts.value = NewCommentCounts(
           newCount: count - widget.discussion.commentsCount,

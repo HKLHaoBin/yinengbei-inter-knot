@@ -22,6 +22,7 @@ class _HistoryPageState extends State<HistoryPage>
             list: c.history(),
             hasNextPage: false,
             reorderHistoryOnOpen: false,
+            desktopMaxCrossAxisExtent: homeAlignedDesktopDiscussionCardExtent,
           )),
     );
   }

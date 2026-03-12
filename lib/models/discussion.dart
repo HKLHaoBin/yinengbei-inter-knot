@@ -245,6 +245,16 @@ class DiscussionModel {
 
   bool _isLoadingComments = false;
 
+  bool _hasMeaningfulAuthorName(String value) {
+    final normalized = value.trim();
+    return normalized.isNotEmpty && normalized != 'Unknown';
+  }
+
+  bool _hasMeaningfulAuthorLogin(String value) {
+    final normalized = value.trim();
+    return normalized.isNotEmpty && normalized != 'unknown';
+  }
+
   void updateFrom(DiscussionModel other) {
     title = other.title;
     bodyHTML = other.bodyHTML;
@@ -256,7 +266,27 @@ class DiscussionModel {
     coverImages = other.coverImages;
     createdAt = other.createdAt;
     lastEditedAt = other.lastEditedAt;
-    author = other.author;
+    author
+      ..name = _hasMeaningfulAuthorName(other.author.name)
+          ? other.author.name
+          : author.name
+      ..login = _hasMeaningfulAuthorLogin(other.author.login)
+          ? other.author.login
+          : author.login
+      ..avatar =
+          other.author.avatar.isNotEmpty ? other.author.avatar : author.avatar
+      ..email = other.author.email ?? author.email
+      ..userId = other.author.userId ?? author.userId
+      ..authorId = (other.author.authorId?.isNotEmpty ?? false)
+          ? other.author.authorId
+          : author.authorId
+      ..createdAt = other.author.createdAt ?? author.createdAt
+      ..exp = other.author.exp ?? author.exp
+      ..level = other.author.level ?? author.level
+      ..lastCheckInDate = other.author.lastCheckInDate ?? author.lastCheckInDate
+      ..consecutiveCheckInDays =
+          other.author.consecutiveCheckInDays ?? author.consecutiveCheckInDays
+      ..canCheckIn = other.author.canCheckIn;
     likesCount = other.likesCount;
     liked = other.liked;
     isEditableDraft = other.isEditableDraft;
