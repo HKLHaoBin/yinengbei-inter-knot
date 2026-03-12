@@ -13,15 +13,18 @@ import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/drop_zone.dart';
 import 'package:inter_knot/helpers/image_compress_helper.dart';
+import 'package:inter_knot/helpers/throttle.dart';
 import 'package:inter_knot/helpers/toast.dart';
 import 'package:inter_knot/helpers/upload_task.dart';
 import 'package:inter_knot/helpers/web_hooks.dart';
 import 'package:inter_knot/models/captcha.dart';
+import 'package:inter_knot/models/h_data.dart';
 import 'package:markdown_quill/markdown_quill.dart';
 
 import 'package:inter_knot/pages/create_discussion/create_discussion_desktop_footer.dart';
 import 'package:inter_knot/pages/create_discussion/create_discussion_desktop_sidebar.dart';
 import 'package:inter_knot/pages/create_discussion/create_discussion_cover_page.dart';
+import 'package:inter_knot/pages/create_discussion/create_discussion_drafts_page.dart';
 import 'package:inter_knot/pages/create_discussion/create_discussion_editor_page.dart';
 import 'package:inter_knot/pages/create_discussion/create_discussion_header.dart';
 import 'package:inter_knot/pages/create_discussion/create_discussion_mobile_nav.dart';
@@ -82,9 +85,14 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   bool _isDesktopEditorActive = true;
   String? _documentId;
   String _lastSavedSnapshot = '';
-  DateTime? _lastSavedAt;
   List<dynamic>? _persistedEditorState;
   String _persistedBodyText = '';
+  DiscussionModel? _activeDiscussion;
+  final RxSet<HDataModel> _draftEntries = <HDataModel>{}.obs;
+  final RxBool _draftHasNextPage = true.obs;
+  String? _draftEndCursor;
+  bool _isDraftListLoading = false;
+  bool _draftListInitialized = false;
 
   // 压缩是 CPU 密集型任务：限制并发，避免 UI 卡顿（Web 单线程更明显）
   final Queue<Completer<void>> _compressionWaiters = Queue<Completer<void>>();
@@ -112,6 +120,10 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   final c = Get.find<Controller>();
   late final api = Get.find<Api>();
+  late final _fetchMoreDraftEntries = retryThrottle(
+    _loadMoreDraftEntries,
+    const Duration(milliseconds: 500),
+  );
 
   bool get _hasAnyDraftContent {
     final title = titleController.text.trim();
@@ -121,30 +133,11 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
 
   bool get _canPublish =>
       !_isInitializingDraft &&
+      !_isSavingDraft &&
       !_isPublishing &&
       !_isCoverUploading &&
       titleController.text.trim().isNotEmpty &&
       (_currentBodyText.trim().isNotEmpty || _uploadedImages.isNotEmpty);
-
-  String? get _editorStatusLabel {
-    if (_isPublishing) {
-      return '发布中...';
-    }
-    if (_isSavingDraft) {
-      return '保存中...';
-    }
-    if (_lastSavedAt != null) {
-      return '已自动保存';
-    }
-    return null;
-  }
-
-  Color get _editorStatusColor {
-    if (_isPublishing) {
-      return const Color(0xffFBC02D);
-    }
-    return const Color(0xffD7FF00);
-  }
 
   String get _currentBodyText {
     if (_isDesktopEditorActive) {
@@ -188,7 +181,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     return jsonEncode(payload);
   }
 
-  void _syncSavedSnapshot({DateTime? savedAt}) {
+  void _syncSavedSnapshot() {
     final payload = _buildDraftPayload();
     _lastSavedSnapshot = _draftSnapshot(payload);
     _persistedBodyText = payload['text']?.toString() ?? '';
@@ -196,7 +189,6 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     _persistedEditorState =
         editorState is List ? List<dynamic>.from(editorState) : null;
     _hasUnsavedChanges = false;
-    _lastSavedAt = savedAt ?? DateTime.now();
   }
 
   void _scheduleAutoSave() {
@@ -297,6 +289,116 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     }
 
     return res.statusText ?? 'Unknown error';
+  }
+
+  void _setCurrentDiscussion(DiscussionModel? discussion) {
+    _activeDiscussion = discussion;
+    if (discussion != null && discussion.id.isNotEmpty) {
+      _documentId = discussion.id;
+    }
+  }
+
+  Future<void> _ensureDraftEntriesLoaded() async {
+    if (_draftListInitialized || _isDraftListLoading) {
+      return;
+    }
+    await _refreshDraftEntries(silent: true);
+  }
+
+  Future<void> _refreshDraftEntries({bool silent = false}) async {
+    _draftEntries.clear();
+    _draftEndCursor = null;
+    _draftHasNextPage.value = true;
+    _draftListInitialized = true;
+    await _loadMoreDraftEntries(silent: silent);
+  }
+
+  Future<void> _loadMoreDraftEntries({bool silent = false}) async {
+    if (_isDraftListLoading || !_draftHasNextPage.value) {
+      return;
+    }
+    if (!c.isLogin.value) {
+      _draftHasNextPage.value = false;
+      _draftListInitialized = true;
+      if (mounted) {
+        setState(() {});
+      }
+      return;
+    }
+
+    _isDraftListLoading = true;
+    if (mounted) {
+      setState(() {});
+    }
+
+    try {
+      final res = await api.getMyDraftDiscussions(_draftEndCursor ?? '');
+      _draftEntries.addAll(res.nodes);
+      _draftEndCursor = res.endCursor;
+      _draftHasNextPage.value = res.hasNextPage;
+    } catch (e) {
+      if (!silent && mounted) {
+        showToast('加载草稿失败: $e', isError: true);
+      }
+    } finally {
+      _isDraftListLoading = false;
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  void _selectDesktopPage(int index) {
+    if (index == 2) {
+      unawaited(_ensureDraftEntriesLoaded());
+    }
+    _pageController.jumpToPage(index);
+  }
+
+  Future<void> _openDraftFromList(
+    BuildContext _context,
+    HDataModel item,
+    DiscussionModel _discussion,
+  ) async {
+    if (_documentId == item.id) {
+      _pageController.jumpToPage(0);
+      return;
+    }
+
+    if (_hasUnsavedChanges && (_documentId != null || _hasAnyDraftContent)) {
+      try {
+        await _saveDraft(force: true);
+      } catch (e) {
+        if (mounted) {
+          showToast('当前草稿保存失败: $e', isError: true);
+        }
+        return;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isInitializingDraft = true;
+      });
+    }
+
+    try {
+      final nextDiscussion = await api.getMyDraftDetail(item.id);
+      _applyDiscussionToEditor(nextDiscussion);
+      if (mounted) {
+        _pageController.jumpToPage(0);
+      }
+    } catch (e) {
+      if (mounted) {
+        showToast('加载草稿失败: $e', isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isInitializingDraft = false;
+        });
+      }
+    }
   }
 
   /// 设置粘贴事件监听
@@ -742,6 +844,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       return;
     }
 
+    final previousDocumentId = _documentId;
     final payload = _buildDraftPayload();
     final snapshot = _draftSnapshot(payload);
     if (!force && snapshot == _lastSavedSnapshot) {
@@ -790,14 +893,22 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         isEditableDraft: true,
       );
 
+      final currentDiscussion = _activeDiscussion;
       _documentId = discussion.id.isNotEmpty
           ? discussion.id
           : (saved['documentId']?.toString() ?? _documentId);
       _syncSavedSnapshot();
 
-      if (widget.discussion != null) {
-        widget.discussion!.updateFrom(discussion);
-        widget.discussion!.id = _documentId ?? widget.discussion!.id;
+      if (currentDiscussion != null) {
+        currentDiscussion.updateFrom(discussion);
+        currentDiscussion.id = _documentId ?? currentDiscussion.id;
+        _activeDiscussion = currentDiscussion;
+      } else {
+        _activeDiscussion = discussion;
+      }
+
+      if (_selectedIndex == 2 || previousDocumentId == null) {
+        unawaited(_refreshDraftEntries(silent: true));
       }
 
       if (mounted) {
@@ -818,6 +929,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   void _applyDiscussionToEditor(DiscussionModel discussion) {
     _suppressChangeTracking = true;
     try {
+      _setCurrentDiscussion(discussion);
       titleController.text = discussion.title;
       _mobileBodyController.text = discussion.rawBodyText;
 
@@ -860,15 +972,22 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       _persistedEditorState = discussion.editorState == null
           ? null
           : List<dynamic>.from(discussion.editorState!);
-      _syncSavedSnapshot(
-          savedAt: discussion.lastEditedAt ?? discussion.createdAt);
+      _syncSavedSnapshot();
     } finally {
       _suppressChangeTracking = false;
     }
   }
 
   Future<void> _loadDraftIfNeeded() async {
-    final draftId = widget.documentId ?? widget.discussion?.id;
+    final shouldLoadDraft =
+        widget.documentId != null && widget.documentId!.isNotEmpty
+            ? widget.discussion == null || widget.discussion!.isEditableDraft
+            : (_activeDiscussion?.isEditableDraft ?? false);
+    if (!shouldLoadDraft) {
+      return;
+    }
+
+    final draftId = widget.documentId ?? _activeDiscussion?.id;
     if (draftId == null || draftId.isEmpty) {
       return;
     }
@@ -880,14 +999,17 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     }
 
     try {
-      final discussion = await api.getMyDraftDetail(draftId);
-      _applyDiscussionToEditor(discussion);
-      if (widget.discussion != null) {
-        widget.discussion!.updateFrom(discussion);
+      final loadedDiscussion = await api.getMyDraftDetail(draftId);
+      if (widget.discussion != null && widget.discussion!.id == draftId) {
+        widget.discussion!.updateFrom(loadedDiscussion);
+        widget.discussion!.id = loadedDiscussion.id;
+        _applyDiscussionToEditor(widget.discussion!);
+      } else {
+        _applyDiscussionToEditor(loadedDiscussion);
       }
     } catch (e) {
       debugPrint('Load draft failed: $e');
-      if (widget.discussion == null && mounted) {
+      if (_activeDiscussion == null && mounted) {
         showToast('加载草稿失败: $e', isError: true);
       }
     } finally {
@@ -933,7 +1055,8 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
   @override
   void initState() {
     super.initState();
-    _documentId = widget.documentId ?? widget.discussion?.id;
+    _activeDiscussion = widget.discussion;
+    _documentId = widget.documentId ?? _activeDiscussion?.id;
     titleController.addListener(_handleTitleChanged);
     _mobileBodyController.addListener(_handleMobileBodyChanged);
     _quillController.addListener(_handleQuillChanged);
@@ -944,8 +1067,8 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       _setupDropZone();
     }
 
-    if (widget.discussion != null) {
-      _applyDiscussionToEditor(widget.discussion!);
+    if (_activeDiscussion != null) {
+      _applyDiscussionToEditor(_activeDiscussion!);
     }
     unawaited(_loadDraftIfNeeded());
   }
@@ -1014,9 +1137,13 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       final publishedDiscussion = DiscussionModel.fromJson(publishedData);
       _syncSavedSnapshot();
 
-      if (widget.discussion != null) {
-        widget.discussion!.updateFrom(publishedDiscussion);
-        widget.discussion!
+      if (_activeDiscussion != null) {
+        _activeDiscussion!.updateFrom(publishedDiscussion);
+        _activeDiscussion!
+          ..hasPublishedVersion = true
+          ..isEditableDraft = false;
+      } else {
+        _activeDiscussion = publishedDiscussion
           ..hasPublishedVersion = true
           ..isEditableDraft = false;
       }
@@ -1052,7 +1179,6 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     final screenW = MediaQuery.of(context).size.width;
     final isWindowed = screenW >= 800;
     final isDesktop = screenW >= 600;
-    final editorStatusLabel = _editorStatusLabel;
 
     // Keep autosave/publish reading from the editor that is actually visible.
     _isDesktopEditorActive = isDesktop;
@@ -1077,11 +1203,25 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       mobileMaxCoverImages: _maxCoverImages,
     );
 
+    final draftsPage = Obx(
+      () => CreateDiscussionDraftsPage(
+        isLoggedIn: c.isLogin.value,
+        isLoading: _isDraftListLoading,
+        drafts: _draftEntries,
+        hasNextPage: _draftHasNextPage.value,
+        onFetchMore: _fetchMoreDraftEntries,
+        onOpenDraft: _openDraftFromList,
+      ),
+    );
+
     final content = PageView(
       scrollDirection: isDesktop ? Axis.vertical : Axis.horizontal,
       physics: const NeverScrollableScrollPhysics(),
       controller: _pageController,
       onPageChanged: (index) {
+        if (index == 2) {
+          unawaited(_ensureDraftEntriesLoaded());
+        }
         setState(() {
           _selectedIndex = index;
         });
@@ -1105,6 +1245,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
             });
           },
         ),
+        draftsPage,
       ],
     );
 
@@ -1119,6 +1260,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
               ]),
               builder: (context, _) => Obx(
                 () => CreateDiscussionMobileNav(
+                  isSavingDraft: _isSavingDraft,
                   isPublishing: _isPublishing,
                   submitEnabled: _canPublish,
                   onPickImage: _pickImages,
@@ -1142,21 +1284,6 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
               title: '发布委托',
               onClose: _handleClose,
             ),
-            if (editorStatusLabel != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    editorStatusLabel,
-                    style: TextStyle(
-                      color: _editorStatusColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
             // Body
             Expanded(
               child: isDesktop
@@ -1164,8 +1291,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                       children: [
                         CreateDiscussionDesktopSidebar(
                           selectedIndex: _selectedIndex,
-                          onSelectPage: (index) =>
-                              _pageController.jumpToPage(index),
+                          onSelectPage: _selectDesktopPage,
                         ),
                         Expanded(
                           flex: 9,
@@ -1190,6 +1316,7 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
                                 ),
                               ),
                               CreateDiscussionDesktopFooter(
+                                isSavingDraft: _isSavingDraft,
                                 isPublishing: _isPublishing,
                                 onSubmit: () => _publish(),
                                 submitEnabled: _canPublish,

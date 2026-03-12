@@ -83,6 +83,14 @@ class _DesktopEditorBody extends StatefulWidget {
 }
 
 class _DesktopEditorBodyState extends State<_DesktopEditorBody> {
+  final _editorFocus = FocusNode(debugLabel: 'create-discussion-editor');
+
+  @override
+  void dispose() {
+    _editorFocus.dispose();
+    super.dispose();
+  }
+
   bool _isPasteShortcut(KeyEvent event) {
     if (event is! KeyDownEvent) return false;
     if (event.logicalKey != LogicalKeyboardKey.keyV) return false;
@@ -169,25 +177,30 @@ class _DesktopEditorBodyState extends State<_DesktopEditorBody> {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: quill.QuillEditor.basic(
-              controller: widget.quillController,
-              config: quill.QuillEditorConfig(
-                placeholder: '请尽情发挥吧',
-                padding: const EdgeInsets.all(16),
-                onKeyPressed: _onKeyPressed,
-                embedBuilders: [
-                  ...FlutterQuillEmbeds.editorBuilders(
-                    imageEmbedConfig: QuillEditorImageEmbedConfig(
-                      onImageClicked: (url) {},
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: _editorFocus.requestFocus,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.5)),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: quill.QuillEditor.basic(
+                controller: widget.quillController,
+                focusNode: _editorFocus,
+                config: quill.QuillEditorConfig(
+                  placeholder: '请尽情发挥吧',
+                  padding: const EdgeInsets.all(16),
+                  onKeyPressed: _onKeyPressed,
+                  embedBuilders: [
+                    ...FlutterQuillEmbeds.editorBuilders(
+                      imageEmbedConfig: QuillEditorImageEmbedConfig(
+                        onImageClicked: (url) {},
+                      ),
                     ),
-                  ),
-                  const _DividerEmbedBuilder(),
-                ],
+                    const _DividerEmbedBuilder(),
+                  ],
+                ),
               ),
             ),
           ),

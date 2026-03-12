@@ -603,7 +603,7 @@ class Api extends BaseConnect {
   }
 
   Future<DiscussionModel> getMyDraftDetail(String documentId) async {
-    final res = await get('/api/articles/my/$documentId');
+    final res = await get('/api/articles/my/detail/$documentId');
     final data = unwrapData<Map<String, dynamic>>(res);
 
     final discussion = await compute(_parseEditableDraftDiscussionSync, data);
@@ -758,7 +758,7 @@ class Api extends BaseConnect {
 
     if (currentAuthorId == authorId) {
       final res = await get(
-        '/api/articles/my',
+        '/api/articles/my/published',
         query: {
           'start': start.toString(),
           'limit': ApiConfig.defaultPageSize.toString(),
@@ -766,25 +766,13 @@ class Api extends BaseConnect {
       );
 
       final data = unwrapData<List<dynamic>>(res);
+      await _mergeReadStatus(data, tag: 'MyPublishedDiscussions');
       final hasNext = data.length >= ApiConfig.defaultPageSize;
-      final result =
-          await compute(_parseEditableDraftListAndDiscussionsSync, data);
+      final result = await compute(_parseHDataListAndDiscussionsSync, data);
 
       final controller = Get.find<Controller>();
       for (final discussion in result.discussions) {
         controller.applyLocalOverrides(discussion);
-        final user = controller.user.value;
-        if (discussion.author.authorId == null ||
-            discussion.author.authorId!.isEmpty ||
-            discussion.author.name == 'Unknown') {
-          discussion.author
-            ..name = user?.name ?? user?.login ?? discussion.author.name
-            ..login = user?.login ?? discussion.author.login
-            ..avatar = user?.avatar ?? discussion.author.avatar
-            ..authorId = controller.authorId.value ??
-                user?.authorId ??
-                discussion.author.authorId;
-        }
         HDataModel.upsertCachedDiscussion(discussion);
       }
 
@@ -823,6 +811,48 @@ class Api extends BaseConnect {
     final controller = Get.find<Controller>();
     for (final discussion in result.discussions) {
       controller.applyLocalOverrides(discussion);
+      HDataModel.upsertCachedDiscussion(discussion);
+    }
+
+    return PaginationModel(
+      nodes: result.nodes,
+      endCursor: (start + ApiConfig.defaultPageSize).toString(),
+      hasNextPage: hasNext,
+    );
+  }
+
+  Future<PaginationModel<HDataModel>> getMyDraftDiscussions(
+      String endCur) async {
+    final start = int.tryParse(endCur.isEmpty ? '0' : endCur) ?? 0;
+
+    final res = await get(
+      '/api/articles/my/drafts',
+      query: {
+        'start': start.toString(),
+        'limit': ApiConfig.defaultPageSize.toString(),
+      },
+    );
+
+    final data = unwrapData<List<dynamic>>(res);
+    final hasNext = data.length >= ApiConfig.defaultPageSize;
+    final result =
+        await compute(_parseEditableDraftListAndDiscussionsSync, data);
+
+    final controller = Get.find<Controller>();
+    final user = controller.user.value;
+    for (final discussion in result.discussions) {
+      controller.applyLocalOverrides(discussion);
+      if (discussion.author.authorId == null ||
+          discussion.author.authorId!.isEmpty ||
+          discussion.author.name == 'Unknown') {
+        discussion.author
+          ..name = user?.name ?? user?.login ?? discussion.author.name
+          ..login = user?.login ?? discussion.author.login
+          ..avatar = user?.avatar ?? discussion.author.avatar
+          ..authorId = controller.authorId.value ??
+              user?.authorId ??
+              discussion.author.authorId;
+      }
       HDataModel.upsertCachedDiscussion(discussion);
     }
 

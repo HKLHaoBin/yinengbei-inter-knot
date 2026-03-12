@@ -45,6 +45,12 @@ class CreateDiscussionDesktopSidebar extends StatelessWidget {
                 selected: selectedIndex == 1,
                 onTap: () => onSelectPage(1),
               ),
+              ListTile(
+                leading: const Icon(Icons.drafts_outlined),
+                title: const Text('草稿'),
+                selected: selectedIndex == 2,
+                onTap: () => onSelectPage(2),
+              ),
             ],
           ),
         ),

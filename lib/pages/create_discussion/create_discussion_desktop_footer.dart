@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class CreateDiscussionDesktopFooter extends StatelessWidget {
   const CreateDiscussionDesktopFooter({
     super.key,
+    required this.isSavingDraft,
     required this.isPublishing,
     required this.onSubmit,
     this.submitEnabled = true,
@@ -11,6 +12,7 @@ class CreateDiscussionDesktopFooter extends StatelessWidget {
     this.onCompressionChanged,
   });
 
+  final bool isSavingDraft;
   final bool isPublishing;
   final VoidCallback onSubmit;
   final bool submitEnabled;
@@ -20,6 +22,10 @@ class CreateDiscussionDesktopFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isBusy = isSavingDraft || isPublishing;
+    final buttonEnabled = submitEnabled && !isBusy;
+    final buttonText = isSavingDraft ? '正在保存' : '发布';
+
     return Container(
       margin: const EdgeInsets.only(
         left: 8,
@@ -62,13 +68,13 @@ class CreateDiscussionDesktopFooter extends StatelessWidget {
           else
             const SizedBox.shrink(),
           Material(
-            color: submitEnabled
+            color: buttonEnabled
                 ? const Color(0xff1A1A1A)
                 : const Color(0xff111111),
             borderRadius: BorderRadius.circular(28),
             child: InkWell(
               borderRadius: BorderRadius.circular(28),
-              onTap: isPublishing || !submitEnabled ? null : onSubmit,
+              onTap: buttonEnabled ? onSubmit : null,
               child: Container(
                 height: 56,
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -90,15 +96,15 @@ class CreateDiscussionDesktopFooter extends StatelessWidget {
                                 color: Colors.black,
                               ),
                             )
-                          : const Icon(
-                              Icons.send,
+                          : Icon(
+                              isSavingDraft ? Icons.save_outlined : Icons.send,
                               color: Colors.black,
                               size: 16,
                             ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
-                      '发布',
+                    Text(
+                      buttonText,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,

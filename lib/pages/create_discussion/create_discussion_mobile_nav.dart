@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class CreateDiscussionMobileNav extends StatelessWidget {
   const CreateDiscussionMobileNav({
     super.key,
+    required this.isSavingDraft,
     required this.isPublishing,
     required this.submitEnabled,
     required this.onPickImage,
@@ -11,6 +12,7 @@ class CreateDiscussionMobileNav extends StatelessWidget {
     this.uploadingCount = 0,
   });
 
+  final bool isSavingDraft;
   final bool isPublishing;
   final bool submitEnabled;
   final VoidCallback onPickImage;
@@ -20,6 +22,7 @@ class CreateDiscussionMobileNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isBusy = isSavingDraft || isPublishing;
     final submitColor = submitEnabled
         ? const Color(0xffD7FF00)
         : Color.lerp(const Color(0xffD7FF00), Colors.white, 0.72)!;
@@ -44,36 +47,48 @@ class CreateDiscussionMobileNav extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
-              child: isPublishing
-                  ? const Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xffD7FF00),
-                        ),
-                      ),
-                    )
-                  : GestureDetector(
-                      onTap: submitEnabled ? onSubmit : null,
-                      child: Container(
-                        height: 42,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: submitColor,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          '\u53d1\u5e03',
-                          style: TextStyle(
+              child: GestureDetector(
+                onTap: submitEnabled && !isBusy ? onSubmit : null,
+                child: Container(
+                  height: 42,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: submitColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isPublishing)
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
                             color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
                           ),
+                        )
+                      else if (isSavingDraft)
+                        const Icon(
+                          Icons.save_outlined,
+                          color: Colors.black,
+                          size: 18,
+                        ),
+                      if (isBusy) const SizedBox(width: 8),
+                      Text(
+                        isSavingDraft
+                            ? '\u6b63\u5728\u4fdd\u5b58'
+                            : '\u53d1\u5e03',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
                       ),
-                    ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ],
