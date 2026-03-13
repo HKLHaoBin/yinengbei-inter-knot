@@ -12,6 +12,7 @@ import 'package:inter_knot/api/api.dart';
 import 'package:inter_knot/controllers/data.dart';
 import 'package:inter_knot/helpers/dialog_helper.dart';
 import 'package:inter_knot/helpers/drop_zone.dart';
+import 'package:inter_knot/helpers/image_dimension_helper.dart';
 import 'package:inter_knot/helpers/image_compress_helper.dart';
 import 'package:inter_knot/helpers/throttle.dart';
 import 'package:inter_knot/helpers/toast.dart';
@@ -588,6 +589,9 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
       }
 
       task.bytes = uploadBytes;
+      final dimensions = await _getUploadImageDimensions(uploadBytes);
+      task.imageWidth = dimensions?.width;
+      task.imageHeight = dimensions?.height;
 
       // 2. 上传阶段
       task.status.value = UploadStatus.uploading;
@@ -598,6 +602,8 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         bytes: uploadBytes,
         filename: task.filename,
         mimeType: task.mimeType,
+        width: task.imageWidth,
+        height: task.imageHeight,
         onProgress: (percent) {
           task.progress.value = percent;
         },
@@ -665,6 +671,10 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
     }
   }
 
+  Future<ImageDimensions?> _getUploadImageDimensions(Uint8List bytes) {
+    return ImageDimensionHelper.decode(bytes);
+  }
+
   /// 粘贴图片 -> 上传 -> 替换为 HTML 图片标签
   void _uploadImageAndInsert({
     required int insertIndex,
@@ -711,10 +721,13 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         }
       }
 
+      final dimensions = await _getUploadImageDimensions(uploadBytes);
       final result = await api.uploadImage(
         bytes: uploadBytes,
         filename: filename,
         mimeType: mimeType,
+        width: dimensions?.width,
+        height: dimensions?.height,
         onProgress: (_) {},
       );
 
@@ -1051,6 +1064,8 @@ class _CreateDiscussionPageState extends State<CreateDiscussionPage> {
         );
         task.serverId = cover.id ?? '';
         task.serverUrl = cover.url;
+        task.imageWidth = cover.width;
+        task.imageHeight = cover.height;
         task.status.value = UploadStatus.done;
         task.progress.value = 100;
         _uploadTasks.add(task);

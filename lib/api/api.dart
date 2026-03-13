@@ -1567,6 +1567,8 @@ class Api extends BaseConnect {
     required String filename,
     required String mimeType,
     String path = 'editor',
+    int? width,
+    int? height,
     required void Function(int percent) onProgress,
   }) async {
     final token = box.read<String>('access_token') ?? '';
@@ -1629,11 +1631,16 @@ class Api extends BaseConnect {
     onProgress(80);
 
     // 3. 完成上传
+    final completePayload = <String, dynamic>{
+      'uploadToken': uploadToken,
+    };
+    if (width != null && height != null && width > 0 && height > 0) {
+      completePayload['width'] = width;
+      completePayload['height'] = height;
+    }
     final completeRes = await postWithRetry(
       '/api/direct-upload/complete',
-      {
-        'uploadToken': uploadToken,
-      },
+      completePayload,
       headers: authHeaders,
       operationName: 'DirectUpload Complete',
     );
@@ -1661,12 +1668,16 @@ class Api extends BaseConnect {
     required List<int> bytes,
     required String filename,
     required String mimeType,
+    int? width,
+    int? height,
     required void Function(int percent) onProgress,
   }) async {
     return uploadImageDirect(
       bytes: bytes,
       filename: filename,
       mimeType: mimeType,
+      width: width,
+      height: height,
       onProgress: onProgress,
     );
   }

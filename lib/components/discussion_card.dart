@@ -379,7 +379,7 @@ class _DraftBadge extends StatelessWidget {
   }
 }
 
-class Cover extends StatefulWidget {
+class Cover extends StatelessWidget {
   const Cover({
     super.key,
     required this.discussion,
@@ -390,59 +390,10 @@ class Cover extends StatefulWidget {
   final bool isHovering;
 
   @override
-  State<Cover> createState() => _CoverState();
-}
-
-class _CoverState extends State<Cover> {
-  String? _resolvedImageUrl;
-  ImageStream? _imageStream;
-  ImageStreamListener? _imageStreamListener;
-
-  void _resolveImageAspectRatio(String imageUrl) {
-    if (_resolvedImageUrl == imageUrl) {
-      return;
-    }
-
-    if (_imageStream != null && _imageStreamListener != null) {
-      _imageStream!.removeListener(_imageStreamListener!);
-    }
-
-    _resolvedImageUrl = imageUrl;
-    final imageStream = NetworkImage(imageUrl).resolve(
-      const ImageConfiguration(),
-    );
-    final imageStreamListener = ImageStreamListener((info, _) {
-      if (!mounted || _resolvedImageUrl != imageUrl) {
-        return;
-      }
-
-      setState(() {
-        final image = info.image;
-        _imageAspectRatio = image.width / image.height;
-      });
-    });
-
-    _imageStream = imageStream;
-    _imageStreamListener = imageStreamListener;
-    imageStream.addListener(imageStreamListener);
-  }
-
-  @override
-  void dispose() {
-    if (_imageStream != null && _imageStreamListener != null) {
-      _imageStream!.removeListener(_imageStreamListener!);
-    }
-    super.dispose();
-  }
-
-  double? _imageAspectRatio; // 图片加载后的实际宽高比
-
-  @override
   Widget build(BuildContext context) {
-    // Prefer the high-res image from coverImages if available
-    final highResUrl = widget.discussion.coverImages.isNotEmpty
-        ? widget.discussion.coverImages.first.url
-        : widget.discussion.cover;
+    final coverImage =
+        discussion.coverImages.isNotEmpty ? discussion.coverImages.first : null;
+    final highResUrl = coverImage?.url ?? discussion.cover;
 
     Widget image;
     if (highResUrl == null) {
@@ -451,7 +402,6 @@ class _CoverState extends State<Cover> {
         fit: BoxFit.cover,
       );
     } else {
-      _resolveImageAspectRatio(highResUrl);
       image = NetworkImageBox(
         url: highResUrl,
         fit: BoxFit.cover,
@@ -464,35 +414,16 @@ class _CoverState extends State<Cover> {
         },
         errorBuilder: (context) =>
             Assets.images.defaultCover.image(fit: BoxFit.cover),
-        /* frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-          if (frame != null && _imageAspectRatio == null) {
-            // 图片加载完成，获取实际尺寸
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              final imageStream = NetworkImage(highResUrl).resolve(
-                const ImageConfiguration(),
-              );
-              imageStream.addListener(
-                ImageStreamListener((info, _) {
-                  if (mounted) {
-                    setState(() {
-                      final image = info.image;
-                      _imageAspectRatio = image.width / image.height;
-                    });
-                  }
-                }),
-              );
-            });
-          }
-          return child;
-        }, */
       );
     }
 
-    // 使用图片加载后的实际宽高比，如果还没加载完则使用默认值 643:408
-    final double displayAspectRatio = _imageAspectRatio ?? (643 / 408);
-
-    // 限制最小宽高比，防止图片过高
-    // 最小宽高比 0.75 (3:4)，即高度最多是宽度的 1.33 倍
+    // Only use backend-provided dimensions for card height.
+    final backendAspectRatio = switch ((coverImage?.width, coverImage?.height)) {
+      (final int width?, final int height?) when width > 0 && height > 0 =>
+        width / height,
+      _ => null,
+    };
+    final double displayAspectRatio = backendAspectRatio ?? (643 / 408);
     final double clampedAspectRatio =
         displayAspectRatio < 0.75 ? 0.75 : displayAspectRatio;
 
@@ -500,7 +431,7 @@ class _CoverState extends State<Cover> {
       aspectRatio: clampedAspectRatio,
       child: ClipRect(
         child: AnimatedScale(
-          scale: widget.isHovering ? 1.1 : 1.0,
+          scale: isHovering ? 1.1 : 1.0,
           duration: const Duration(milliseconds: 1200),
           curve: Curves.easeOutCubic,
           child: image,

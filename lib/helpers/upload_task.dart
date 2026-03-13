@@ -53,6 +53,9 @@ class UploadTask {
   /// 服务器返回的 url
   String? serverUrl;
 
+  int? imageWidth;
+  int? imageHeight;
+
   /// 错误信息
   String? errorMessage;
 
