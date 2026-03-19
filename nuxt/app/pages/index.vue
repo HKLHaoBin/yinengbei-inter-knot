@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { MasonryWall } from "@yeger/vue-masonry-wall";
 import { useDebounceFn, useIntersectionObserver } from "@vueuse/core";
 import type { Discussion } from "~/types/entities";
@@ -12,7 +12,7 @@ const loadingMore = ref(false);
 const error = ref("");
 
 const list = ref<Discussion[]>([]);
-const endCursor = ref("");
+const endCursor = ref("0");
 const hasNextPage = ref(true);
 const sentinelRef = ref<HTMLElement | null>(null);
 const requestVersion = ref(0);
@@ -30,16 +30,17 @@ const fetchList = async (reset = false) => {
 
   const currentVersion = ++requestVersion.value;
   try {
-    const page = await api.searchArticles(query.value.trim(), reset ? "" : endCursor.value);
+    const page = await api.searchArticles(query.value.trim(), reset ? "0" : endCursor.value);
     if (currentVersion !== requestVersion.value) {
       return;
     }
+
     if (reset) {
       list.value = page.nodes;
     } else {
-      // Keep immutable update to avoid expensive deep reactivity work
       list.value = [...list.value, ...page.nodes];
     }
+
     endCursor.value = page.endCursor;
     hasNextPage.value = page.hasNextPage;
   } catch (err) {
@@ -88,7 +89,8 @@ useIntersectionObserver(
 
 <template>
   <section class="container ik-home-container ik-stack">
-    <h1 class="ik-title">绳网推送</h1>
+    <h1 class="ik-title">绳网推荐</h1>
+
     <z-card class="ik-panel">
       <div class="ik-row">
         <z-input
@@ -98,7 +100,7 @@ useIntersectionObserver(
         />
         <z-button @click="fetchList(true)" :loading="loading">搜索</z-button>
       </div>
-      <p class="ik-meta">数据源：/api/articles/list 与 /api/articles/search</p>
+      <p class="ik-meta">数据源：/api/articles/list 和 /api/articles/search</p>
     </z-card>
 
     <div v-if="error" class="ik-panel" style="border-color: #5d2424; color: #ff9d9d">
@@ -106,7 +108,8 @@ useIntersectionObserver(
     </div>
 
     <div v-if="loading" class="ik-empty">正在加载帖子...</div>
-    <div v-else-if="!list.length" class="ik-empty">暂无相关帖子... \[ o_x ]/</div>
+    <div v-else-if="!list.length" class="ik-empty">暂无相关帖子... [ o_x ]/</div>
+
     <ClientOnly v-else>
       <MasonryWall
         :items="list"
@@ -128,8 +131,9 @@ useIntersectionObserver(
       <z-button v-if="hasNextPage" @click="fetchList(false)" :loading="loadingMore">
         加载更多
       </z-button>
-      <span v-else class="ik-meta">已经到底啦… \[ O_X ] /</span>
+      <span v-else class="ik-meta">已经到底啦 [ O_X ] /</span>
     </div>
+
     <div ref="sentinelRef" class="ik-sentinel" />
   </section>
 </template>

@@ -128,8 +128,6 @@ const handleOpen = () => {
   background: #000;
   padding: 4px;
   overflow: hidden;
-  content-visibility: auto;
-  contain-intrinsic-size: 360px;
   transition: background-color 180ms ease;
 }
 
