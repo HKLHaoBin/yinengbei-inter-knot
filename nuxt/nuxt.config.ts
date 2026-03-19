@@ -15,7 +15,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBaseUrl:
-        process.env.NUXT_PUBLIC_API_BASE_URL || "http://38.76.218.42:1338",
+        process.env.NUXT_PUBLIC_API_BASE_URL || "https://dev.tiwat.cn",
       appName: "Inter Knot",
     },
   },
