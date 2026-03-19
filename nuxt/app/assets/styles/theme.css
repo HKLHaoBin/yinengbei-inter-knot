@@ -38,7 +38,7 @@ a {
 }
 
 .ik-page {
-  padding: 20px 0 90px;
+  padding: 0;
 }
 
 .ik-grid {
@@ -90,6 +90,6 @@ a {
   }
 
   .ik-page {
-    padding-top: 14px;
+    padding-bottom: 64px;
   }
 }

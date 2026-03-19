@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import type { Discussion } from "~/types/entities";
 
 const props = defineProps<{
@@ -10,14 +10,10 @@ const emit = defineEmits<{
   open: [discussion: Discussion];
 }>();
 
-const avatarLabel = computed(() => {
-  const name = props.discussion.author?.name || "U";
-  return name[0] || "U";
-});
-
 const DEFAULT_COVER_ASPECT_RATIO = 643 / 408;
 const MIN_COVER_ASPECT_RATIO = 0.75;
 const DEFAULT_COVER_IMAGE = "/images/default-cover.webp";
+const DEFAULT_AVATAR_IMAGE = "/images/default-avatar.webp";
 
 const authorName = computed(() => props.discussion.author?.name || "未知作者");
 const excerpt = computed(
@@ -40,6 +36,20 @@ const coverAspectRatio = computed(() => {
 
   return DEFAULT_COVER_ASPECT_RATIO;
 });
+
+const avatarSrc = ref(DEFAULT_AVATAR_IMAGE);
+
+watch(
+  () => [props.discussion.id, props.discussion.author?.avatar] as const,
+  () => {
+    avatarSrc.value = props.discussion.author?.avatar || DEFAULT_AVATAR_IMAGE;
+  },
+  { immediate: true },
+);
+
+const onAvatarError = () => {
+  avatarSrc.value = DEFAULT_AVATAR_IMAGE;
+};
 
 const handleOpen = () => {
   emit("open", props.discussion);
@@ -98,14 +108,13 @@ const handleOpen = () => {
         <div class="ik-card__author-row">
           <div class="ik-card__avatar-shell">
             <img
-              v-if="discussion.author?.avatar"
-              :src="discussion.author.avatar"
+              :src="avatarSrc"
               :alt="authorName"
               class="ik-card__avatar-image"
               loading="lazy"
               decoding="async"
+              @error="onAvatarError"
             />
-            <div v-else class="ik-card__avatar-fallback">{{ avatarLabel }}</div>
           </div>
           <div class="ik-card__author-block">
             <p class="ik-card__author-name">{{ authorName }}</p>
@@ -214,25 +223,12 @@ const handleOpen = () => {
   background: #222;
 }
 
-.ik-card__avatar-image,
-.ik-card__avatar-fallback {
+.ik-card__avatar-image {
   width: 100%;
   height: 100%;
   border-radius: 999px;
-}
-
-.ik-card__avatar-image {
   object-fit: cover;
-  background: #111;
-}
-
-.ik-card__avatar-fallback {
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #2d2d2d 0%, #181818 100%);
-  border: 1px solid #3a3a3a;
-  color: var(--ik-primary);
-  font-weight: 800;
+  background: #1b1b1b;
 }
 
 .ik-card__author-block {

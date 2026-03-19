@@ -1,12 +1,50 @@
 ﻿<script setup lang="ts">
-import { MasonryWall } from "@yeger/vue-masonry-wall";
-import { useDebounceFn, useIntersectionObserver } from "@vueuse/core";
+import { Waterfall } from "vue-waterfall-plugin-next";
+import "vue-waterfall-plugin-next/dist/style.css";
+import BScroll from "@better-scroll/core";
+import PullUp from "@better-scroll/pull-up";
+import MouseWheel from "@better-scroll/mouse-wheel";
+import ObserveDOM from "@better-scroll/observe-dom";
+import { useDebounceFn } from "@vueuse/core";
 import type { Discussion } from "~/types/entities";
 import { resolveErrorMessage } from "~/utils/api-error";
 
-const api = useApi();
+type BScrollWithFlag = typeof BScroll & {
+  __ikPluginsRegistered?: boolean;
+};
 
-const query = ref("");
+const BScrollRuntime = BScroll as BScrollWithFlag;
+if (!BScrollRuntime.__ikPluginsRegistered) {
+  BScrollRuntime.use(PullUp);
+  BScrollRuntime.use(MouseWheel);
+  BScrollRuntime.use(ObserveDOM);
+  BScrollRuntime.__ikPluginsRegistered = true;
+}
+
+const api = useApi();
+const route = useRoute();
+
+const SCROLL_PULL_THRESHOLD = 40;
+const SCROLL_MIN_HEIGHT = 360;
+const MOBILE_BOTTOM_NAV_HEIGHT = 64;
+
+const WATERFALL_BREAKPOINTS = {
+  99999: { rowPerView: 6 },
+  1400: { rowPerView: 5 },
+  1200: { rowPerView: 4 },
+  900: { rowPerView: 3 },
+  680: { rowPerView: 2 },
+  460: { rowPerView: 1 },
+};
+
+const pickFirstQuery = (queryValue: string | string[] | undefined) => {
+  if (Array.isArray(queryValue)) {
+    return queryValue[0] || "";
+  }
+  return queryValue || "";
+};
+
+const query = ref(pickFirstQuery(route.query.q as string | string[] | undefined));
 const loading = ref(false);
 const loadingMore = ref(false);
 const error = ref("");
@@ -14,8 +52,56 @@ const error = ref("");
 const list = ref<Discussion[]>([]);
 const endCursor = ref("0");
 const hasNextPage = ref(true);
-const sentinelRef = ref<HTMLElement | null>(null);
 const requestVersion = ref(0);
+const seenIds = ref<Set<string>>(new Set());
+
+const scrollWrapperRef = ref<HTMLElement | null>(null);
+const scrollHeight = ref(540);
+const bScrollRef = shallowRef<InstanceType<typeof BScroll> | null>(null);
+
+const finishPullUp = () => {
+  (bScrollRef.value as (InstanceType<typeof BScroll> & { finishPullUp?: () => void }) | null)
+    ?.finishPullUp?.();
+};
+
+const refreshScroll = useDebounceFn(() => {
+  bScrollRef.value?.refresh();
+}, 60);
+
+const updateScrollHeight = () => {
+  if (!import.meta.client) return;
+  const wrapper = scrollWrapperRef.value;
+  if (!wrapper) return;
+
+  const rect = wrapper.getBoundingClientRect();
+  const viewportHeight = window.innerHeight;
+  const reserveBottom = window.innerWidth <= 768 ? MOBILE_BOTTOM_NAV_HEIGHT : 0;
+  const nextHeight = Math.floor(viewportHeight - rect.top - reserveBottom);
+  scrollHeight.value = Math.max(SCROLL_MIN_HEIGHT, nextHeight);
+};
+
+const toUniqueNodes = (nodes: Discussion[], reset: boolean): Discussion[] => {
+  if (reset) {
+    seenIds.value = new Set();
+  }
+
+  const unique: Discussion[] = [];
+  for (const node of nodes) {
+    if (!node.id || seenIds.value.has(node.id)) continue;
+    seenIds.value.add(node.id);
+    unique.push(node);
+  }
+  return unique;
+};
+
+const syncScrollAfterData = async (reset: boolean) => {
+  await nextTick();
+  if (reset) {
+    bScrollRef.value?.scrollTo(0, 0, 0);
+  }
+  finishPullUp();
+  refreshScroll();
+};
 
 const fetchList = async (reset = false) => {
   if (loading.value || loadingMore.value) return;
@@ -35,16 +121,21 @@ const fetchList = async (reset = false) => {
       return;
     }
 
+    const uniqueNodes = toUniqueNodes(page.nodes, reset);
+
     if (reset) {
-      list.value = page.nodes;
+      list.value = uniqueNodes;
     } else {
-      list.value = [...list.value, ...page.nodes];
+      list.value = [...list.value, ...uniqueNodes];
     }
 
     endCursor.value = page.endCursor;
     hasNextPage.value = page.hasNextPage;
+
+    await syncScrollAfterData(reset);
   } catch (err) {
     error.value = resolveErrorMessage(err, "获取帖子失败");
+    await syncScrollAfterData(false);
   } finally {
     loading.value = false;
     loadingMore.value = false;
@@ -59,7 +150,57 @@ const goDiscussion = async (discussion: Discussion) => {
   }
 };
 
+const handlePullingUp = async () => {
+  if (loading.value || loadingMore.value || !hasNextPage.value) {
+    finishPullUp();
+    refreshScroll();
+    return;
+  }
+
+  await fetchList(false);
+};
+
+const initBetterScroll = () => {
+  if (!import.meta.client || !scrollWrapperRef.value || bScrollRef.value) return;
+
+  const instance = new BScroll(scrollWrapperRef.value, {
+    scrollY: true,
+    scrollX: false,
+    click: true,
+    probeType: 3,
+    bounceTime: 500,
+    observeDOM: true,
+    mouseWheel: {
+      speed: 20,
+      invert: false,
+      easeTime: 280,
+    },
+    pullUpLoad: {
+      threshold: SCROLL_PULL_THRESHOLD,
+    },
+  });
+
+  instance.on("pullingUp", handlePullingUp);
+  bScrollRef.value = instance;
+};
+
+const destroyBetterScroll = () => {
+  if (!bScrollRef.value) return;
+  bScrollRef.value.off("pullingUp", handlePullingUp);
+  bScrollRef.value.destroy();
+  bScrollRef.value = null;
+};
+
+const handleResize = useDebounceFn(() => {
+  updateScrollHeight();
+  refreshScroll();
+}, 80);
+
 const debouncedSearch = useDebounceFn(() => fetchList(true), 300);
+
+const handleWaterfallAfterRender = () => {
+  refreshScroll();
+};
 
 watch(
   () => query.value,
@@ -68,73 +209,102 @@ watch(
   },
 );
 
-onMounted(() => {
-  fetchList(true);
-});
-
-useIntersectionObserver(
-  sentinelRef,
-  (entries) => {
-    const [entry] = entries;
-    if (entry?.isIntersecting) {
-      fetchList(false);
-    }
-  },
-  {
-    rootMargin: "900px 0px",
-    threshold: 0,
+watch(
+  () => route.query.q,
+  (nextQuery) => {
+    const normalized = pickFirstQuery(nextQuery as string | string[] | undefined);
+    if (normalized === query.value) return;
+    query.value = normalized;
   },
 );
+
+watch(
+  () => list.value.length,
+  async () => {
+    await nextTick();
+    refreshScroll();
+  },
+);
+
+watch(
+  () => scrollWrapperRef.value,
+  async (wrapper) => {
+    if (!wrapper) {
+      destroyBetterScroll();
+      return;
+    }
+    await nextTick();
+    updateScrollHeight();
+    initBetterScroll();
+    refreshScroll();
+  },
+  { flush: "post" },
+);
+
+onMounted(async () => {
+  if (import.meta.client) {
+    window.addEventListener("resize", handleResize, { passive: true });
+  }
+
+  await fetchList(true);
+
+  await nextTick();
+  updateScrollHeight();
+  initBetterScroll();
+  refreshScroll();
+});
+
+onBeforeUnmount(() => {
+  if (import.meta.client) {
+    window.removeEventListener("resize", handleResize);
+  }
+  destroyBetterScroll();
+});
 </script>
 
 <template>
   <section class="container ik-home-container ik-stack">
-    <h1 class="ik-title">绳网推荐</h1>
-
-    <z-card class="ik-panel">
-      <div class="ik-row">
-        <z-input
-          v-model="query"
-          placeholder="搜索帖子标题或关键词"
-          style="flex: 1"
-        />
-        <z-button @click="fetchList(true)" :loading="loading">搜索</z-button>
-      </div>
-      <p class="ik-meta">数据源：/api/articles/list 和 /api/articles/search</p>
-    </z-card>
-
     <div v-if="error" class="ik-panel" style="border-color: #5d2424; color: #ff9d9d">
       {{ error }}
     </div>
 
-    <div v-if="loading" class="ik-empty">正在加载帖子...</div>
-    <div v-else-if="!list.length" class="ik-empty">暂无相关帖子... [ o_x ]/</div>
+    <div v-if="!list.length && loading" class="ik-empty">正在加载帖子...</div>
+    <div v-else-if="!list.length && !loading" class="ik-empty">暂无相关帖子... [ o_x ]/</div>
 
     <ClientOnly v-else>
-      <MasonryWall
-        :items="list"
-        :column-width="228"
-        :gap="12"
-        :min-columns="1"
-        :max-columns="6"
-        :ssr-columns="1"
-        class="ik-masonry"
-        :key-mapper="(item: Discussion) => item.id"
+      <div
+        ref="scrollWrapperRef"
+        class="ik-scroll-wrapper"
+        :style="{ height: `${scrollHeight}px` }"
       >
-        <template #default="{ item }">
-          <DiscussionCard :discussion="item" @open="goDiscussion" />
-        </template>
-      </MasonryWall>
+        <div class="ik-scroll-content">
+          <Waterfall
+            class="ik-masonry"
+            :list="list"
+            row-key="id"
+            img-selector="cover"
+            :width="228"
+            :gutter="12"
+            :space="12"
+            :has-around-gutter="false"
+            :breakpoints="WATERFALL_BREAKPOINTS"
+            background-color="transparent"
+            :delay="80"
+            :animation-cancel="true"
+            @after-render="handleWaterfallAfterRender"
+          >
+            <template #default="{ item }">
+              <DiscussionCard :discussion="item" @open="goDiscussion" />
+            </template>
+          </Waterfall>
+
+          <div v-if="loadingMore || !hasNextPage" class="ik-scroll-footer">
+            <img v-if="loadingMore" class="ik-scroll-gif" src="/images/Bangboo.gif" alt="加载中" />
+            <span v-else class="ik-meta">已经到底啦 [ O_X ] /</span>
+          </div>
+        </div>
+      </div>
     </ClientOnly>
-
-    <div class="ik-row" style="justify-content: center; margin-top: 6px">
-      <z-button v-if="hasNextPage" @click="fetchList(false)" :loading="loadingMore">
-        加载更多
-      </z-button>
-      <span v-else class="ik-meta">已经到底啦 [ O_X ] /</span>
-    </div>
-
-    <div ref="sentinelRef" class="ik-sentinel" />
   </section>
 </template>
 
@@ -143,18 +313,51 @@ useIntersectionObserver(
   width: min(1450px, calc(100% - 20px));
 }
 
+.ik-scroll-wrapper {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  position: relative;
+}
+
+.ik-scroll-content {
+  min-height: 100%;
+  width: 100%;
+  padding-bottom: 0;
+}
+
 .ik-masonry {
   width: 100%;
 }
 
-.ik-sentinel {
-  width: 100%;
-  height: 1px;
+.ik-scroll-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  pointer-events: none;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.ik-scroll-gif {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
 }
 
 @media (max-width: 768px) {
   .ik-home-container {
     width: calc(100% - 20px);
+  }
+
+  .ik-scroll-footer {
+    flex-wrap: wrap;
   }
 }
 </style>
