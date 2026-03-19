@@ -1,0 +1,95 @@
+:root {
+  --ik-bg: #0a0a0a;
+  --ik-bg-elevated: #1a1a1a;
+  --ik-bg-card: #222222;
+  --ik-text: #e8e8e8;
+  --ik-muted: #9a9a9a;
+  --ik-primary: #d7ff00;
+  --ik-accent: #00e5ff;
+  --ik-danger: #ff4d4f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#__nuxt {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(circle at top, #171717 0%, var(--ik-bg) 40%);
+  color: var(--ik-text);
+  font-family:
+    "PingFang SC",
+    "Microsoft YaHei",
+    "Segoe UI",
+    sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.container {
+  width: min(1200px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.ik-page {
+  padding: 20px 0 90px;
+}
+
+.ik-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.ik-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ik-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.ik-panel {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #2d2d2d;
+  background: linear-gradient(180deg, #212121 0%, #181818 100%);
+}
+
+.ik-meta {
+  color: var(--ik-muted);
+  font-size: 13px;
+}
+
+.ik-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+}
+
+.ik-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--ik-muted);
+}
+
+@media (max-width: 768px) {
+  .container {
+    width: calc(100% - 20px);
+  }
+
+  .ik-page {
+    padding-top: 14px;
+  }
+}
