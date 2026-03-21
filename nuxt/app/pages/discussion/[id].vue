@@ -57,11 +57,31 @@ const loadComments = async () => {
 };
 
 const retryLoadComments = async () => {
-  // 重试时重置分页状态，重新加载
-  comments.value = [];
-  commentsCursor.value = "";
-  commentsHasNext.value = true;
-  await loadComments();
+  // 重试时仅重新请求当前页，不清空已加载的评论
+  // 如果还没有任何评论（首次加载失败），则从第一页开始
+  // 如果已有评论（分页加载失败），则使用当前 cursor 重试
+  commentsError.value = "";
+  commentsLoading.value = true;
+  try {
+    const page = await api.getComments(discussionId.value, commentsCursor.value);
+    
+    // 如果是首次加载（cursor 为空），直接设置评论列表
+    if (!commentsCursor.value) {
+      comments.value = page.nodes;
+    } else {
+      // 如果是分页加载，需要去重后追加
+      const existingIds = new Set(comments.value.map(c => c.id));
+      const newNodes = page.nodes.filter(node => !existingIds.has(node.id));
+      comments.value.push(...newNodes);
+    }
+    
+    commentsCursor.value = page.endCursor;
+    commentsHasNext.value = page.hasNextPage;
+  } catch (err) {
+    commentsError.value = resolveErrorMessage(err, "获取评论失败");
+  } finally {
+    commentsLoading.value = false;
+  }
 };
 
 const sendComment = async () => {
