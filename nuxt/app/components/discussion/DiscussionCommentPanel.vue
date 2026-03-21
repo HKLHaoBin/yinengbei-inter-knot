@@ -5,10 +5,12 @@ defineProps<{
   comments: Comment[];
   loading: boolean;
   hasNext: boolean;
+  error: string;
 }>();
 
 const emit = defineEmits<{
   loadMore: [];
+  clearError: [];
   likeComment: [comment: Comment];
   likeReply: [reply: Comment["replies"][number]];
 }>();
@@ -20,10 +22,20 @@ const emit = defineEmits<{
       评论区
     </h2>
 
-    <div v-if="!comments.length && !loading" class="ik-empty">
+    <!-- 评论加载失败 -->
+    <div v-if="error" class="ik-discussion-comments__error">
+      <p>{{ error }}</p>
+      <z-button type="default" @click="emit('clearError')">
+        重试
+      </z-button>
+    </div>
+
+    <!-- 空状态 -->
+    <div v-else-if="!comments.length && !loading" class="ik-empty">
       暂时还没有评论
     </div>
 
+    <!-- 评论列表 -->
     <div v-else class="ik-discussion-comments__list">
       <CommentItem
         v-for="comment in comments"
@@ -34,17 +46,20 @@ const emit = defineEmits<{
       />
     </div>
 
+    <!-- 加载中 -->
     <div v-if="loading" class="ik-discussion-comments__loading">
       正在加载更多...
     </div>
 
-    <div v-else-if="hasNext" class="ik-discussion-comments__load-more">
+    <!-- 加载更多按钮 -->
+    <div v-else-if="hasNext && !error" class="ik-discussion-comments__load-more">
       <z-button type="default" @click="emit('loadMore')">
         加载更多评论
       </z-button>
     </div>
 
-    <div v-else-if="comments.length" class="ik-discussion-comments__end">
+    <!-- 已加载全部 -->
+    <div v-else-if="comments.length && !error" class="ik-discussion-comments__end">
       <span class="ik-meta">评论已全部加载</span>
     </div>
   </section>
@@ -66,6 +81,25 @@ const emit = defineEmits<{
   font-weight: 700;
   color: var(--ik-text);
   flex-shrink: 0;
+}
+
+.ik-discussion-comments__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  color: #ffb1b1;
+  border: 1px solid #662e2e;
+  border-radius: 8px;
+  background: rgba(102, 46, 46, 0.1);
+}
+
+.ik-discussion-comments__error p {
+  margin: 0;
+  font-size: 14px;
 }
 
 .ik-discussion-comments__list {

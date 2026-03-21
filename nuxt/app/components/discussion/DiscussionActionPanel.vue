@@ -7,11 +7,14 @@ const props = defineProps<{
   sending: boolean;
   auth: ReturnType<typeof useAuthStore>;
   modelValue: string;
+  error: string;
+  likeError: string;
 }>();
 
 const emit = defineEmits<{
   like: [];
   sendComment: [];
+  clearSendError: [];
   "update:modelValue": [value: string];
 }>();
 
@@ -23,6 +26,11 @@ const commentInput = computed({
 
 <template>
   <section class="ik-discussion-actions">
+    <!-- 点赞失败提示 -->
+    <div v-if="likeError" class="ik-discussion-actions__error">
+      <p>{{ likeError }}</p>
+    </div>
+
     <!-- 操作按钮组 -->
     <div class="ik-discussion-actions__buttons">
       <z-button
@@ -51,6 +59,15 @@ const commentInput = computed({
         :disabled="sending"
         rows="3"
       />
+
+      <!-- 发送失败提示 -->
+      <div v-if="error" class="ik-discussion-actions__send-error">
+        <p>{{ error }}</p>
+        <button class="ik-discussion-actions__clear-error" @click="emit('clearSendError')">
+          关闭
+        </button>
+      </div>
+
       <div class="ik-row">
         <z-button :loading="sending" @click="emit('sendComment')">
           发送评论
@@ -75,6 +92,19 @@ const commentInput = computed({
   flex-shrink: 0;
 }
 
+.ik-discussion-actions__error {
+  padding: 8px 12px;
+  background: rgba(102, 46, 46, 0.15);
+  border: 1px solid #662e2e;
+  border-radius: 6px;
+  color: #ffb1b1;
+  font-size: 13px;
+}
+
+.ik-discussion-actions__error p {
+  margin: 0;
+}
+
 .ik-discussion-actions__buttons {
   display: flex;
   gap: 10px;
@@ -92,6 +122,40 @@ const commentInput = computed({
   font-size: 14px;
   font-weight: 600;
   color: var(--ik-muted);
+}
+
+.ik-discussion-actions__send-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(102, 46, 46, 0.15);
+  border: 1px solid #662e2e;
+  border-radius: 6px;
+  color: #ffb1b1;
+  font-size: 13px;
+}
+
+.ik-discussion-actions__send-error p {
+  margin: 0;
+  flex: 1;
+}
+
+.ik-discussion-actions__clear-error {
+  background: transparent;
+  border: none;
+  color: var(--ik-muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.ik-discussion-actions__clear-error:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ik-text);
 }
 
 .ik-row {

@@ -39,24 +39,21 @@ const emit = defineEmits<{
     <div class="ik-comment-item__actions">
       <z-button
         size="small"
-        type="default"
+        :type="comment.liked ? 'primary' : 'default'"
+        :class="{ 'ik-comment-item__btn--liked': comment.liked }"
         @click="emit('likeComment', comment)"
       >
+        <!-- 已点赞 - 实心大拇指 -->
         <svg
           v-if="comment.liked"
-          class="ik-icon--small"
+          class="ik-icon--small ik-icon--liked"
           viewBox="0 0 24 24"
-          fill="none"
+          fill="currentColor"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
+          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
         </svg>
+        <!-- 未点赞 - 轮廓大拇指 -->
         <svg
           v-else
           class="ik-icon--small"
@@ -106,24 +103,21 @@ const emit = defineEmits<{
         <div class="ik-comment-item__reply-actions">
           <z-button
             size="small"
-            type="default"
+            :type="reply.liked ? 'primary' : 'default'"
+            :class="{ 'ik-comment-item__btn--liked': reply.liked }"
             @click="emit('likeReply', reply)"
           >
+            <!-- 已点赞 - 实心大拇指 -->
             <svg
               v-if="reply.liked"
-              class="ik-icon--small"
+              class="ik-icon--small ik-icon--liked"
               viewBox="0 0 24 24"
-              fill="none"
+              fill="currentColor"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path
-                d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
+              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
             </svg>
+            <!-- 未点赞 - 轮廓大拇指 -->
             <svg
               v-else
               class="ik-icon--small"
@@ -212,6 +206,10 @@ const emit = defineEmits<{
 .ik-icon--small {
   width: 14px;
   height: 14px;
+}
+
+.ik-icon--liked {
+  color: var(--ik-primary);
 }
 
 /* 回复列表 */

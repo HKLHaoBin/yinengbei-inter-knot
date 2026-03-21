@@ -11,24 +11,30 @@ const auth = useAuthStore();
 
 const discussion = ref<Discussion | null>(null);
 const loading = ref(true);
-const errorMessage = ref("");
+const loadError = ref("");
 
 const comments = ref<Comment[]>([]);
 const commentsCursor = ref("");
 const commentsHasNext = ref(true);
 const commentsLoading = ref(false);
+const commentsError = ref("");
 
 const sendingComment = ref(false);
+const sendCommentError = ref("");
+
+const likeArticleError = ref("");
+
+const newComment = ref("");
 
 const discussionId = computed(() => String(route.params.id || ""));
 
 const loadDiscussion = async () => {
   loading.value = true;
-  errorMessage.value = "";
+  loadError.value = "";
   try {
     discussion.value = await api.getDiscussion(discussionId.value);
   } catch (err) {
-    errorMessage.value = resolveErrorMessage(err, "获取帖子详情失败");
+    loadError.value = resolveErrorMessage(err, "获取帖子详情失败");
   } finally {
     loading.value = false;
   }
@@ -37,13 +43,14 @@ const loadDiscussion = async () => {
 const loadComments = async () => {
   if (commentsLoading.value || !commentsHasNext.value) return;
   commentsLoading.value = true;
+  commentsError.value = "";
   try {
     const page = await api.getComments(discussionId.value, commentsCursor.value);
     comments.value.push(...page.nodes);
     commentsCursor.value = page.endCursor;
     commentsHasNext.value = page.hasNextPage;
   } catch (err) {
-    errorMessage.value = resolveErrorMessage(err, "获取评论失败");
+    commentsError.value = resolveErrorMessage(err, "获取评论失败");
   } finally {
     commentsLoading.value = false;
   }
@@ -59,7 +66,7 @@ const sendComment = async () => {
   }
 
   sendingComment.value = true;
-  errorMessage.value = "";
+  sendCommentError.value = "";
   try {
     let captchaPayload = await captcha.verify("commentCreate");
     await api.addDiscussionComment({
@@ -100,10 +107,10 @@ const sendComment = async () => {
         await loadComments();
         return;
       } catch (retryErr) {
-        errorMessage.value = resolveErrorMessage(retryErr, "评论发送失败");
+        sendCommentError.value = resolveErrorMessage(retryErr, "评论发送失败");
       }
     } else {
-      errorMessage.value = resolveErrorMessage(err, "评论发送失败");
+      sendCommentError.value = resolveErrorMessage(err, "评论发送失败");
     }
   } finally {
     sendingComment.value = false;
@@ -116,12 +123,13 @@ const likeArticle = async () => {
     await navigateTo("/login");
     return;
   }
+  likeArticleError.value = "";
   try {
     const result = await api.toggleLike("article", discussion.value.id);
     discussion.value.liked = result.liked;
     discussion.value.likesCount = result.likesCount;
   } catch (err) {
-    errorMessage.value = resolveErrorMessage(err, "点赞失败");
+    likeArticleError.value = resolveErrorMessage(err, "点赞失败");
   }
 };
 
@@ -135,7 +143,8 @@ const likeComment = async (comment: Comment) => {
     comment.liked = result.liked;
     comment.likesCount = result.likesCount;
   } catch (err) {
-    errorMessage.value = resolveErrorMessage(err, "评论点赞失败");
+    // 评论点赞失败不显示全局错误，只在本地标记
+    console.error("评论点赞失败:", err);
   }
 };
 
@@ -149,7 +158,8 @@ const likeReply = async (reply: Comment["replies"][number]) => {
     reply.liked = result.liked;
     reply.likesCount = result.likesCount;
   } catch (err) {
-    errorMessage.value = resolveErrorMessage(err, "回复点赞失败");
+    // 回复点赞失败不显示全局错误，只在本地标记
+    console.error("回复点赞失败:", err);
   }
 };
 
@@ -157,8 +167,13 @@ const goBack = () => {
   navigateTo("/");
 };
 
-// 评论输入框
-const newComment = ref("");
+const clearSendError = () => {
+  sendCommentError.value = "";
+};
+
+const clearCommentsError = () => {
+  commentsError.value = "";
+};
 
 onMounted(async () => {
   await loadDiscussion();
@@ -168,10 +183,17 @@ onMounted(async () => {
 
 <template>
   <section class="ik-discussion-detail container">
-    <div v-if="loading" class="ik-empty">正在加载帖子详情...</div>
-    <div v-else-if="errorMessage" class="ik-panel" style="border-color: #662e2e; color: #ffb1b1">
-      {{ errorMessage }}
+    <!-- 加载帖子详情 -->
+    <div v-if="loading" class="ik-empty">
+      正在加载帖子详情...
     </div>
+
+    <!-- 帖子详情加载失败 - 整页错误 -->
+    <div v-else-if="loadError" class="ik-panel" style="border-color: #662e2e; color: #ffb1b1">
+      {{ loadError }}
+    </div>
+
+    <!-- 成功加载帖子 -->
     <template v-else-if="discussion">
       <div class="ik-discussion-stage">
         <!-- 顶部作者信息条 -->
@@ -196,7 +218,9 @@ onMounted(async () => {
               :comments="comments"
               :loading="commentsLoading"
               :has-next="commentsHasNext"
+              :error="commentsError"
               @load-more="loadComments"
+              @clear-error="clearCommentsError"
               @like-comment="likeComment"
               @like-reply="likeReply"
             />
@@ -208,9 +232,12 @@ onMounted(async () => {
               :sending="sendingComment"
               :auth="auth"
               :model-value="newComment"
+              :error="sendCommentError"
+              :like-error="likeArticleError"
               @update:model-value="newComment = $event"
               @like="likeArticle"
               @send-comment="sendComment"
+              @clear-send-error="clearSendError"
             />
           </aside>
         </div>
