@@ -18,21 +18,51 @@ const emit = defineEmits<{
   "update:modelValue": [value: string];
 }>();
 
+type ActionMode = "default" | "comment";
+
+const mode = ref<ActionMode>("default");
+const commentInputRef = ref<HTMLInputElement | null>(null);
+
 const commentInput = computed({
   get: () => props.modelValue,
   set: (value) => emit("update:modelValue", value),
 });
+
+const handleCommentClick = () => {
+  if (mode.value === "default") {
+    mode.value = "comment";
+    nextTick(() => {
+      commentInputRef.value?.focus();
+    });
+  } else {
+    mode.value = "default";
+  }
+};
+
+const handleSendComment = async () => {
+  await emit("sendComment");
+  if (!props.error) {
+    mode.value = "default";
+  }
+};
+
+watch(
+  () => props.error,
+  (newError) => {
+    if (newError && mode.value === "default") {
+      mode.value = "comment";
+    }
+  },
+);
 </script>
 
 <template>
   <section class="ik-discussion-actions">
-    <!-- 点赞失败提示 -->
     <div v-if="likeError" class="ik-discussion-actions__error">
       <p>{{ likeError }}</p>
     </div>
 
-    <!-- 操作按钮组 -->
-    <div class="ik-discussion-actions__buttons">
+    <div v-if="mode === 'default'" class="ik-discussion-actions__buttons">
       <z-button
         :type="discussion.liked ? 'primary' : 'default'"
         @click="emit('like')"
@@ -45,22 +75,37 @@ const commentInput = computed({
       <z-button disabled title="功能开发中">
         分享
       </z-button>
+      <z-button
+        type="default"
+        @click="handleCommentClick"
+      >
+        评论
+      </z-button>
     </div>
 
-    <!-- 评论输入区 -->
-    <div class="ik-discussion-actions__comment-input">
-      <h3 class="ik-discussion-actions__title">
-        发表评论
-      </h3>
-      <z-input
-        v-model="commentInput"
-        type="textarea"
-        placeholder="说点什么..."
-        :disabled="sending"
-        rows="3"
-      />
+    <div v-else class="ik-discussion-actions__comment-input">
+      <div class="ik-discussion-actions__input-wrapper">
+        <z-input
+          ref="commentInputRef"
+          v-model="commentInput"
+          type="textarea"
+          placeholder="说点什么..."
+          :disabled="sending"
+          rows="3"
+          class="ik-discussion-actions__input"
+        />
+        <z-button
+          :loading="sending"
+          :disabled="!commentInput.trim()"
+          size="small"
+          type="primary"
+          class="ik-discussion-actions__send-btn"
+          @click="handleSendComment"
+        >
+          发送
+        </z-button>
+      </div>
 
-      <!-- 发送失败提示 -->
       <div v-if="error" class="ik-discussion-actions__send-error">
         <p>{{ error }}</p>
         <z-button size="small" type="default" @click="emit('clearSendError')">
@@ -68,11 +113,8 @@ const commentInput = computed({
         </z-button>
       </div>
 
-      <div class="ik-row">
-        <z-button :loading="sending" @click="emit('sendComment')">
-          发送评论
-        </z-button>
-        <NuxtLink v-if="!auth.isLogin" to="/login" class="ik-meta">
+      <div v-if="!auth.isLogin" class="ik-discussion-actions__login-tip">
+        <NuxtLink to="/login" class="ik-meta">
           登录后可评论
         </NuxtLink>
       </div>
@@ -84,8 +126,8 @@ const commentInput = computed({
 .ik-discussion-actions {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
+  gap: 12px;
+  padding: 12px;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 12px;
   border: 1px solid #2d2d2d;
@@ -108,20 +150,34 @@ const commentInput = computed({
 .ik-discussion-actions__buttons {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.ik-discussion-actions__buttons :deep(.z-button) {
+  height: 32px;
+  padding: 0 16px;
+  font-size: 13px;
 }
 
 .ik-discussion-actions__comment-input {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
-.ik-discussion-actions__title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ik-muted);
+.ik-discussion-actions__input-wrapper {
+  position: relative;
+}
+
+.ik-discussion-actions__input {
+  padding-right: 80px;
+}
+
+.ik-discussion-actions__send-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
 }
 
 .ik-discussion-actions__send-error {
@@ -142,10 +198,9 @@ const commentInput = computed({
   flex: 1;
 }
 
-.ik-row {
+.ik-discussion-actions__login-tip {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  justify-content: flex-end;
 }
 
 @media (max-width: 768px) {
@@ -165,6 +220,15 @@ const commentInput = computed({
 
   .ik-discussion-actions__send-error :deep(.z-button) {
     align-self: flex-end;
+  }
+
+  .ik-discussion-actions__input {
+    padding-right: 70px;
+  }
+
+  .ik-discussion-actions__send-btn {
+    bottom: 6px;
+    right: 6px;
   }
 }
 </style>

@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import type { Discussion } from "~/types/entities";
 
@@ -51,17 +51,16 @@ const onAvatarError = () => {
   avatarSrc.value = DEFAULT_AVATAR_IMAGE;
 };
 
-const handleOpen = () => {
+const handleOpen = (e: MouseEvent) => {
+  e.preventDefault();
   emit("open", props.discussion);
 };
 </script>
 
 <template>
   <article class="ik-card" :class="{ 'ik-card--pinned': discussion.isPinned }">
-    <NuxtLink
-      :to="`/discussion/${discussion.id}`"
+    <div
       class="ik-card__link"
-      no-prefetch
       @click="handleOpen"
     >
       <div class="ik-card__cover-wrap">
@@ -127,7 +126,7 @@ const handleOpen = () => {
         </h3>
         <p class="ik-card__excerpt">{{ excerpt }}</p>
       </div>
-    </NuxtLink>
+    </div>
   </article>
 </template>
 

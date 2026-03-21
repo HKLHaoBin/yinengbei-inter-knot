@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { Waterfall } from "vue-waterfall-plugin-next";
 import "vue-waterfall-plugin-next/dist/style.css";
 import BScroll from "@better-scroll/core";
@@ -54,6 +54,33 @@ const endCursor = ref("0");
 const hasNextPage = ref(true);
 const requestVersion = ref(0);
 const seenIds = ref<Set<string>>(new Set());
+
+const selectedDiscussionId = ref("");
+const detailOpen = ref(false);
+
+const lockBodyScroll = () => {
+  if (import.meta.client) {
+    document.body.style.overflow = "hidden";
+  }
+};
+
+const unlockBodyScroll = () => {
+  if (import.meta.client) {
+    document.body.style.overflow = "";
+  }
+};
+
+watch(detailOpen, (isOpen) => {
+  if (isOpen) {
+    lockBodyScroll();
+  } else {
+    unlockBodyScroll();
+  }
+});
+
+onBeforeUnmount(() => {
+  unlockBodyScroll();
+});
 
 const scrollWrapperRef = ref<HTMLElement | null>(null);
 const scrollHeight = ref(540);
@@ -146,8 +173,9 @@ const goDiscussion = async (discussion: Discussion) => {
   try {
     await api.markAsReadBatch([discussion.id]);
   } catch {
-    // ignore read status update errors
   }
+  selectedDiscussionId.value = discussion.id;
+  detailOpen.value = true;
 };
 
 const handlePullingUp = async () => {
@@ -305,6 +333,14 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </ClientOnly>
+
+    <DiscussionDetailModal
+      v-if="detailOpen && selectedDiscussionId"
+      :discussion-id="selectedDiscussionId"
+      :width-percent="82"
+      :height-percent="88"
+      @close="detailOpen = false"
+    />
   </section>
 </template>
 
