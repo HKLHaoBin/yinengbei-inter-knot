@@ -51,7 +51,10 @@ const onAvatarError = () => {
   avatarSrc.value = DEFAULT_AVATAR_IMAGE;
 };
 
-const handleOpen = (e: MouseEvent) => {
+const handleOpen = (e: MouseEvent | KeyboardEvent) => {
+  if (e instanceof KeyboardEvent && e.key !== "Enter" && e.key !== " ") {
+    return;
+  }
   e.preventDefault();
   emit("open", props.discussion);
 };
@@ -61,7 +64,10 @@ const handleOpen = (e: MouseEvent) => {
   <article class="ik-card" :class="{ 'ik-card--pinned': discussion.isPinned }">
     <div
       class="ik-card__link"
+      role="button"
+      tabindex="0"
       @click="handleOpen"
+      @keydown="handleOpen"
     >
       <div class="ik-card__cover-wrap">
         <div class="ik-card__cover-frame" :style="{ aspectRatio: String(coverAspectRatio) }">
@@ -152,6 +158,12 @@ const handleOpen = (e: MouseEvent) => {
   border-radius: 20px 20px 0 20px;
   background: #222;
   overflow: hidden;
+  cursor: pointer;
+}
+
+.ik-card__link:focus-visible {
+  outline: 2px solid #d7ff00;
+  outline-offset: 2px;
 }
 
 .ik-card__cover-wrap {

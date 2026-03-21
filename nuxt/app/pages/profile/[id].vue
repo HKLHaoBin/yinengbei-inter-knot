@@ -65,6 +65,14 @@ const loadProfileComments = async () => {
   }
 };
 
+const handleDiscussionOpen = async (discussion: Discussion) => {
+  try {
+    await api.markAsReadBatch([discussion.id]);
+  } catch {
+  }
+  await navigateTo(`/discussion/${discussion.id}`);
+};
+
 watch(
   () => tab.value,
   async (next) => {
@@ -103,7 +111,7 @@ onMounted(async () => {
           <z-tab-panel name="articles" label="帖子">
             <div class="ik-stack">
               <div v-if="!articles.length" class="ik-empty">暂无帖子</div>
-              <DiscussionCard v-for="item in articles" :key="item.id" :discussion="item" />
+              <DiscussionCard v-for="item in articles" :key="item.id" :discussion="item" @open="handleDiscussionOpen" />
               <div class="ik-row" style="justify-content: center">
                 <z-button v-if="articleHasNext" :loading="articleLoading" @click="loadProfileArticles">
                   加载更多帖子

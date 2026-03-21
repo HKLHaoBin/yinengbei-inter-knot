@@ -39,12 +39,18 @@ const handleCommentClick = () => {
   }
 };
 
-const handleSendComment = async () => {
-  await emit("sendComment");
-  if (!props.error) {
-    mode.value = "default";
-  }
+const handleSendComment = () => {
+  emit("sendComment");
 };
+
+watch(
+  () => props.sending,
+  (isSending, wasSending) => {
+    if (wasSending && !isSending && !props.error) {
+      mode.value = "default";
+    }
+  },
+);
 
 watch(
   () => props.error,
