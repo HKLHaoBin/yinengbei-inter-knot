@@ -51,24 +51,23 @@ const emit = defineEmits<{
     </div>
 
     <!-- 底部控制区 - 固定在 viewport 下方 -->
-    <!-- 仅在需要显示按钮或状态文本时显示 -->
-    <div v-if="!error && (!loading || !comments.length)" class="ik-discussion-comments__footer">
-      <!-- 加载中（首次加载） -->
-      <div v-if="loading && !comments.length" class="ik-discussion-comments__loading">
-        正在加载评论...
+    <!-- 仅在有评论时显示 -->
+    <div v-if="!error && comments.length" class="ik-discussion-comments__footer">
+      <!-- 加载中（加载更多） -->
+      <div v-if="loading" class="ik-discussion-comments__loading">
+        正在加载更多...
       </div>
 
       <!-- 加载更多按钮 -->
-      <div v-else-if="hasNext && !loading" class="ik-discussion-comments__load-more">
+      <div v-else-if="hasNext" class="ik-discussion-comments__load-more">
         <z-button type="default" @click="emit('loadMore')">
           加载更多评论
         </z-button>
       </div>
 
       <!-- 已加载全部 -->
-      <div v-else-if="!hasNext && !loading" class="ik-discussion-comments__end">
-        <span v-if="comments.length" class="ik-meta">评论已全部加载</span>
-        <span v-else class="ik-meta">没有更多评论了</span>
+      <div v-else class="ik-discussion-comments__end">
+        <span class="ik-meta">评论已全部加载</span>
       </div>
     </div>
 
