@@ -66,8 +66,9 @@ const emit = defineEmits<{
       </div>
 
       <!-- 已加载全部 -->
-      <div v-else-if="comments.length && !hasNext && !loading" class="ik-discussion-comments__end">
-        <span class="ik-meta">评论已全部加载</span>
+      <div v-else-if="!hasNext && !loading" class="ik-discussion-comments__end">
+        <span v-if="comments.length" class="ik-meta">评论已全部加载</span>
+        <span v-else class="ik-meta">没有更多评论了</span>
       </div>
     </div>
 
