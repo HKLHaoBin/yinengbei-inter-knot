@@ -71,8 +71,8 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <!-- 错误提示 - 固定在底部（只要有错误就显示） -->
-    <div v-else class="ik-discussion-comments__footer-error">
+    <!-- 错误提示 - 固定在底部（只有真的有错误时才显示） -->
+    <div v-else-if="error" class="ik-discussion-comments__footer-error">
       <p>{{ error }}</p>
       <div class="ik-discussion-comments__error-actions">
         <z-button size="small" type="primary" @click="emit('retry')">
