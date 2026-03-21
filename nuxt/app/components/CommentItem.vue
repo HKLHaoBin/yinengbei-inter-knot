@@ -194,6 +194,7 @@ const emit = defineEmits<{
   color: #f0f0f0;
   white-space: pre-wrap;
   font-size: 14px;
+  word-break: break-word;
 }
 
 .ik-comment-item__actions {
@@ -274,6 +275,7 @@ const emit = defineEmits<{
   color: #f0f0f0;
   white-space: pre-wrap;
   font-size: 13px;
+  word-break: break-word;
 }
 
 .ik-comment-item__reply-actions {

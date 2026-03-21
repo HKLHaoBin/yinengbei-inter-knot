@@ -261,10 +261,11 @@ watch(
             />
 
             <div class="ik-modal-body">
-              <DiscussionDetailPanel
-                class="ik-modal-main"
-                :discussion="discussion"
-              />
+              <div class="ik-modal-main">
+                <z-scrollbar class="ik-modal-main-scrollbar">
+                  <DiscussionDetailPanel :discussion="discussion" />
+                </z-scrollbar>
+              </div>
 
               <aside class="ik-modal-side">
                 <DiscussionCommentPanel
@@ -352,6 +353,13 @@ watch(
   overflow: hidden;
 }
 
+.ik-modal-body,
+.ik-modal-main,
+.ik-modal-side,
+.ik-modal-comments {
+  min-height: 0;
+}
+
 .ik-modal-body {
   display: grid;
   grid-template-columns: 1fr 420px;
@@ -360,45 +368,30 @@ watch(
   overflow: hidden;
 }
 
+.ik-modal-main,
+.ik-modal-comments {
+  overflow: hidden;
+}
+
 .ik-modal-main {
   border-right: 1px solid #2d2d2d;
-  overflow-y: auto;
 }
 
 .ik-modal-side {
   display: flex;
   flex-direction: column;
   border-left: 1px solid #2d2d2d;
-  overflow: hidden;
 }
 
 .ik-modal-comments {
   flex: 1;
-  min-height: 0;
-  overflow: hidden;
   border-bottom: 1px solid #2d2d2d;
 }
 
-.ik-modal-main::-webkit-scrollbar,
-.ik-modal-comments::-webkit-scrollbar {
-  width: 6px;
-}
-
-.ik-modal-main::-webkit-scrollbar-track,
-.ik-modal-comments::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-}
-
-.ik-modal-main::-webkit-scrollbar-thumb,
-.ik-modal-comments::-webkit-scrollbar-thumb {
-  background: #3d3d3d;
-  border-radius: 3px;
-}
-
-.ik-modal-main::-webkit-scrollbar-thumb:hover,
-.ik-modal-comments::-webkit-scrollbar-thumb:hover {
-  background: #4d4d4d;
+.ik-modal-main-scrollbar,
+.ik-discussion-comments__scrollbar {
+  width: 100%;
+  height: 100%;
 }
 
 @media (max-width: 959px) {
