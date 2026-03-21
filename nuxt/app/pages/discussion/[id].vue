@@ -56,6 +56,14 @@ const loadComments = async () => {
   }
 };
 
+const retryLoadComments = async () => {
+  // 重试时重置分页状态，重新加载
+  comments.value = [];
+  commentsCursor.value = "";
+  commentsHasNext.value = true;
+  await loadComments();
+};
+
 const sendComment = async () => {
   if (!auth.isLogin) {
     await navigateTo("/login");
@@ -220,6 +228,7 @@ onMounted(async () => {
               :has-next="commentsHasNext"
               :error="commentsError"
               @load-more="loadComments"
+              @retry="retryLoadComments"
               @clear-error="clearCommentsError"
               @like-comment="likeComment"
               @like-reply="likeReply"

@@ -10,6 +10,7 @@ defineProps<{
 
 const emit = defineEmits<{
   loadMore: [];
+  retry: [];
   clearError: [];
   likeComment: [comment: Comment];
   likeReply: [reply: Comment["replies"][number]];
@@ -22,21 +23,8 @@ const emit = defineEmits<{
       评论区
     </h2>
 
-    <!-- 评论加载失败 -->
-    <div v-if="error" class="ik-discussion-comments__error">
-      <p>{{ error }}</p>
-      <z-button type="default" @click="emit('clearError')">
-        重试
-      </z-button>
-    </div>
-
-    <!-- 空状态 -->
-    <div v-else-if="!comments.length && !loading" class="ik-empty">
-      暂时还没有评论
-    </div>
-
-    <!-- 评论列表 -->
-    <div v-else class="ik-discussion-comments__list">
+    <!-- 评论列表 - 始终显示（如果有评论） -->
+    <div v-if="comments.length" class="ik-discussion-comments__list">
       <CommentItem
         v-for="comment in comments"
         :key="comment.id"
@@ -46,20 +34,38 @@ const emit = defineEmits<{
       />
     </div>
 
-    <!-- 加载中 -->
+    <!-- 空状态 - 仅在没有评论且没有错误时显示 -->
+    <div v-else-if="!loading && !error" class="ik-empty">
+      暂时还没有评论
+    </div>
+
+    <!-- 加载中提示 -->
     <div v-if="loading" class="ik-discussion-comments__loading">
       正在加载更多...
     </div>
 
-    <!-- 加载更多按钮 -->
-    <div v-else-if="hasNext && !error" class="ik-discussion-comments__load-more">
+    <!-- 错误提示 - 叠加在列表上方或单独显示 -->
+    <div v-if="error" class="ik-discussion-comments__error">
+      <p>{{ error }}</p>
+      <div class="ik-discussion-comments__error-actions">
+        <z-button size="small" type="primary" @click="emit('retry')">
+          重试
+        </z-button>
+        <z-button size="small" type="default" @click="emit('clearError')">
+          关闭
+        </z-button>
+      </div>
+    </div>
+
+    <!-- 加载更多按钮 - 仅在无错误时显示 -->
+    <div v-else-if="hasNext && !loading" class="ik-discussion-comments__load-more">
       <z-button type="default" @click="emit('loadMore')">
         加载更多评论
       </z-button>
     </div>
 
     <!-- 已加载全部 -->
-    <div v-else-if="comments.length && !error" class="ik-discussion-comments__end">
+    <div v-else-if="comments.length && !hasNext && !loading" class="ik-discussion-comments__end">
       <span class="ik-meta">评论已全部加载</span>
     </div>
   </section>
@@ -81,25 +87,6 @@ const emit = defineEmits<{
   font-weight: 700;
   color: var(--ik-text);
   flex-shrink: 0;
-}
-
-.ik-discussion-comments__error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 24px;
-  text-align: center;
-  color: #ffb1b1;
-  border: 1px solid #662e2e;
-  border-radius: 8px;
-  background: rgba(102, 46, 46, 0.1);
-}
-
-.ik-discussion-comments__error p {
-  margin: 0;
-  font-size: 14px;
 }
 
 .ik-discussion-comments__list {
@@ -130,6 +117,31 @@ const emit = defineEmits<{
   background: #4d4d4d;
 }
 
+.ik-discussion-comments__error {
+  padding: 12px 16px;
+  background: rgba(102, 46, 46, 0.15);
+  border: 1px solid #662e2e;
+  border-radius: 8px;
+  color: #ffb1b1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.ik-discussion-comments__error p {
+  margin: 0;
+  font-size: 13px;
+  flex: 1;
+}
+
+.ik-discussion-comments__error-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .ik-discussion-comments__loading,
 .ik-discussion-comments__load-more,
 .ik-discussion-comments__end {
@@ -158,6 +170,19 @@ const emit = defineEmits<{
 
   .ik-discussion-comments__title {
     font-size: 16px;
+  }
+
+  .ik-discussion-comments__error {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ik-discussion-comments__error-actions {
+    justify-content: stretch;
+  }
+
+  .ik-discussion-comments__error-actions :deep(.z-button) {
+    flex: 1;
   }
 }
 </style>

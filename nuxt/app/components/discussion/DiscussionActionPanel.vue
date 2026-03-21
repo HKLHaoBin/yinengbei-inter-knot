@@ -63,9 +63,9 @@ const commentInput = computed({
       <!-- 发送失败提示 -->
       <div v-if="error" class="ik-discussion-actions__send-error">
         <p>{{ error }}</p>
-        <button class="ik-discussion-actions__clear-error" @click="emit('clearSendError')">
+        <z-button size="small" type="default" @click="emit('clearSendError')">
           关闭
-        </button>
+        </z-button>
       </div>
 
       <div class="ik-row">
@@ -142,22 +142,6 @@ const commentInput = computed({
   flex: 1;
 }
 
-.ik-discussion-actions__clear-error {
-  background: transparent;
-  border: none;
-  color: var(--ik-muted);
-  cursor: pointer;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.ik-discussion-actions__clear-error:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--ik-text);
-}
-
 .ik-row {
   display: flex;
   align-items: center;
@@ -172,6 +156,15 @@ const commentInput = computed({
 
   .ik-discussion-actions__buttons {
     gap: 8px;
+  }
+
+  .ik-discussion-actions__send-error {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ik-discussion-actions__send-error :deep(.z-button) {
+    align-self: flex-end;
   }
 }
 </style>
