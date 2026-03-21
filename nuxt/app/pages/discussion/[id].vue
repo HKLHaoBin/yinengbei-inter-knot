@@ -2,6 +2,7 @@
 import type { ApiClientError } from "~/types/api";
 import type { Comment, Discussion } from "~/types/entities";
 import { resolveErrorMessage } from "~/utils/api-error";
+import { useAuthStore } from "~/stores/auth";
 
 const route = useRoute();
 const api = useApi();
@@ -17,7 +18,6 @@ const commentsCursor = ref("");
 const commentsHasNext = ref(true);
 const commentsLoading = ref(false);
 
-const newComment = ref("");
 const sendingComment = ref(false);
 
 const discussionId = computed(() => String(route.params.id || ""));
@@ -67,6 +67,10 @@ const sendComment = async () => {
       content: newComment.value.trim(),
       captcha: captchaPayload,
     });
+    // 更新评论计数
+    if (discussion.value) {
+      discussion.value.commentsCount = (discussion.value.commentsCount || 0) + 1;
+    }
     newComment.value = "";
     comments.value = [];
     commentsCursor.value = "";
@@ -85,6 +89,10 @@ const sendComment = async () => {
           content: newComment.value.trim(),
           captcha: verified,
         });
+        // 更新评论计数
+        if (discussion.value) {
+          discussion.value.commentsCount = (discussion.value.commentsCount || 0) + 1;
+        }
         newComment.value = "";
         comments.value = [];
         commentsCursor.value = "";
@@ -145,6 +153,13 @@ const likeReply = async (reply: Comment["replies"][number]) => {
   }
 };
 
+const goBack = () => {
+  navigateTo("/");
+};
+
+// 评论输入框
+const newComment = ref("");
+
 onMounted(async () => {
   await loadDiscussion();
   await loadComments();
@@ -152,68 +167,138 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="container ik-stack">
+  <section class="ik-discussion-detail container">
     <div v-if="loading" class="ik-empty">正在加载帖子详情...</div>
     <div v-else-if="errorMessage" class="ik-panel" style="border-color: #662e2e; color: #ffb1b1">
       {{ errorMessage }}
     </div>
     <template v-else-if="discussion">
-      <z-card class="ik-panel">
-        <div class="ik-stack">
-          <h1 class="ik-title">{{ discussion.title }}</h1>
-          <div class="ik-row">
-            <span class="ik-meta">作者：{{ discussion.author.name || "未知作者" }}</span>
-            <span class="ik-meta">{{ discussion.views || 0 }} 阅读</span>
-            <span class="ik-meta">{{ discussion.commentsCount || 0 }} 评论</span>
-          </div>
-          <p class="ik-discussion-content">
-            {{ discussion.bodyText || discussion.rawBodyText || discussion.body || "暂无正文内容" }}
-          </p>
-          <div class="ik-row">
-            <z-button @click="likeArticle">
-              {{ discussion.liked ? "取消点赞" : "点赞" }}
-              {{ discussion.likesCount || 0 }}
-            </z-button>
-          </div>
-        </div>
-      </z-card>
-
-      <z-card class="ik-panel">
-        <div class="ik-stack">
-          <h2 style="margin: 0">发表评论</h2>
-          <z-input v-model="newComment" type="textarea" placeholder="说点什么..." />
-          <div class="ik-row">
-            <z-button :loading="sendingComment" @click="sendComment">发送评论</z-button>
-            <NuxtLink v-if="!auth.isLogin" to="/login" class="ik-meta">登录后可评论</NuxtLink>
-          </div>
-        </div>
-      </z-card>
-
-      <section class="ik-stack">
-        <h2 style="margin: 0">评论区</h2>
-        <div v-if="!comments.length" class="ik-empty">暂时还没有评论</div>
-        <CommentItem
-          v-for="comment in comments"
-          :key="comment.id"
-          :comment="comment"
-          @like-comment="likeComment"
-          @like-reply="likeReply"
+      <div class="ik-discussion-stage">
+        <!-- 顶部作者信息条 -->
+        <DiscussionHeaderBar
+          :discussion="discussion"
+          @close="goBack"
         />
-        <div class="ik-row" style="justify-content: center">
-          <z-button v-if="commentsHasNext" :loading="commentsLoading" @click="loadComments">
-            加载更多评论
-          </z-button>
-          <span v-else class="ik-meta">评论已全部加载</span>
+
+        <!-- 主体内容区 -->
+        <div class="ik-discussion-stage__body">
+          <!-- 左侧详情面板 -->
+          <DiscussionDetailPanel
+            class="ik-discussion-stage__main"
+            :discussion="discussion"
+          />
+
+          <!-- 右侧边栏 -->
+          <aside class="ik-discussion-stage__side">
+            <!-- 评论面板 -->
+            <DiscussionCommentPanel
+              class="ik-discussion-stage__comments"
+              :comments="comments"
+              :loading="commentsLoading"
+              :has-next="commentsHasNext"
+              @load-more="loadComments"
+              @like-comment="likeComment"
+              @like-reply="likeReply"
+            />
+
+            <!-- 操作面板 -->
+            <DiscussionActionPanel
+              class="ik-discussion-stage__actions"
+              :discussion="discussion"
+              :sending="sendingComment"
+              :auth="auth"
+              :model-value="newComment"
+              @update:model-value="newComment = $event"
+              @like="likeArticle"
+              @send-comment="sendComment"
+            />
+          </aside>
         </div>
-      </section>
+      </div>
     </template>
   </section>
 </template>
 
 <style scoped>
-.ik-discussion-content {
-  margin: 0;
-  line-height: 1.65;
-  white-space: pre-wrap;
+/* 页面容器 */
+.ik-discussion-detail {
+  padding: 20px 0;
+}
+
+/* 主舞台容器 */
+.ik-discussion-stage {
+  border-radius: 16px;
+  border: 1px solid #2d2d2d;
+  background: linear-gradient(180deg, #212121 0%, #181818 100%);
+  overflow: hidden;
+}
+
+/* 主体布局 */
+.ik-discussion-stage__body {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 0;
+}
+
+.ik-discussion-stage__main {
+  border-right: 1px solid #2d2d2d;
+}
+
+.ik-discussion-stage__side {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #2d2d2d;
+}
+
+.ik-discussion-stage__comments {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-bottom: 1px solid #2d2d2d;
+}
+
+/* 响应式布局 - 平板 */
+@media (max-width: 959px) {
+  .ik-discussion-stage__body {
+    grid-template-columns: 1fr 350px;
+  }
+}
+
+/* 响应式布局 - 移动端 */
+@media (max-width: 767px) {
+  .ik-discussion-stage {
+    border-radius: 0;
+    border: none;
+    background: transparent;
+  }
+
+  .ik-discussion-stage__body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .ik-discussion-stage__main {
+    border-right: none;
+    border-bottom: 1px solid #2d2d2d;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #212121 0%, #181818 100%);
+  }
+
+  .ik-discussion-stage__side {
+    border-left: none;
+    gap: 16px;
+  }
+
+  .ik-discussion-stage__comments {
+    border-bottom: none;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #212121 0%, #181818 100%);
+  }
+
+  .ik-discussion-stage__actions {
+    border-radius: 12px;
+    background: linear-gradient(180deg, #212121 0%, #181818 100%);
+  }
 }
 </style>
