@@ -42,13 +42,13 @@ const emit = defineEmits<{
             暂时还没有评论
           </div>
 
-          <!-- 加载中提示 -->
-          <div v-if="loading" class="ik-discussion-comments__loading">
+          <!-- 加载中提示 - 放在列表底部 -->
+          <div v-if="loading && comments.length" class="ik-discussion-comments__loading--inline">
             正在加载更多...
           </div>
 
-          <!-- 错误提示 - 叠加在列表上方或单独显示 -->
-          <div v-if="error" class="ik-discussion-comments__error">
+          <!-- 错误提示 - 放在列表底部 -->
+          <div v-if="error && comments.length" class="ik-discussion-comments__error--inline">
             <p>{{ error }}</p>
             <div class="ik-discussion-comments__error-actions">
               <z-button size="small" type="primary" @click="emit('retry')">
@@ -59,20 +59,41 @@ const emit = defineEmits<{
               </z-button>
             </div>
           </div>
-
-          <!-- 加载更多按钮 - 仅在无错误时显示 -->
-          <div v-else-if="hasNext && !loading" class="ik-discussion-comments__load-more">
-            <z-button type="default" @click="emit('loadMore')">
-              加载更多评论
-            </z-button>
-          </div>
-
-          <!-- 已加载全部 -->
-          <div v-else-if="comments.length && !hasNext && !loading" class="ik-discussion-comments__end">
-            <span class="ik-meta">评论已全部加载</span>
-          </div>
         </div>
       </z-scrollbar>
+    </div>
+
+    <!-- 底部控制区 - 固定在 viewport 下方 -->
+    <div v-if="!comments.length || (!loading && !error)" class="ik-discussion-comments__footer">
+      <!-- 空状态时的加载更多 -->
+      <div v-if="hasNext && !loading" class="ik-discussion-comments__load-more">
+        <z-button type="default" @click="emit('loadMore')">
+          加载更多评论
+        </z-button>
+      </div>
+
+      <!-- 已加载全部 -->
+      <div v-else-if="comments.length && !hasNext && !loading" class="ik-discussion-comments__end">
+        <span class="ik-meta">评论已全部加载</span>
+      </div>
+
+      <!-- 加载中（首次加载） -->
+      <div v-if="loading && !comments.length" class="ik-discussion-comments__loading">
+        正在加载评论...
+      </div>
+    </div>
+
+    <!-- 错误提示 - 固定在底部（当有评论但出错时） -->
+    <div v-else-if="error" class="ik-discussion-comments__footer-error">
+      <p>{{ error }}</p>
+      <div class="ik-discussion-comments__error-actions">
+        <z-button size="small" type="primary" @click="emit('retry')">
+          重试
+        </z-button>
+        <z-button size="small" type="default" @click="emit('clearError')">
+          关闭
+        </z-button>
+      </div>
     </div>
   </section>
 </template>
@@ -121,39 +142,66 @@ const emit = defineEmits<{
   gap: 12px;
 }
 
-.ik-discussion-comments__error {
-  padding: 12px 16px;
-  background: rgba(102, 46, 46, 0.15);
-  border: 1px solid #662e2e;
-  border-radius: 8px;
-  color: #ffb1b1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-shrink: 0;
-}
-
-.ik-discussion-comments__error p {
-  margin: 0;
-  font-size: 13px;
-  flex: 1;
-}
-
-.ik-discussion-comments__error-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.ik-discussion-comments__loading,
-.ik-discussion-comments__load-more,
-.ik-discussion-comments__end {
+/* 内联加载中和错误提示（在列表底部） */
+.ik-discussion-comments__loading--inline,
+.ik-discussion-comments__error--inline {
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 12px;
   flex-shrink: 0;
+  gap: 12px;
+}
+
+.ik-discussion-comments__loading--inline {
+  color: var(--ik-muted);
+  font-size: 13px;
+}
+
+.ik-discussion-comments__error--inline {
+  padding: 12px 16px;
+  background: rgba(102, 46, 46, 0.15);
+  border: 1px solid #662e2e;
+  border-radius: 8px;
+  color: #ffb1b1;
+  justify-content: space-between;
+}
+
+.ik-discussion-comments__error--inline p {
+  margin: 0;
+  font-size: 13px;
+  flex: 1;
+}
+
+.ik-discussion-comments__error--inline .ik-discussion-comments__error-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 底部固定控制区 */
+.ik-discussion-comments__footer {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.15);
+  border-top: 1px solid #2d2d2d;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 52px;
+}
+
+.ik-discussion-comments__load-more,
+.ik-discussion-comments__end,
+.ik-discussion-comments__loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ik-discussion-comments__end {
+  color: var(--ik-muted);
+  font-size: 13px;
 }
 
 .ik-discussion-comments__loading {
@@ -161,9 +209,30 @@ const emit = defineEmits<{
   font-size: 13px;
 }
 
-.ik-discussion-comments__end {
-  color: var(--ik-muted);
+/* 底部固定错误提示 */
+.ik-discussion-comments__footer-error {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  background: rgba(102, 46, 46, 0.15);
+  border-top: 1px solid #662e2e;
+  color: #ffb1b1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 52px;
+}
+
+.ik-discussion-comments__footer-error p {
+  margin: 0;
   font-size: 13px;
+  flex: 1;
+}
+
+.ik-discussion-comments__footer-error .ik-discussion-comments__error-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
@@ -176,16 +245,33 @@ const emit = defineEmits<{
     padding: 0 12px 12px;
   }
 
-  .ik-discussion-comments__error {
+  .ik-discussion-comments__footer {
+    padding: 12px;
+  }
+
+  .ik-discussion-comments__footer-error {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .ik-discussion-comments__error-actions {
+  .ik-discussion-comments__footer-error .ik-discussion-comments__error-actions {
     justify-content: stretch;
   }
 
-  .ik-discussion-comments__error-actions :deep(.z-button) {
+  .ik-discussion-comments__footer-error .ik-discussion-comments__error-actions :deep(.z-button) {
+    flex: 1;
+  }
+
+  .ik-discussion-comments__error--inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ik-discussion-comments__error--inline .ik-discussion-comments__error-actions {
+    justify-content: stretch;
+  }
+
+  .ik-discussion-comments__error--inline .ik-discussion-comments__error-actions :deep(.z-button) {
     flex: 1;
   }
 }

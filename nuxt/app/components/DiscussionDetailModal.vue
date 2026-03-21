@@ -418,31 +418,49 @@ watch(
   .ik-modal-body {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 0;
+    min-height: 0;
   }
 
   .ik-modal-main {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
     border-right: none;
     border-bottom: 1px solid #2d2d2d;
-    border-radius: 12px;
+    border-radius: 0;
     background: linear-gradient(180deg, #212121 0%, #181818 100%);
-    margin: 12px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ik-modal-main-scrollbar {
+    flex: 1;
+    min-height: 0;
   }
 
   .ik-modal-side {
+    flex: 1;
+    min-height: 0;
     border-left: none;
-    gap: 16px;
-    padding: 0 12px 12px;
+    gap: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .ik-modal-comments {
+    flex: 1;
+    min-height: 0;
     border-bottom: none;
-    border-radius: 12px;
+    border-radius: 0;
     background: linear-gradient(180deg, #212121 0%, #181818 100%);
   }
 
   .ik-modal-actions {
-    border-radius: 12px;
+    flex-shrink: 0;
+    border-radius: 0;
     background: linear-gradient(180deg, #212121 0%, #181818 100%);
   }
 }
