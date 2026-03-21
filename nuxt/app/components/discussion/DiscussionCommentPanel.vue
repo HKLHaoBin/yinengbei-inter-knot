@@ -51,15 +51,10 @@ const emit = defineEmits<{
     </div>
 
     <!-- 底部控制区 - 固定在 viewport 下方 -->
-    <!-- 显示条件：没有错误时才显示正常底部 -->
-    <div v-if="!error" class="ik-discussion-comments__footer">
-      <!-- 空状态 - 没有评论且没有错误 -->
-      <div v-if="!comments.length && !loading" class="ik-discussion-comments__load-more">
-        <span class="ik-meta">暂时还没有评论</span>
-      </div>
-
+    <!-- 仅在需要显示按钮或状态文本时显示 -->
+    <div v-if="!error && (!loading || !comments.length)" class="ik-discussion-comments__footer">
       <!-- 加载中（首次加载） -->
-      <div v-else-if="loading && !comments.length" class="ik-discussion-comments__loading">
+      <div v-if="loading && !comments.length" class="ik-discussion-comments__loading">
         正在加载评论...
       </div>
 
