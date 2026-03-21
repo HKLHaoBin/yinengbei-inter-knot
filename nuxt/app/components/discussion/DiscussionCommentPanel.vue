@@ -37,8 +37,13 @@ const emit = defineEmits<{
             />
           </div>
 
+          <!-- 首次加载中 - 仅在没有评论且正在加载时显示 -->
+          <div v-else-if="loading" class="ik-discussion-comments__loading-state">
+            正在加载评论...
+          </div>
+
           <!-- 空状态 - 仅在没有评论且没有错误时显示 -->
-          <div v-else-if="!loading && !error" class="ik-empty">
+          <div v-else-if="!error" class="ik-empty">
             暂时还没有评论
           </div>
 
@@ -51,15 +56,10 @@ const emit = defineEmits<{
     </div>
 
     <!-- 底部控制区 - 固定在 viewport 下方 -->
-    <!-- 仅在有评论时显示 -->
-    <div v-if="!error && comments.length" class="ik-discussion-comments__footer">
-      <!-- 加载中（加载更多） -->
-      <div v-if="loading" class="ik-discussion-comments__loading">
-        正在加载更多...
-      </div>
-
+    <!-- 仅在有评论且未加载中时显示 -->
+    <div v-if="!error && comments.length && !loading" class="ik-discussion-comments__footer">
       <!-- 加载更多按钮 -->
-      <div v-else-if="hasNext" class="ik-discussion-comments__load-more">
+      <div v-if="hasNext" class="ik-discussion-comments__load-more">
         <z-button type="default" @click="emit('loadMore')">
           加载更多评论
         </z-button>
@@ -130,6 +130,7 @@ const emit = defineEmits<{
   gap: 12px;
 }
 
+.ik-discussion-comments__loading-state,
 /* 内联加载中提示（在列表底部） */
 .ik-discussion-comments__loading--inline {
   display: flex;
@@ -154,19 +155,13 @@ const emit = defineEmits<{
 }
 
 .ik-discussion-comments__load-more,
-.ik-discussion-comments__end,
-.ik-discussion-comments__loading {
+.ik-discussion-comments__end {
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .ik-discussion-comments__end {
-  color: var(--ik-muted);
-  font-size: 13px;
-}
-
-.ik-discussion-comments__loading {
   color: var(--ik-muted);
   font-size: 13px;
 }
